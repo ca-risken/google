@@ -52,7 +52,7 @@ message GCPForUpsert {
   uint32 project_id = 4;
   string gcp_organization_id = 5;
   string gcp_project_id = 6;
-  Status status = 14;
-  string status_detail = 15;
-  int64 scan_at = 16;
+  Status status = 7;
+  string status_detail = 8;
+  int64 scan_at = 9;
 }
