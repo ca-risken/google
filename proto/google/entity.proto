@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package google.google;
+option go_package = "github.com/CyberAgent/mimosa-google/proto/google";
+
+/**
+ * Entity
+ **/
+
+// Empty
+message Empty {}
+
+// GoogleDataSource
+message GoogleDataSource {
+  uint32 google_data_source_id = 1;
+  string name = 2;
+  string description = 3;
+  float max_score = 4;
+  int64 created_at = 5;
+  int64 updated_at = 6;
+}
+
+// GCP
+message GCP {
+  uint32 gcp_id = 1;
+  uint32 google_data_source_id = 2;
+  string name = 3;
+  uint32 project_id = 4;
+  string gcp_organization_id = 5;
+  string gcp_project_id = 6;
+  Status status = 7;
+  string status_detail = 8;
+  int64 scan_at = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+}
+
+// Status
+enum Status {
+  UNKNOWN = 0;
+  OK = 1;
+  CONFIGURED = 2;
+  NOT_CONFIGURED = 3;
+  ERROR = 4;
+}
+
+// GCPForUpsert
+message GCPForUpsert {
+  uint32 gcp_id = 1; // Unique key for entity.
+  uint32 google_data_source_id = 2;
+  string name = 3;
+  uint32 project_id = 4;
+  string gcp_organization_id = 5;
+  string gcp_project_id = 6;
+  Status status = 14;
+  string status_detail = 15;
+  int64 scan_at = 16;
+}
