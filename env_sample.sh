@@ -16,10 +16,12 @@ export DB_SLAVE_USER="hoge"
 export DB_SLAVE_PASSWORD="moge"
 export DB_LOG_MODE="false"
 
-# CODE
+# Google
 export PORT="11001"
 export AWS_REGION="ap-northeast-1"
 export SQS_ENDPOINT="http://sqs:9324"
+export SCC_QUEUE_NAME="google-scc"
+export SCC_QUEUE_URL="http://sqs:9324/queue/google-scc"
 
 # gRPC server
 export FINDING_SVC_ADDR="finding:8001"

@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  google:
+    networks:
+      - google
+      - local-shared
+    build:
+      context: src/google
+      args:
+        - GITHUB_USER=${GITHUB_USER}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    environment:
+      - PORT=${PORT}
+      - DB_MASTER_HOST=${DB_MASTER_HOST}
+      - DB_MASTER_USER=${DB_MASTER_USER}
+      - DB_MASTER_PASSWORD=${DB_MASTER_PASSWORD}
+      - DB_SLAVE_HOST=${DB_SLAVE_HOST}
+      - DB_SLAVE_USER=${DB_SLAVE_USER}
+      - DB_SLAVE_PASSWORD=${DB_SLAVE_PASSWORD}
+      - DB_PORT=3306
+      - DB_SCHEMA=mimosa
+      - DB_LOG_MODE=${DB_LOG_MODE}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - SQS_ENDPOINT=${SQS_ENDPOINT}
+      - SCC_QUEUE_URL=${SCC_QUEUE_URL}
+    ports:
+      - "11001:11001"
+
+networks:
+  google:
+    driver: bridge
+    attachable: true
+  local-shared:
+    external: true
