@@ -18,10 +18,15 @@ export DB_LOG_MODE="false"
 
 # Google
 export PORT="11001"
+export DEBUG="true"
 export AWS_REGION="ap-northeast-1"
 export SQS_ENDPOINT="http://sqs:9324"
 export ASSET_QUEUE_NAME="google-asset"
 export ASSET_QUEUE_URL="http://sqs:9324/queue/google-asset"
+export GOOGLE_CREDENTIAL_PATH="/path/to/your-credential-file"
+export GOOGLE_SERVICE_ACCOUNT_JSON='
+  "key": "service-account json credential here..." 
+}'
 
 # gRPC server
 export FINDING_SVC_ADDR="finding:8001"

@@ -15,7 +15,7 @@ type sqsConfig struct {
 	AWSRegion   string `envconfig:"aws_region" default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://localhost:9324"`
 
-	SCCQueueURL string `split_words:"true" required:"true"`
+	AssetQueueURL string `split_words:"true" required:"true"`
 }
 
 type sqsAPI interface {
@@ -23,8 +23,8 @@ type sqsAPI interface {
 }
 
 type sqsClient struct {
-	svc         *sqs.SQS
-	sccQueueURL string
+	svc           *sqs.SQS
+	assetQueueURL string
 }
 
 func newSQSClient() *sqsClient {
@@ -39,8 +39,8 @@ func newSQSClient() *sqsClient {
 	})
 
 	return &sqsClient{
-		svc:         session,
-		sccQueueURL: conf.SCCQueueURL,
+		svc:           session,
+		assetQueueURL: conf.AssetQueueURL,
 	}
 }
 
@@ -49,10 +49,10 @@ func (s *sqsClient) sendMsgForGCP(msg *common.GCPQueueMessage) (*sqs.SendMessage
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse message, err=%+v", err)
 	}
-	// TODO: SCC or .... handling
+	// TODO: Asse or .... handling
 	resp, err := s.svc.SendMessage(&sqs.SendMessageInput{
 		MessageBody:  aws.String(string(buf)),
-		QueueUrl:     aws.String(s.sccQueueURL),
+		QueueUrl:     aws.String(s.assetQueueURL),
 		DelaySeconds: aws.Int64(1),
 	})
 	if err != nil {
