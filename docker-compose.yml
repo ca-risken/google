@@ -26,9 +26,35 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
       - SQS_ENDPOINT=${SQS_ENDPOINT}
-      - SCC_QUEUE_URL=${SCC_QUEUE_URL}
+      - ASSET_QUEUE_URL=${ASSET_QUEUE_URL}
     ports:
       - "11001:11001"
+
+  asset:
+    networks:
+      - google
+      - local-shared
+    build:
+      context: src/asset
+      args:
+        - GITHUB_USER=${GITHUB_USER}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    environment:
+      - DEBUG=${DEBUG}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - SQS_ENDPOINT=${SQS_ENDPOINT}
+      - ASSET_QUEUE_NAME=${ASSET_QUEUE_NAME}
+      - ASSET_QUEUE_URL=${ASSET_QUEUE_URL}
+      - FINDING_SVC_ADDR=${FINDING_SVC_ADDR}
+      - ALERT_SVC_ADDR=${ALERT_SVC_ADDR}
+      - GOOGLE_SVC_ADDR=${GOOGLE_SVC_ADDR}
+      - GOOGLE_CREDENTIAL_PATH=${GOOGLE_CREDENTIAL_PATH}
+      - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON}
+    ports:
+      - "11002:11002"
 
 networks:
   google:

@@ -1,5 +1,5 @@
 FROM golang AS builder
-WORKDIR /go/src/github.com/CyberAgent/mimosa-google/src/google/
+WORKDIR /go/src/github.com/CyberAgent/mimosa-google/src/asset/
 ADD *.go go.* ./
 ENV CGO_ENABLED=0 GO111MODULE=on GOPRIVATE="github.com/CyberAgent/*"
 ARG GITHUB_USER
@@ -13,24 +13,24 @@ FROM alpine
 RUN apk add --no-cache ca-certificates tzdata \
   && cd /tmp/ && wget -q https://github.com/okzk/env-injector/releases/download/v0.0.5/env-injector_0.0.5_linux_amd64.tar.gz \
   && tar xvfz env-injector_0.0.5_linux_amd64.tar.gz && mv env-injector /usr/local/bin/ && rm /tmp/*
-COPY --from=builder /go/bin/google /usr/local/google/bin/
-ENV PORT= \
-    DB_MASTER_HOST= \
-    DB_MASTER_USER= \
-    DB_MASTER_PASSWORD= \
-    DB_SLAVE_HOST= \
-    DB_SLAVE_USER= \
-    DB_SLAVE_PASSWORD= \
-    DB_SCHEMA=mimosa \
-    DB_PORT=3306 \
-    DB_LOG_MODE=false \
+COPY --from=builder /go/bin/asset /usr/local/asset/bin/
+ADD docker-entrypoint.sh /usr/local/bin
+ENV DEBUG= \
     AWS_REGION= \
     AWS_ACCESS_KEY_ID= \
     AWS_SECRET_ACCESS_KEY= \
     AWS_SESSION_TOKEN= \
     SQS_ENDPOINT= \
+    ASSET_QUEUE_NAME= \
     ASSET_QUEUE_URL= \
+    MAX_NUMBER_OF_MESSAGE=10 \
+    WAIT_TIME_SECOND=20 \
+    FINDING_SVC_ADDR= \
+    ALERT_SVC_ADDR= \
+    GOOGLE_SVC_ADDR= \
+    GOOGLE_CREDENTIAL_PATH= \
+    GOOGLE_SERVICE_ACCOUNT_JSON= \
     TZ=Asia/Tokyo
-WORKDIR /usr/local/google
-ENTRYPOINT ["/usr/local/bin/env-injector"]
-CMD ["bin/google"]
+WORKDIR /usr/local/asset
+ENTRYPOINT ["env-injector", "docker-entrypoint.sh"]
+CMD ["bin/asset"]
