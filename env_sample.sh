@@ -20,8 +20,8 @@ export DB_LOG_MODE="false"
 export PORT="11001"
 export AWS_REGION="ap-northeast-1"
 export SQS_ENDPOINT="http://sqs:9324"
-export SCC_QUEUE_NAME="google-scc"
-export SCC_QUEUE_URL="http://sqs:9324/queue/google-scc"
+export ASSET_QUEUE_NAME="google-asset"
+export ASSET_QUEUE_URL="http://sqs:9324/queue/google-asset"
 
 # gRPC server
 export FINDING_SVC_ADDR="finding:8001"
