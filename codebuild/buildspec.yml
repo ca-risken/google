@@ -1,0 +1,60 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_GOOGLE: "google/google"
+    IMAGE_ASSET: "google/asset"
+  parameter-store:
+    GITHUB_USER: "/build/GITHUB_USER"
+    GITHUB_TOKEN: "/build/GITHUB_TOKEN"
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.14
+    commands:
+      - echo "machine github.com" > ~/.netrc
+      - echo "login ${GITHUB_USER}" >> ~/.netrc
+      - echo "password ${GITHUB_TOKEN}" >> ~/.netrc
+  pre_build:
+    commands:
+      - echo Setting environment variables
+      - SRC=${CODEBUILD_SRC_DIR}/src
+      - BUILD_OPT="--no-cache --pull"
+      - TAG=v0.0.${CODEBUILD_BUILD_NUMBER}
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+      - REGISTORY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+
+      - echo Testing the sources...
+      - cd ${SRC}/google && go test ./...
+      - cd ${SRC}/asset  && go test ./...
+
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
+  build:
+    commands:
+      - echo Build gateway started on `date`
+      - echo Pushing the Docker images...
+      - cd ${SRC}/google && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_GOOGLE}:${TAG} .
+      - cd ${SRC}/asset  && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_ASSET}:${TAG} .
+
+      - echo Tagging the images...
+      # tag the specific version
+      - docker tag ${IMAGE_GOOGLE}:${TAG} ${REGISTORY}/${IMAGE_GOOGLE}:${TAG}
+      - docker tag ${IMAGE_ASSET}:${TAG}  ${REGISTORY}/${IMAGE_ASSET}:${TAG}
+
+      # update latest version 
+      - docker tag ${IMAGE_GOOGLE}:${TAG} ${REGISTORY}/${IMAGE_GOOGLE}:latest
+      - docker tag ${IMAGE_ASSET}:${TAG}  ${REGISTORY}/${IMAGE_ASSET}:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+
+      # specific version
+      - docker push ${REGISTORY}/${IMAGE_GOOGLE}:${TAG}
+      - docker push ${REGISTORY}/${IMAGE_ASSET}:${TAG}
+
+      # latest version
+      - docker push ${REGISTORY}/${IMAGE_GOOGLE}:latest
+      - docker push ${REGISTORY}/${IMAGE_ASSET}:latest
