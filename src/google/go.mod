@@ -3,14 +3,14 @@ module github.com/CyberAgent/mimosa-google/src/google
 go 1.15
 
 require (
-	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20201224124557-6af532663512
-	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20201224124557-6af532663512
+	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20201225112120-f2059668f7e7
+	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20201225112120-f2059668f7e7
 	github.com/aws/aws-sdk-go v1.36.15
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/sirupsen/logrus v1.7.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sys v0.0.0-20201223074533-0d417f636930 // indirect
