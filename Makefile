@@ -42,6 +42,10 @@ go-mod-update:
 	cd src/google \
 		&& go get -u \
 			github.com/CyberAgent/mimosa-google/...
+	cd src/asset \
+		&& go get -u \
+			github.com/CyberAgent/mimosa-core/... \
+			github.com/CyberAgent/mimosa-google/...
 
 # @see https://github.com/CyberAgent/mimosa-common/tree/master/local
 network:
