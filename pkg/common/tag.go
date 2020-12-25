@@ -7,6 +7,8 @@ const (
 	TagGCP = "gcp"
 	// TagAssetInventory tag
 	TagAssetInventory = "asset"
+	// TagServiceAccount tag
+	TagServiceAccount = "serviceAccount"
 
 	// TagSCC tag
 	// TagSCC = "scc"
