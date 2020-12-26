@@ -8,7 +8,7 @@ import (
 	"google.golang.org/genproto/googleapis/iam/v1"
 )
 
-func TestGetShortNameFromResouceFullName(t *testing.T) {
+func TestGetShortName(t *testing.T) {
 	cases := []struct {
 		name  string
 		input string
@@ -32,7 +32,39 @@ func TestGetShortNameFromResouceFullName(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := getShortNameFromResouceFullName(c.input)
+			got := getShortName(c.input)
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestIsUserServiceAccount(t *testing.T) {
+	cases := []struct {
+		name  string
+		input []string
+		want  bool
+	}{
+		{
+			name:  "OK",
+			input: []string{"iam.googleapis.com/ServiceAccount", "//.../account@my-project.iam.gserviceaccount.com"},
+			want:  true,
+		},
+		{
+			name:  "No other type",
+			input: []string{"iam.googleapis.com/NotServiceAccount", "//.../account@my-project.iam.gserviceaccount.com"},
+			want:  false,
+		},
+		{
+			name:  "No email not match",
+			input: []string{"iam.googleapis.com/ServiceAccount", "//.../account@service.gserviceaccount.com"},
+			want:  false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := isUserServiceAccount(c.input[0], c.input[1])
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
 			}
@@ -49,7 +81,7 @@ func TestScoreAsset(t *testing.T) {
 		{
 			name:  "OK Blank",
 			input: &assetFinding{},
-			want:  0.1,
+			want:  0.0,
 		},
 		{
 			name: "OK Some asset",
@@ -59,7 +91,7 @@ func TestScoreAsset(t *testing.T) {
 					Name:      "some-asset",
 				},
 			},
-			want: 0.1,
+			want: 0.0,
 		},
 		{
 			name: "OK Exists ServiceAccount 1",
@@ -88,7 +120,7 @@ func TestScoreAsset(t *testing.T) {
 				},
 				IAMPolicy: &asset.AnalyzeIamPolicyResponse{},
 			},
-			want: 0.1,
+			want: 0.0,
 		},
 		{
 			name: "OK Exists Admin ServiceAccount",
