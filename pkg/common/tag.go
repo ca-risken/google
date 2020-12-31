@@ -9,9 +9,9 @@ const (
 	TagAssetInventory = "asset"
 	// TagServiceAccount tag
 	TagServiceAccount = "serviceAccount"
+	// TagCloudSploit tag
+	TagCloudSploit = "cloudsploit"
 
 	// TagSCC tag
 	// TagSCC = "scc"
-	// TagCloudSploit tag
-	// TagCloudSploit = "cloudsploit"
 )
