@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 	"github.com/CyberAgent/mimosa-google/proto/google"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jinzhu/gorm"
 	"github.com/vikyd/zero"
 )
@@ -150,6 +152,11 @@ func getStatus(s string) google.Status {
 	}
 }
 
+const (
+	cloudAssetDataSourceID  uint32 = 1001
+	cloudSploitDataSourceID uint32 = 1002
+)
+
 func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
@@ -158,10 +165,19 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err != nil {
 		return nil, err
 	}
-	resp, err := g.sqs.sendMsgForGCP(&common.GCPQueueMessage{
+	msg := &common.GCPQueueMessage{
 		GCPID:     data.GCPID,
 		ProjectID: data.ProjectID,
-	})
+	}
+	var resp *sqs.SendMessageOutput
+	switch data.GoogleDataSourceID {
+	case cloudAssetDataSourceID:
+		resp, err = g.sqs.sendMsgForAsset(msg)
+	case cloudSploitDataSourceID:
+		resp, err = g.sqs.sendMsgForCloudSploit(msg)
+	default:
+		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
+	}
 	if err != nil {
 		return nil, err
 	}

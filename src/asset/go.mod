@@ -4,11 +4,11 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.74.0
-	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20201130105221-b9659eb5f70a
-	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20201130105221-b9659eb5f70a
-	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20201225112120-f2059668f7e7
-	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20201225112120-f2059668f7e7
-	github.com/aws/aws-sdk-go v1.36.15
+	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20201228101508-31c3cea3d730
+	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20201228101508-31c3cea3d730
+	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20201231175124-5fd0ac7321c2
+	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20201231175124-5fd0ac7321c2
+	github.com/aws/aws-sdk-go v1.36.18
 	github.com/h2ik/go-sqs-poller/v3 v3.1.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/sirupsen/logrus v1.7.0

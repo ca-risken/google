@@ -23,10 +23,12 @@ export AWS_REGION="ap-northeast-1"
 export SQS_ENDPOINT="http://sqs:9324"
 export ASSET_QUEUE_NAME="google-asset"
 export ASSET_QUEUE_URL="http://sqs:9324/queue/google-asset"
+export CLOUD_SPLOIT_QUEUE_NAME="google-cloudsploit"
+export CLOUD_SPLOIT_QUEUE_URL="http://sqs:9324/queue/google-cloudsploit"
 export GOOGLE_CREDENTIAL_PATH="/path/to/your-credential-file"
-export GOOGLE_SERVICE_ACCOUNT_JSON='{
-  "key": "service-account json credential here..." 
-}'
+export GOOGLE_SERVICE_ACCOUNT_JSON='{"key": "your credential json here..." }'
+export GOOGLE_SERVICE_ACCOUNT_EMAIL="risken@ca-security-hub.iam.gserviceaccount.com"
+export GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="your private key here..."
 
 # gRPC server
 export FINDING_SVC_ADDR="finding:8001"

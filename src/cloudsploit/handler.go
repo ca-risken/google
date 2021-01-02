@@ -13,15 +13,13 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"google.golang.org/api/iterator"
-	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
 type sqsHandler struct {
 	findingClient finding.FindingServiceClient
 	alertClient   alert.AlertServiceClient
 	googleClient  google.GoogleServiceClient
-	gcpClient     gcpServiceClient
+	cloudSploit   cloudSploitServiceClient
 }
 
 func newHandler() *sqsHandler {
@@ -29,13 +27,8 @@ func newHandler() *sqsHandler {
 		findingClient: newFindingClient(),
 		alertClient:   newAlertClient(),
 		googleClient:  newGoogleClient(),
-		gcpClient:     newGCPClient(),
+		cloudSploit:   newCloudSploitClient(),
 	}
-}
-
-type assetFinding struct {
-	Asset     *assetpb.ResourceSearchResult     `json:"asset"`
-	IAMPolicy *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy"`
 }
 
 func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
@@ -55,27 +48,13 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	}
 	scanStatus := s.initScanStatus(gcp)
 
-	// Get cloud asset
-	it := s.gcpClient.listAsset(ctx, gcp.GcpProjectId)
-	for {
-		resource, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
-			return s.updateScanStatusError(ctx, scanStatus, err.Error())
-		}
-		f := assetFinding{Asset: resource}
-		if isUserServiceAccount(resource.AssetType, resource.Name) {
-			email := common.GetShortName(resource.Name)
-			policy, err := s.gcpClient.analyzeServiceAccountPolicy(ctx, gcp.GcpProjectId, email)
-			if err != nil {
-				return s.updateScanStatusError(ctx, scanStatus, err.Error())
-			}
-			f.IAMPolicy = policy
-		}
-		appLogger.Debugf("Got: %+v", resource)
+	// Get cloud sploit
+	result, err := s.cloudSploit.run(ctx, gcp.GcpProjectId)
+	if err != nil {
+		appLogger.Errorf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
+		return err
+	}
+	for _, f := range *result {
 		// Put finding
 		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
@@ -120,18 +99,18 @@ func (s *sqsHandler) initScanStatus(g *google.GCP) *google.PutGCPRequest {
 	}
 }
 
-func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *assetFinding) error {
-	score := scoreAsset(f)
+func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *cloudSploitFinding) error {
+	score := scoreCloudSploit(f)
 	if score == 0.0 {
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
 			Resource: &finding.ResourceForUpsert{
-				ResourceName: common.GetResourceName(gcpProjectID, common.GetShortName(f.Asset.AssetType), common.GetShortName(f.Asset.Name)),
+				ResourceName: common.GetResourceName(gcpProjectID, f.Category, f.Resource),
 				ProjectId:    projectID,
 			},
 		})
 		if err != nil {
-			appLogger.Errorf("Failed to put finding project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+			appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 			return err
 		}
 		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
@@ -140,16 +119,16 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 
 	buf, err := json.Marshal(f)
 	if err != nil {
-		appLogger.Errorf("Failed to marshal user data, project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+		appLogger.Errorf("Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 		return err
 	}
 	// PutFinding
 	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
 		Finding: &finding.FindingForUpsert{
-			Description:      fmt.Sprintf("GCP Cloud Asset: %s", f.Asset.DisplayName),
+			Description:      f.Description,
 			DataSource:       common.AssetDataSource,
-			DataSourceId:     f.Asset.Name,
-			ResourceName:     common.GetResourceName(gcpProjectID, common.GetShortName(f.Asset.AssetType), common.GetShortName(f.Asset.Name)),
+			DataSourceId:     f.DataSourceID,
+			ResourceName:     common.GetResourceName(gcpProjectID, f.Category, common.GetShortName(f.Resource)),
 			ProjectId:        projectID,
 			OriginalScore:    score,
 			OriginalMaxScore: 1.0,
@@ -157,15 +136,13 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		},
 	})
 	if err != nil {
-		appLogger.Errorf("Failed to put finding project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+		appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 		return err
 	}
 	// PutFindingTag
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, common.TagAssetInventory, resp.Finding.FindingId, resp.Finding.ProjectId)
-	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
-		s.tagFinding(ctx, common.TagServiceAccount, resp.Finding.FindingId, resp.Finding.ProjectId)
-	}
+	s.tagFinding(ctx, common.TagCloudSploit, resp.Finding.FindingId, resp.Finding.ProjectId)
+	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -221,37 +198,12 @@ func cutString(input string, cut int) string {
 	return input
 }
 
-const (
-	// Supported asset types: https://cloud.google.com/asset-inventory/docs/supported-asset-types
-	assetTypeServiceAccount        string = "iam.googleapis.com/ServiceAccount"
-	userServiceAccountEmailPattern string = ".iam.gserviceaccount.com"
-
-	// Basic roles: https://cloud.google.com/iam/docs/understanding-roles
-	roleOwner  string = "roles/owner"
-	roleEditor string = "roles/editor"
-)
-
-func isUserServiceAccount(assetType, name string) bool {
-	return assetType == assetTypeServiceAccount && strings.HasSuffix(name, userServiceAccountEmailPattern)
-}
-
-func scoreAsset(f *assetFinding) float32 {
-	if f == nil || f.Asset == nil {
+func scoreCloudSploit(f *cloudSploitFinding) float32 {
+	if strings.ToUpper(f.Status) == "OK" {
 		return 0.0
 	}
-	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
-		if f.IAMPolicy == nil || f.IAMPolicy.MainAnalysis == nil || f.IAMPolicy.MainAnalysis.AnalysisResults == nil {
-			return 0.0
-		}
-		for _, p := range f.IAMPolicy.MainAnalysis.AnalysisResults {
-			if p.IamBinding == nil {
-				continue
-			}
-			if p.IamBinding.Role == roleOwner || p.IamBinding.Role == roleEditor {
-				return 0.8 // the serviceAccount has Admin role.
-			}
-		}
+	if f.Resource == resourceUnknown {
 		return 0.1
 	}
-	return 0.0
+	return 0.3
 }
