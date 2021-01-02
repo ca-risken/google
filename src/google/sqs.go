@@ -15,16 +15,19 @@ type sqsConfig struct {
 	AWSRegion   string `envconfig:"aws_region" default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://localhost:9324"`
 
-	AssetQueueURL string `split_words:"true" required:"true"`
+	AssetQueueURL       string `split_words:"true" required:"true"`
+	CloudSploitQueueURL string `split_words:"true" required:"true"`
 }
 
 type sqsAPI interface {
-	sendMsgForGCP(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForAsset(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
 }
 
 type sqsClient struct {
-	svc           *sqs.SQS
-	assetQueueURL string
+	svc                 *sqs.SQS
+	assetQueueURL       string
+	cloudSploitQueueURL string
 }
 
 func newSQSClient() *sqsClient {
@@ -39,20 +42,28 @@ func newSQSClient() *sqsClient {
 	})
 
 	return &sqsClient{
-		svc:           session,
-		assetQueueURL: conf.AssetQueueURL,
+		svc:                 session,
+		assetQueueURL:       conf.AssetQueueURL,
+		cloudSploitQueueURL: conf.CloudSploitQueueURL,
 	}
 }
 
-func (s *sqsClient) sendMsgForGCP(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+func (s *sqsClient) sendMsgForAsset(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(s.assetQueueURL, msg)
+}
+
+func (s *sqsClient) sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(s.cloudSploitQueueURL, msg)
+}
+
+func (s *sqsClient) sendMsgForGCP(queueURL string, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
 	buf, err := json.Marshal(msg)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse message, err=%+v", err)
 	}
-	// TODO: Asse or .... handling
 	resp, err := s.svc.SendMessage(&sqs.SendMessageInput{
 		MessageBody:  aws.String(string(buf)),
-		QueueUrl:     aws.String(s.assetQueueURL),
+		QueueUrl:     aws.String(queueURL),
 		DelaySeconds: aws.Int64(1),
 	})
 	if err != nil {

@@ -27,6 +27,7 @@ services:
       - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
       - SQS_ENDPOINT=${SQS_ENDPOINT}
       - ASSET_QUEUE_URL=${ASSET_QUEUE_URL}
+      - CLOUD_SPLOIT_QUEUE_URL=${CLOUD_SPLOIT_QUEUE_URL}
     ports:
       - "11001:11001"
 
@@ -55,6 +56,32 @@ services:
       - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON}
     ports:
       - "11002:11002"
+
+  cloudsploit:
+    networks:
+      - google
+      - local-shared
+    build:
+      context: src/cloudsploit
+      args:
+        - GITHUB_USER=${GITHUB_USER}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    environment:
+      - DEBUG=${DEBUG}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - SQS_ENDPOINT=${SQS_ENDPOINT}
+      - CLOUD_SPLOIT_QUEUE_NAME=${CLOUD_SPLOIT_QUEUE_NAME}
+      - CLOUD_SPLOIT_QUEUE_URL=${CLOUD_SPLOIT_QUEUE_URL}
+      - FINDING_SVC_ADDR=${FINDING_SVC_ADDR}
+      - ALERT_SVC_ADDR=${ALERT_SVC_ADDR}
+      - GOOGLE_SVC_ADDR=${GOOGLE_SVC_ADDR}
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY}
+    ports:
+      - "11003:11003"
 
 networks:
   google:

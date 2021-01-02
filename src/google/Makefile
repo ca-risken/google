@@ -53,7 +53,7 @@ delete-gcp:
 invoke-scan-gcp:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1001, "gcp_id":1001}' \
+		-d '{"project_id":1001, "gcp_id":1002}' \
 		localhost:11001 google.google.GoogleService.InvokeScanGCP
 
 .PHONY: invoke-scan-all

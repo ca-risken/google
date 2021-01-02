@@ -30,6 +30,7 @@ ENV PORT= \
     AWS_SESSION_TOKEN= \
     SQS_ENDPOINT= \
     ASSET_QUEUE_URL= \
+    CLOUD_SPLOIT_QUEUE_URL= \
     TZ=Asia/Tokyo
 WORKDIR /usr/local/google
 ENTRYPOINT ["/usr/local/bin/env-injector"]
