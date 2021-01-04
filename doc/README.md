@@ -6,16 +6,23 @@
 - [google/entity.proto](#google/entity.proto)
     - [Empty](#google.google.Empty)
     - [GCP](#google.google.GCP)
+    - [GCPDataSource](#google.google.GCPDataSource)
+    - [GCPDataSourceForUpsert](#google.google.GCPDataSourceForUpsert)
     - [GCPForUpsert](#google.google.GCPForUpsert)
     - [GoogleDataSource](#google.google.GoogleDataSource)
   
     - [Status](#google.google.Status)
   
 - [google/service.proto](#google/service.proto)
+    - [AttachGCPDataSourceRequest](#google.google.AttachGCPDataSourceRequest)
+    - [AttachGCPDataSourceResponse](#google.google.AttachGCPDataSourceResponse)
     - [DeleteGCPRequest](#google.google.DeleteGCPRequest)
+    - [DetachGCPDataSourceRequest](#google.google.DetachGCPDataSourceRequest)
     - [GetGCPRequest](#google.google.GetGCPRequest)
     - [GetGCPResponse](#google.google.GetGCPResponse)
     - [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest)
+    - [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest)
+    - [ListGCPDataSourceResponse](#google.google.ListGCPDataSourceResponse)
     - [ListGCPRequest](#google.google.ListGCPRequest)
     - [ListGCPResponse](#google.google.ListGCPResponse)
     - [ListGoogleDataSourceRequest](#google.google.ListGoogleDataSourceRequest)
@@ -55,16 +62,56 @@ GCP
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | gcp_id | [uint32](#uint32) |  |  |
-| google_data_source_id | [uint32](#uint32) |  |  |
 | name | [string](#string) |  |  |
 | project_id | [uint32](#uint32) |  |  |
-| gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
+| created_at | [int64](#int64) |  |  |
+| updated_at | [int64](#int64) |  |  |
+
+
+
+
+
+
+<a name="google.google.GCPDataSource"></a>
+
+### GCPDataSource
+GCPDataSource
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| gcp_id | [uint32](#uint32) |  | gcp_data_source.gcp_id |
+| google_data_source_id | [uint32](#uint32) |  | gcp_data_source.google_data_source_id |
+| project_id | [uint32](#uint32) |  | gcp_data_source.project_id |
+| status | [Status](#google.google.Status) |  | gcp_data_source.status |
+| status_detail | [string](#string) |  | gcp_data_source.status_detail |
+| scan_at | [int64](#int64) |  | gcp_data_source.scan_at |
+| created_at | [int64](#int64) |  | gcp_data_source.created_at |
+| updated_at | [int64](#int64) |  | gcp_data_source.updated_at |
+| name | [string](#string) |  | google_data_source.name |
+| description | [string](#string) |  | google_data_source.description |
+| max_score | [float](#float) |  | google_data_source.max_score |
+
+
+
+
+
+
+<a name="google.google.GCPDataSourceForUpsert"></a>
+
+### GCPDataSourceForUpsert
+GCPDataSourceForUpsert
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| gcp_id | [uint32](#uint32) |  |  |
+| google_data_source_id | [uint32](#uint32) |  |  |
+| project_id | [uint32](#uint32) |  |  |
 | status | [Status](#google.google.Status) |  |  |
 | status_detail | [string](#string) |  |  |
 | scan_at | [int64](#int64) |  |  |
-| created_at | [int64](#int64) |  |  |
-| updated_at | [int64](#int64) |  |  |
 
 
 
@@ -80,14 +127,9 @@ GCPForUpsert
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | gcp_id | [uint32](#uint32) |  | Unique key for entity. |
-| google_data_source_id | [uint32](#uint32) |  |  |
 | name | [string](#string) |  |  |
 | project_id | [uint32](#uint32) |  |  |
-| gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
-| status | [Status](#google.google.Status) |  |  |
-| status_detail | [string](#string) |  |  |
-| scan_at | [int64](#int64) |  |  |
 
 
 
@@ -145,6 +187,37 @@ Status
 
 
 
+<a name="google.google.AttachGCPDataSourceRequest"></a>
+
+### AttachGCPDataSourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [uint32](#uint32) |  |  |
+| gcp_data_source | [GCPDataSourceForUpsert](#google.google.GCPDataSourceForUpsert) |  |  |
+
+
+
+
+
+
+<a name="google.google.AttachGCPDataSourceResponse"></a>
+
+### AttachGCPDataSourceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| gcp_data_source | [GCPDataSource](#google.google.GCPDataSource) |  |  |
+
+
+
+
+
+
 <a name="google.google.DeleteGCPRequest"></a>
 
 ### DeleteGCPRequest
@@ -155,6 +228,23 @@ Status
 | ----- | ---- | ----- | ----------- |
 | project_id | [uint32](#uint32) |  |  |
 | gcp_id | [uint32](#uint32) |  |  |
+
+
+
+
+
+
+<a name="google.google.DetachGCPDataSourceRequest"></a>
+
+### DetachGCPDataSourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [uint32](#uint32) |  |  |
+| gcp_id | [uint32](#uint32) |  |  |
+| google_data_source_id | [uint32](#uint32) |  |  |
 
 
 
@@ -202,6 +292,38 @@ Status
 | ----- | ---- | ----- | ----------- |
 | project_id | [uint32](#uint32) |  |  |
 | gcp_id | [uint32](#uint32) |  |  |
+| google_data_source_id | [uint32](#uint32) |  |  |
+
+
+
+
+
+
+<a name="google.google.ListGCPDataSourceRequest"></a>
+
+### ListGCPDataSourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [uint32](#uint32) |  |  |
+| gcp_id | [uint32](#uint32) |  |  |
+
+
+
+
+
+
+<a name="google.google.ListGCPDataSourceResponse"></a>
+
+### ListGCPDataSourceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| gcp_data_source | [GCPDataSource](#google.google.GCPDataSource) | repeated |  |
 
 
 
@@ -217,8 +339,8 @@ Status
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | project_id | [uint32](#uint32) |  |  |
-| google_data_source_id | [uint32](#uint32) |  |  |
 | gcp_id | [uint32](#uint32) |  |  |
+| gcp_project_id | [string](#string) |  |  |
 
 
 
@@ -320,6 +442,9 @@ Status
 | GetGCP | [GetGCPRequest](#google.google.GetGCPRequest) | [GetGCPResponse](#google.google.GetGCPResponse) |  |
 | PutGCP | [PutGCPRequest](#google.google.PutGCPRequest) | [PutGCPResponse](#google.google.PutGCPResponse) |  |
 | DeleteGCP | [DeleteGCPRequest](#google.google.DeleteGCPRequest) | [Empty](#google.google.Empty) |  |
+| ListGCPDataSource | [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest) | [ListGCPDataSourceResponse](#google.google.ListGCPDataSourceResponse) | GCP DataSource |
+| AttachGCPDataSource | [AttachGCPDataSourceRequest](#google.google.AttachGCPDataSourceRequest) | [AttachGCPDataSourceResponse](#google.google.AttachGCPDataSourceResponse) |  |
+| DetachGCPDataSource | [DetachGCPDataSourceRequest](#google.google.DetachGCPDataSourceRequest) | [Empty](#google.google.Empty) |  |
 | InvokeScanGCP | [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest) | [Empty](#google.google.Empty) | Scan
 
 For ondeamnd |

@@ -12,14 +12,21 @@ type GoogleDataSource struct {
 	UpdatedAt          time.Time
 }
 
-// GoogleGCP entity
-type GoogleGCP struct {
+// GCP entity
+type GCP struct {
+	GCPID        uint32 `gorm:"primary_key column:gcp_id"`
+	Name         string
+	ProjectID    uint32
+	GCPProjectID string `gorm:"column:gcp_project_id"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// GCPDataSource entity
+type GCPDataSource struct {
 	GCPID              uint32 `gorm:"primary_key column:gcp_id"`
-	GoogleDataSourceID uint32
-	Name               string
+	GoogleDataSourceID uint32 `gorm:"primary_key"`
 	ProjectID          uint32
-	GCPOrganizationID  string `gorm:"column:gcp_organization_id"`
-	GCPProjectID       string `gorm:"column:gcp_project_id"`
 	Status             string
 	StatusDetail       string
 	ScanAt             time.Time
