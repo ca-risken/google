@@ -53,11 +53,16 @@ func TestValidate_ListGCPRequest(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			input: &ListGCPRequest{ProjectId: 1, GoogleDataSourceId: 1, GcpId: 1},
+			input: &ListGCPRequest{ProjectId: 1, GcpId: 1, GcpProjectId: "pj"},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &ListGCPRequest{GoogleDataSourceId: 1, GcpId: 1},
+			input:   &ListGCPRequest{ProjectId: 1, GcpId: 1, GcpProjectId: stringLength129},
+			wantErr: true,
+		},
+		{
+			name:    "NG Length(gcp_project_id)",
+			input:   &ListGCPRequest{GcpId: 1, GcpProjectId: "pj"},
 			wantErr: true,
 		},
 	}
@@ -115,7 +120,7 @@ func TestValidate_PutGCPRequest(t *testing.T) {
 		{
 			name: "OK",
 			input: &PutGCPRequest{ProjectId: 1, Gcp: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpProjectId: "1",
+				Name: "name", ProjectId: 1, GcpProjectId: "1",
 			}},
 		},
 		{
@@ -126,7 +131,7 @@ func TestValidate_PutGCPRequest(t *testing.T) {
 		{
 			name: "NG Invalid project_id",
 			input: &PutGCPRequest{ProjectId: 999, Gcp: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpProjectId: "1",
+				Name: "name", ProjectId: 1, GcpProjectId: "1",
 			}},
 			wantErr: true,
 		},
@@ -176,6 +181,110 @@ func TestValidate_DeleteGCPRequest(t *testing.T) {
 	}
 }
 
+func TestValidate_ListGCPDataSourceRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *ListGCPDataSourceRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &ListGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &ListGCPDataSourceRequest{GcpId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_AttachGCPDataSourceRequest(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *AttachGCPDataSourceRequest
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &AttachGCPDataSourceRequest{ProjectId: 1, GcpDataSource: &GCPDataSourceForUpsert{
+				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			}},
+		},
+		{
+			name:    "NG No GcpDataSource param",
+			input:   &AttachGCPDataSourceRequest{ProjectId: 1},
+			wantErr: true,
+		},
+		{
+			name: "NG Invalid project_id",
+			input: &AttachGCPDataSourceRequest{ProjectId: 999, GcpDataSource: &GCPDataSourceForUpsert{
+				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			}},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_DetachGCPDataSourceRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *DetachGCPDataSourceRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &DetachGCPDataSourceRequest{GcpId: 1, GoogleDataSourceId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(gcp_id)",
+			input:   &DetachGCPDataSourceRequest{ProjectId: 1, GoogleDataSourceId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(google_data_source_id)",
+			input:   &DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_InvokeScanGCPRequest(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -184,16 +293,21 @@ func TestValidate_InvokeScanGCPRequest(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			input: &InvokeScanGCPRequest{ProjectId: 1, GcpId: 1},
+			input: &InvokeScanGCPRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &InvokeScanGCPRequest{GcpId: 1},
+			input:   &InvokeScanGCPRequest{GcpId: 1, GoogleDataSourceId: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(gcp_id)",
-			input:   &InvokeScanGCPRequest{ProjectId: 1},
+			input:   &InvokeScanGCPRequest{ProjectId: 1, GoogleDataSourceId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(google_data_source_id)",
+			input:   &InvokeScanGCPRequest{ProjectId: 1, GcpId: 1},
 			wantErr: true,
 		},
 	}
@@ -210,7 +324,6 @@ func TestValidate_InvokeScanGCPRequest(t *testing.T) {
 }
 
 func TestValidate_GCPForUpsert(t *testing.T) {
-	now := time.Now()
 	cases := []struct {
 		name    string
 		input   *GCPForUpsert
@@ -219,82 +332,114 @@ func TestValidate_GCPForUpsert(t *testing.T) {
 		{
 			name: "OK",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
 			},
 		},
 		{
 			name: "OK minimize",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
+				Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
 			},
-		},
-		{
-			name: "NG Required(google_data_source_id)",
-			input: &GCPForUpsert{
-				Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
-			},
-			wantErr: true,
 		},
 		{
 			name: "NG Required(name)",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, ProjectId: 1, GcpProjectId: "my-pj",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(name)",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: stringLength65, ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, Name: stringLength65, ProjectId: 1, GcpProjectId: "my-pj",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(project_id)",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, Name: "name", GcpProjectId: "my-pj",
 			},
 			wantErr: true,
 		},
 		{
-			name: "NG Length(gcp_organization_id)",
+			name: "NG Required(gcp_project_id)",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: stringLength129, GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Length(gcp_project_id)",
-			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, Name: "name", ProjectId: 1,
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(gcp_project_id)",
 			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: stringLength129, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: stringLength129,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_GCPDataSourceForUpsert(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *GCPDataSourceForUpsert
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+		},
+		{
+			name: "OK minimize",
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1,
+			},
+		},
+		{
+			name: "NG Required(google_data_source_id)",
+			input: &GCPDataSourceForUpsert{
+				ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(project_id)",
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(status_detail)",
-			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Min(scan_at)",
-			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime19691231T235959,
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime19691231T235959,
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Max(scan_at)",
-			input: &GCPForUpsert{
-				GoogleDataSourceId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: "my-org", GcpProjectId: "my-pj", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
 			},
 			wantErr: true,
 		},

@@ -16,6 +16,13 @@ service GoogleService {
   rpc PutGCP(PutGCPRequest) returns (PutGCPResponse);
   rpc DeleteGCP(DeleteGCPRequest) returns (Empty);
 
+  // GCP DataSource
+  rpc ListGCPDataSource(ListGCPDataSourceRequest)
+      returns (ListGCPDataSourceResponse);
+  rpc AttachGCPDataSource(AttachGCPDataSourceRequest)
+      returns (AttachGCPDataSourceResponse);
+  rpc DetachGCPDataSource(DetachGCPDataSourceRequest) returns (Empty);
+
   // Scan
   rpc InvokeScanGCP(InvokeScanGCPRequest) returns (Empty); // For ondeamnd
   rpc InvokeScanAll(Empty) returns (Empty);                // For scheduled
@@ -32,8 +39,8 @@ message ListGoogleDataSourceResponse {
 
 message ListGCPRequest {
   uint32 project_id = 1;
-  uint32 google_data_source_id = 2;
-  uint32 gcp_id = 3;
+  uint32 gcp_id = 2;
+  string gcp_project_id = 3;
 }
 
 message ListGCPResponse { repeated GCP gcp = 1; }
@@ -57,7 +64,30 @@ message DeleteGCPRequest {
   uint32 gcp_id = 2;
 }
 
+message ListGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+}
+
+message ListGCPDataSourceResponse {
+  repeated GCPDataSource gcp_data_source = 1;
+}
+
+message AttachGCPDataSourceRequest {
+  uint32 project_id = 1;
+  GCPDataSourceForUpsert gcp_data_source = 2;
+}
+
+message AttachGCPDataSourceResponse { GCPDataSource gcp_data_source = 1; }
+
+message DetachGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
+}
+
 message InvokeScanGCPRequest {
   uint32 project_id = 1;
   uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
 }
