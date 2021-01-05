@@ -15,11 +15,17 @@ type googleRepoInterface interface {
 	// google_data_source
 	ListGoogleDataSource(googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error)
 
-	// google_gcp
-	ListGCP(projectID, googleDataSourceID, gcpID uint32) (*[]common.GoogleGCP, error)
-	UpsertGCP(data *google.GCPForUpsert) (*common.GoogleGCP, error)
+	// gcp
+	ListGCP(projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error)
+	GetGCP(projectID, gcpID uint32) (*common.GCP, error)
+	UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, error)
 	DeleteGCP(projectID uint32, gcpID uint32) error
-	GetGCP(projectID, gcpID uint32) (*common.GoogleGCP, error)
+
+	// gcp_data_source
+	ListGCPDataSource(projectID, gcpID uint32) (*[]gcpDataSource, error)
+	GetGCPDataSource(projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error)
+	UpsertGCPDataSource(gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error)
+	DeleteGCPDataSource(projectID, gcpID, googleDataSourceID uint32) error
 }
 
 type googleRepository struct {

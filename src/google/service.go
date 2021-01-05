@@ -35,7 +35,7 @@ func convertGoogleDataSource(data *common.GoogleDataSource) *google.GoogleDataSo
 		Description:        data.Description,
 		MaxScore:           data.MaxScore,
 		CreatedAt:          data.CreatedAt.Unix(),
-		UpdatedAt:          data.CreatedAt.Unix(),
+		UpdatedAt:          data.UpdatedAt.Unix(),
 	}
 }
 
@@ -57,24 +57,17 @@ func (g *googleService) ListGoogleDataSource(ctx context.Context, req *google.Li
 	return &data, nil
 }
 
-func convertGoogleGCP(data *common.GoogleGCP) *google.GCP {
+func convertGCP(data *common.GCP) *google.GCP {
 	if data == nil {
 		return &google.GCP{}
 	}
 	gcp := google.GCP{
-		GcpId:              data.GCPID,
-		GoogleDataSourceId: data.GoogleDataSourceID,
-		Name:               data.Name,
-		ProjectId:          data.ProjectID,
-		GcpOrganizationId:  data.GCPOrganizationID,
-		GcpProjectId:       data.GCPProjectID,
-		Status:             getStatus(data.Status),
-		StatusDetail:       data.StatusDetail,
-		CreatedAt:          data.CreatedAt.Unix(),
-		UpdatedAt:          data.CreatedAt.Unix(),
-	}
-	if !zero.IsZeroVal(data.ScanAt) {
-		gcp.ScanAt = data.ScanAt.Unix()
+		GcpId:        data.GCPID,
+		Name:         data.Name,
+		ProjectId:    data.ProjectID,
+		GcpProjectId: data.GCPProjectID,
+		CreatedAt:    data.CreatedAt.Unix(),
+		UpdatedAt:    data.UpdatedAt.Unix(),
 	}
 	return &gcp
 }
@@ -83,7 +76,7 @@ func (g *googleService) ListGCP(ctx context.Context, req *google.ListGCPRequest)
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := g.repository.ListGCP(req.ProjectId, req.GoogleDataSourceId, req.GcpId)
+	list, err := g.repository.ListGCP(req.ProjectId, req.GcpId, req.GcpProjectId)
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return &google.ListGCPResponse{}, nil
@@ -92,7 +85,7 @@ func (g *googleService) ListGCP(ctx context.Context, req *google.ListGCPRequest)
 	}
 	data := google.ListGCPResponse{}
 	for _, d := range *list {
-		data.Gcp = append(data.Gcp, convertGoogleGCP(&d))
+		data.Gcp = append(data.Gcp, convertGCP(&d))
 	}
 	return &data, nil
 }
@@ -108,7 +101,7 @@ func (g *googleService) GetGCP(ctx context.Context, req *google.GetGCPRequest) (
 		}
 		return nil, err
 	}
-	return &google.GetGCPResponse{Gcp: convertGoogleGCP(data)}, nil
+	return &google.GetGCPResponse{Gcp: convertGCP(data)}, nil
 }
 
 func (g *googleService) PutGCP(ctx context.Context, req *google.PutGCPRequest) (*google.PutGCPResponse, error) {
@@ -119,7 +112,7 @@ func (g *googleService) PutGCP(ctx context.Context, req *google.PutGCPRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return &google.PutGCPResponse{Gcp: convertGoogleGCP(registerd)}, nil
+	return &google.PutGCPResponse{Gcp: convertGCP(registerd)}, nil
 }
 
 func (g *googleService) DeleteGCP(ctx context.Context, req *google.DeleteGCPRequest) (*google.Empty, error) {
@@ -131,6 +124,47 @@ func (g *googleService) DeleteGCP(ctx context.Context, req *google.DeleteGCPRequ
 		return nil, err
 	}
 	return &google.Empty{}, nil
+}
+
+func (g *googleService) ListGCPDataSource(ctx context.Context, req *google.ListGCPDataSourceRequest) (*google.ListGCPDataSourceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	list, err := g.repository.ListGCPDataSource(req.ProjectId, req.GcpId)
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return &google.ListGCPDataSourceResponse{}, nil
+		}
+		return nil, err
+	}
+	data := google.ListGCPDataSourceResponse{}
+	for _, d := range *list {
+		data.GcpDataSource = append(data.GcpDataSource, convertGCPDataSource(&d))
+	}
+	return &data, nil
+}
+
+func convertGCPDataSource(data *gcpDataSource) *google.GCPDataSource {
+	if data == nil {
+		return &google.GCPDataSource{}
+	}
+	gcp := google.GCPDataSource{
+		GcpId:              data.GCPID,
+		GoogleDataSourceId: data.GoogleDataSourceID,
+		ProjectId:          data.ProjectID,
+		Status:             getStatus(data.Status),
+		StatusDetail:       data.StatusDetail,
+		CreatedAt:          data.CreatedAt.Unix(),
+		UpdatedAt:          data.UpdatedAt.Unix(),
+		Name:               data.Name,         // google_data_source.name
+		MaxScore:           data.MaxScore,     // google_data_source.max_score
+		Description:        data.Description,  // google_data_source.description
+		GcpProjectId:       data.GCPProjectID, // gcp.gcp_project_id
+	}
+	if !zero.IsZeroVal(data.ScanAt) {
+		gcp.ScanAt = data.ScanAt.Unix()
+	}
+	return &gcp
 }
 
 func getStatus(s string) google.Status {
@@ -152,6 +186,42 @@ func getStatus(s string) google.Status {
 	}
 }
 
+func (g *googleService) GetGCPDataSource(ctx context.Context, req *google.GetGCPDataSourceRequest) (*google.GetGCPDataSourceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return &google.GetGCPDataSourceResponse{}, nil
+		}
+		return nil, err
+	}
+	return &google.GetGCPDataSourceResponse{GcpDataSource: convertGCPDataSource(data)}, nil
+}
+
+func (g *googleService) AttachGCPDataSource(ctx context.Context, req *google.AttachGCPDataSourceRequest) (*google.AttachGCPDataSourceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	registerd, err := g.repository.UpsertGCPDataSource(req.GcpDataSource)
+	if err != nil {
+		return nil, err
+	}
+	return &google.AttachGCPDataSourceResponse{GcpDataSource: convertGCPDataSource(registerd)}, nil
+}
+
+func (g *googleService) DetachGCPDataSource(ctx context.Context, req *google.DetachGCPDataSourceRequest) (*google.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	err := g.repository.DeleteGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
+	if err != nil {
+		return nil, err
+	}
+	return &google.Empty{}, nil
+}
+
 const (
 	cloudAssetDataSourceID  uint32 = 1001
 	cloudSploitDataSourceID uint32 = 1002
@@ -161,13 +231,14 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	data, err := g.repository.GetGCP(req.ProjectId, req.GcpId)
+	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
 		return nil, err
 	}
 	msg := &common.GCPQueueMessage{
-		GCPID:     data.GCPID,
-		ProjectID: data.ProjectID,
+		GCPID:              data.GCPID,
+		ProjectID:          data.ProjectID,
+		GoogleDataSourceID: data.GoogleDataSourceID,
 	}
 	var resp *sqs.SendMessageOutput
 	switch data.GoogleDataSourceID {
@@ -186,7 +257,7 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 }
 
 func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*google.Empty, error) {
-	list, err := g.repository.ListGCP(0, 0, 0)
+	list, err := g.repository.ListGCPDataSource(0, 0)
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return &google.Empty{}, nil
@@ -194,12 +265,10 @@ func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*go
 		return nil, err
 	}
 	for _, gcp := range *list {
-		if zero.IsZeroVal(gcp.ProjectID) || zero.IsZeroVal(gcp.GoogleDataSourceID) {
-			continue
-		}
 		if _, err := g.InvokeScanGCP(ctx, &google.InvokeScanGCPRequest{
-			GcpId:     gcp.GCPID,
-			ProjectId: gcp.ProjectID,
+			GcpId:              gcp.GCPID,
+			ProjectId:          gcp.ProjectID,
+			GoogleDataSourceId: gcp.GoogleDataSourceID,
 		}); err != nil {
 			// エラーログはいて握りつぶす（すべてのスキャナ登録しきる）
 			appLogger.Errorf("InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)

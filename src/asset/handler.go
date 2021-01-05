@@ -48,9 +48,10 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	}
 
 	ctx := context.Background()
-	gcp, err := s.getGCP(ctx, message.ProjectID, message.GCPID)
+	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
 	if err != nil {
-		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
+		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 		return err
 	}
 	scanStatus := s.initScanStatus(gcp)
@@ -63,7 +64,8 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 			break
 		}
 		if err != nil {
-			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
+			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 		f := assetFinding{Asset: resource}
@@ -78,7 +80,8 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		appLogger.Debugf("Got: %+v", resource)
 		// Put finding
 		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
-			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, err=%+v", message.ProjectID, message.GCPID, err)
+			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 	}
@@ -89,30 +92,28 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	return s.analyzeAlert(ctx, message.ProjectID)
 }
 
-func (s *sqsHandler) getGCP(ctx context.Context, projectID, gcpID uint32) (*google.GCP, error) {
-	data, err := s.googleClient.GetGCP(ctx, &google.GetGCPRequest{
-		ProjectId: projectID,
-		GcpId:     gcpID,
+func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
+	data, err := s.googleClient.GetGCPDataSource(ctx, &google.GetGCPDataSourceRequest{
+		ProjectId:          projectID,
+		GcpId:              gcpID,
+		GoogleDataSourceId: googleDataSourceID,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if data == nil || data.Gcp == nil {
-		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d", projectID, gcpID)
+	if data == nil || data.GcpDataSource == nil {
+		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
 	}
-	return data.Gcp, nil
+	return data.GcpDataSource, nil
 }
 
-func (s *sqsHandler) initScanStatus(g *google.GCP) *google.PutGCPRequest {
-	return &google.PutGCPRequest{
+func (s *sqsHandler) initScanStatus(g *google.GCPDataSource) *google.AttachGCPDataSourceRequest {
+	return &google.AttachGCPDataSourceRequest{
 		ProjectId: g.ProjectId,
-		Gcp: &google.GCPForUpsert{
+		GcpDataSource: &google.GCPDataSourceForUpsert{
 			GcpId:              g.GcpId,
 			GoogleDataSourceId: g.GoogleDataSourceId,
-			Name:               g.Name,
 			ProjectId:          g.ProjectId,
-			GcpOrganizationId:  g.GcpOrganizationId,
-			GcpProjectId:       g.GcpProjectId,
 			ScanAt:             time.Now().Unix(),
 			Status:             google.Status_UNKNOWN, // After scan, will be updated
 			StatusDetail:       "",
@@ -185,25 +186,25 @@ func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint6
 	return nil
 }
 
-func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.PutGCPRequest, statusDetail string) error {
-	putData.Gcp.Status = google.Status_ERROR
+func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
+	putData.GcpDataSource.Status = google.Status_ERROR
 	statusDetail = cutString(statusDetail, 200)
-	putData.Gcp.StatusDetail = statusDetail
+	putData.GcpDataSource.StatusDetail = statusDetail
 	return s.updateScanStatus(ctx, putData)
 }
 
-func (s *sqsHandler) updateScanStatusSuccess(ctx context.Context, putData *google.PutGCPRequest) error {
-	putData.Gcp.Status = google.Status_OK
-	putData.Gcp.StatusDetail = ""
+func (s *sqsHandler) updateScanStatusSuccess(ctx context.Context, putData *google.AttachGCPDataSourceRequest) error {
+	putData.GcpDataSource.Status = google.Status_OK
+	putData.GcpDataSource.StatusDetail = ""
 	return s.updateScanStatus(ctx, putData)
 }
 
-func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.PutGCPRequest) error {
-	resp, err := s.googleClient.PutGCP(ctx, putData)
+func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.AttachGCPDataSourceRequest) error {
+	resp, err := s.googleClient.AttachGCPDataSource(ctx, putData)
 	if err != nil {
 		return err
 	}
-	appLogger.Infof("Success to update GCP status, response=%+v", resp)
+	appLogger.Infof("Success to update GCP DataSource status, response=%+v", resp)
 	return nil
 }
 
