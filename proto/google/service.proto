@@ -19,7 +19,7 @@ service GoogleService {
   // GCP DataSource
   rpc ListGCPDataSource(ListGCPDataSourceRequest)
       returns (ListGCPDataSourceResponse);
-  rpc GetGCPDataSource(ListGCPDataSourceRequest)
+  rpc GetGCPDataSource(GetGCPDataSourceRequest)
       returns (GetGCPDataSourceResponse);
   rpc AttachGCPDataSource(AttachGCPDataSourceRequest)
       returns (AttachGCPDataSourceResponse);
