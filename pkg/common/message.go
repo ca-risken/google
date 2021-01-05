@@ -11,15 +11,13 @@ const (
 	AssetDataSource = "google:asset"
 	// CloudSploitDataSource is the label for Aqua Cloud Sploit.
 	CloudSploitDataSource = "google:cloudsploit"
-
-	// SCCDataSource is the label for Security Command Center.
-	// SCCDataSource = "google:scc"
 )
 
 // GCPQueueMessage is the message for SQS queue
 type GCPQueueMessage struct {
-	GCPID     uint32 `json:"gcp_id"`
-	ProjectID uint32 `json:"project_id"`
+	GCPID              uint32 `json:"gcp_id"`
+	ProjectID          uint32 `json:"project_id"`
+	GoogleDataSourceID uint32 `json:"google_data_source_id"`
 }
 
 // Validate is the validation to GuardDutyMessage
@@ -27,6 +25,7 @@ func (g *GCPQueueMessage) Validate() error {
 	return validation.ValidateStruct(g,
 		validation.Field(&g.GCPID, validation.Required),
 		validation.Field(&g.ProjectID, validation.Required),
+		validation.Field(&g.GoogleDataSourceID, validation.Required),
 	)
 }
 
