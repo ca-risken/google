@@ -477,7 +477,7 @@ Status
 | PutGCP | [PutGCPRequest](#google.google.PutGCPRequest) | [PutGCPResponse](#google.google.PutGCPResponse) |  |
 | DeleteGCP | [DeleteGCPRequest](#google.google.DeleteGCPRequest) | [Empty](#google.google.Empty) |  |
 | ListGCPDataSource | [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest) | [ListGCPDataSourceResponse](#google.google.ListGCPDataSourceResponse) | GCP DataSource |
-| GetGCPDataSource | [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest) | [GetGCPDataSourceResponse](#google.google.GetGCPDataSourceResponse) |  |
+| GetGCPDataSource | [GetGCPDataSourceRequest](#google.google.GetGCPDataSourceRequest) | [GetGCPDataSourceResponse](#google.google.GetGCPDataSourceResponse) |  |
 | AttachGCPDataSource | [AttachGCPDataSourceRequest](#google.google.AttachGCPDataSourceRequest) | [AttachGCPDataSourceResponse](#google.google.AttachGCPDataSourceResponse) |  |
 | DetachGCPDataSource | [DetachGCPDataSourceRequest](#google.google.DetachGCPDataSourceRequest) | [Empty](#google.google.Empty) |  |
 | InvokeScanGCP | [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest) | [Empty](#google.google.Empty) | Scan
