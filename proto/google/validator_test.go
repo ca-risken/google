@@ -209,6 +209,44 @@ func TestValidate_ListGCPDataSourceRequest(t *testing.T) {
 	}
 }
 
+func TestValidate_GetGCPDataSourceRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *GetGCPDataSourceRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &GetGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &GetGCPDataSourceRequest{GcpId: 1, GoogleDataSourceId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(gcp_id)",
+			input:   &GetGCPDataSourceRequest{ProjectId: 1, GoogleDataSourceId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(google_data_source_id)",
+			input:   &GetGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_AttachGCPDataSourceRequest(t *testing.T) {
 	now := time.Now()
 	cases := []struct {

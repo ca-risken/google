@@ -18,6 +18,8 @@
     - [AttachGCPDataSourceResponse](#google.google.AttachGCPDataSourceResponse)
     - [DeleteGCPRequest](#google.google.DeleteGCPRequest)
     - [DetachGCPDataSourceRequest](#google.google.DetachGCPDataSourceRequest)
+    - [GetGCPDataSourceRequest](#google.google.GetGCPDataSourceRequest)
+    - [GetGCPDataSourceResponse](#google.google.GetGCPDataSourceResponse)
     - [GetGCPRequest](#google.google.GetGCPRequest)
     - [GetGCPResponse](#google.google.GetGCPResponse)
     - [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest)
@@ -251,6 +253,38 @@ Status
 
 
 
+<a name="google.google.GetGCPDataSourceRequest"></a>
+
+### GetGCPDataSourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [uint32](#uint32) |  |  |
+| gcp_id | [uint32](#uint32) |  |  |
+| google_data_source_id | [uint32](#uint32) |  |  |
+
+
+
+
+
+
+<a name="google.google.GetGCPDataSourceResponse"></a>
+
+### GetGCPDataSourceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| gcp_data_source | [GCPDataSource](#google.google.GCPDataSource) |  |  |
+
+
+
+
+
+
 <a name="google.google.GetGCPRequest"></a>
 
 ### GetGCPRequest
@@ -443,6 +477,7 @@ Status
 | PutGCP | [PutGCPRequest](#google.google.PutGCPRequest) | [PutGCPResponse](#google.google.PutGCPResponse) |  |
 | DeleteGCP | [DeleteGCPRequest](#google.google.DeleteGCPRequest) | [Empty](#google.google.Empty) |  |
 | ListGCPDataSource | [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest) | [ListGCPDataSourceResponse](#google.google.ListGCPDataSourceResponse) | GCP DataSource |
+| GetGCPDataSource | [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest) | [GetGCPDataSourceResponse](#google.google.GetGCPDataSourceResponse) |  |
 | AttachGCPDataSource | [AttachGCPDataSourceRequest](#google.google.AttachGCPDataSourceRequest) | [AttachGCPDataSourceResponse](#google.google.AttachGCPDataSourceResponse) |  |
 | DetachGCPDataSource | [DetachGCPDataSourceRequest](#google.google.DetachGCPDataSourceRequest) | [Empty](#google.google.Empty) |  |
 | InvokeScanGCP | [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest) | [Empty](#google.google.Empty) | Scan

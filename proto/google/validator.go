@@ -57,6 +57,15 @@ func (l *ListGCPDataSourceRequest) Validate() error {
 	)
 }
 
+// Validate for GetGCPDataSourceRequest
+func (g *GetGCPDataSourceRequest) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.ProjectId, validation.Required),
+		validation.Field(&g.GcpId, validation.Required),
+		validation.Field(&g.GoogleDataSourceId, validation.Required),
+	)
+}
+
 // Validate for AttachGCPDataSourceRequest
 func (a *AttachGCPDataSourceRequest) Validate() error {
 	if a.GcpDataSource == nil {
