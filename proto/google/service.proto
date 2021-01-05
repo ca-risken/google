@@ -19,6 +19,8 @@ service GoogleService {
   // GCP DataSource
   rpc ListGCPDataSource(ListGCPDataSourceRequest)
       returns (ListGCPDataSourceResponse);
+  rpc GetGCPDataSource(ListGCPDataSourceRequest)
+      returns (GetGCPDataSourceResponse);
   rpc AttachGCPDataSource(AttachGCPDataSourceRequest)
       returns (AttachGCPDataSourceResponse);
   rpc DetachGCPDataSource(DetachGCPDataSourceRequest) returns (Empty);
@@ -72,6 +74,14 @@ message ListGCPDataSourceRequest {
 message ListGCPDataSourceResponse {
   repeated GCPDataSource gcp_data_source = 1;
 }
+
+message GetGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
+}
+
+message GetGCPDataSourceResponse { GCPDataSource gcp_data_source = 1; }
 
 message AttachGCPDataSourceRequest {
   uint32 project_id = 1;
