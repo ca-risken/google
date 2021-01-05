@@ -40,9 +40,10 @@ message GCPDataSource {
   int64 scan_at = 6;                // gcp_data_source.scan_at
   int64 created_at = 7;             // gcp_data_source.created_at
   int64 updated_at = 8;             // gcp_data_source.updated_at
-  string name = 9;                  // google_data_source.name
-  string description = 10;          // google_data_source.description
-  float max_score = 11;             // google_data_source.max_score
+  string gcp_project_id = 9;        // gcp.gcp_project_id
+  string name = 10;                 // google_data_source.name
+  string description = 11;          // google_data_source.description
+  float max_score = 12;             // google_data_source.max_score
 }
 
 // Status
