@@ -127,7 +127,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
 		Finding: &finding.FindingForUpsert{
 			Description:      f.Description,
-			DataSource:       common.AssetDataSource,
+			DataSource:       common.CloudSploitDataSource,
 			DataSourceId:     f.DataSourceID,
 			ResourceName:     common.GetResourceName(gcpProjectID, f.Category, common.GetShortName(f.Resource)),
 			ProjectId:        projectID,
