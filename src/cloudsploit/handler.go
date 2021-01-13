@@ -200,10 +200,17 @@ func cutString(input string, cut int) string {
 }
 
 const (
+	// CloudSploit Category
 	categoryIAM        string = "IAM"
 	categorySQL        string = "SQL"
 	categoryStorage    string = "Storage"
 	categoryVPCNetwork string = "VPC Network"
+
+	// CloudSploit Result Code, source: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes
+	resultOK      string = "OK"      // 0: PASS: No risks
+	resultWARN    string = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
+	resultFAIL    string = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
+	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
 )
 
 var scoreMapIAM = map[string]float32{
@@ -242,9 +249,19 @@ var scoreMapVPCNetwork = map[string]float32{
 }
 
 func scoreCloudSploit(f *cloudSploitFinding) float32 {
-	if strings.ToUpper(f.Status) == "OK" {
+	// OK
+	if strings.ToUpper(f.Status) == resultOK {
 		return 0.0
 	}
+	// UNKNOWN
+	if strings.ToUpper(f.Status) == resultUNKNOWN {
+		return 0.1
+	}
+	// WARN
+	if strings.ToUpper(f.Status) == resultWARN {
+		return 0.3
+	}
+	// FAIL
 	switch f.Category {
 	case categoryIAM:
 		if score, ok := scoreMapIAM[f.Plugin]; ok {

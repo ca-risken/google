@@ -12,74 +12,101 @@ func TestScoreCloudSploit(t *testing.T) {
 		want  float32
 	}{
 		{
-			name: "Status OK",
+			name: "OK",
 			input: &cloudSploitFinding{
 				Category: "Any",
 				Plugin:   "Any",
-				Status:   "OK",
+				Status:   resultOK,
 			},
 			want: 0.0,
 		},
 		{
-			name: "IAM high",
-			input: &cloudSploitFinding{
-				Category: categoryIAM,
-				Plugin:   "corporateEmailsOnly",
-				Status:   "Fail",
-			},
-			want: 0.8,
-		},
-		{
-			name: "IAM middle",
-			input: &cloudSploitFinding{
-				Category: categoryIAM,
-				Plugin:   "serviceAccountAdmin",
-				Status:   "Fail",
-			},
-			want: 0.6,
-		},
-		{
-			name: "SQL htgh",
-			input: &cloudSploitFinding{
-				Category: categorySQL,
-				Plugin:   "dbPubliclyAccessible",
-				Status:   "Fail",
-			},
-			want: 0.8,
-		},
-		{
-			name: "Storage htgh",
-			input: &cloudSploitFinding{
-				Category: categoryStorage,
-				Plugin:   "bucketAllUsersPolicy",
-				Status:   "Fail",
-			},
-			want: 0.8,
-		},
-		{
-			name: "VPC htgh",
-			input: &cloudSploitFinding{
-				Category: categoryVPCNetwork,
-				Plugin:   "openAllPorts",
-				Status:   "Fail",
-			},
-			want: 0.8,
-		},
-		{
-			name: "VPC middle",
-			input: &cloudSploitFinding{
-				Category: categoryVPCNetwork,
-				Plugin:   "openKibana",
-				Status:   "Fail",
-			},
-			want: 0.6,
-		},
-		{
-			name: "Other",
+			name: "UNKNOWN",
 			input: &cloudSploitFinding{
 				Category: "Any",
 				Plugin:   "Any",
-				Status:   "Fail",
+				Status:   resultUNKNOWN,
+			},
+			want: 0.1,
+		},
+		{
+			name: "WARN",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultWARN,
+			},
+			want: 0.3,
+		},
+		{
+			name: "FAIL IAM high",
+			input: &cloudSploitFinding{
+				Category: categoryIAM,
+				Plugin:   "corporateEmailsOnly",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL IAM middle",
+			input: &cloudSploitFinding{
+				Category: categoryIAM,
+				Plugin:   "serviceAccountAdmin",
+				Status:   resultFAIL,
+			},
+			want: 0.6,
+		},
+		{
+			name: "FAIL SQL htgh",
+			input: &cloudSploitFinding{
+				Category: categorySQL,
+				Plugin:   "dbPubliclyAccessible",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL Storage htgh",
+			input: &cloudSploitFinding{
+				Category: categoryStorage,
+				Plugin:   "bucketAllUsersPolicy",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL VPC htgh",
+			input: &cloudSploitFinding{
+				Category: categoryVPCNetwork,
+				Plugin:   "openAllPorts",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL VPC middle",
+			input: &cloudSploitFinding{
+				Category: categoryVPCNetwork,
+				Plugin:   "openKibana",
+				Status:   resultFAIL,
+			},
+			want: 0.6,
+		},
+		{
+			name: "FAIL Other",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultFAIL,
+			},
+			want: 0.3,
+		},
+		{
+			name: "Status any",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   "Any",
 			},
 			want: 0.3,
 		},
