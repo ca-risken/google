@@ -199,12 +199,69 @@ func cutString(input string, cut int) string {
 	return input
 }
 
+const (
+	categoryIAM        string = "IAM"
+	categorySQL        string = "SQL"
+	categoryStorage    string = "Storage"
+	categoryVPCNetwork string = "VPC Network"
+)
+
+var scoreMapIAM = map[string]float32{
+	"corporateEmailsOnly": 0.8,
+	"serviceAccountAdmin": 0.6,
+}
+var scoreMapSQL = map[string]float32{
+	"dbPubliclyAccessible": 0.8,
+}
+var scoreMapStorage = map[string]float32{
+	"bucketAllUsersPolicy": 0.8,
+}
+var scoreMapVPCNetwork = map[string]float32{
+	"openAllPorts":                0.8,
+	"openDNS":                     0.6,
+	"openDocker":                  0.6,
+	"openFTP":                     0.6,
+	"openHadoopNameNode":          0.6,
+	"openHadoopNameNodeWebUI":     0.6,
+	"openKibana":                  0.6,
+	"openMySQL":                   0.6,
+	"openNetBIOS":                 0.6,
+	"openOracle":                  0.6,
+	"openOracleAutoDataWarehouse": 0.6,
+	"openPostgreSQL":              0.6,
+	"openRDP":                     0.6,
+	"openRPC":                     0.6,
+	"openSMBoTCP":                 0.6,
+	"openSMTP":                    0.6,
+	"openSQLServer":               0.6,
+	"openSSH":                     0.6,
+	"openSalt":                    0.6,
+	"openTelnet":                  0.6,
+	"openVNCClient":               0.6,
+	"openVNCServer":               0.6,
+}
+
 func scoreCloudSploit(f *cloudSploitFinding) float32 {
 	if strings.ToUpper(f.Status) == "OK" {
 		return 0.0
 	}
-	if f.Resource == resourceUnknown {
-		return 0.1
+	switch f.Category {
+	case categoryIAM:
+		if score, ok := scoreMapIAM[f.Plugin]; ok {
+			return score
+		}
+	case categorySQL:
+		if score, ok := scoreMapSQL[f.Plugin]; ok {
+			return score
+		}
+	case categoryStorage:
+		if score, ok := scoreMapStorage[f.Plugin]; ok {
+			return score
+		}
+	case categoryVPCNetwork:
+		if score, ok := scoreMapVPCNetwork[f.Plugin]; ok {
+			return score
+		}
 	}
 	return 0.3
 }
