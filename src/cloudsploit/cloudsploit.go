@@ -76,7 +76,7 @@ type cloudSploitFinding struct {
 }
 
 func (c *cloudSploitFinding) generateDataSourceID() {
-	hash := sha256.Sum256([]byte(c.Category + c.Plugin + c.Description + c.Region + c.Resource + c.Message))
+	hash := sha256.Sum256([]byte(c.Category + c.Plugin + c.Description + c.Region + c.Resource))
 	c.DataSourceID = hex.EncodeToString(hash[:])
 }
 
