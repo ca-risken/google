@@ -66,13 +66,14 @@ module.exports = {
 type cloudSploitFinding struct {
 	DataSourceID string `json:"data_source_id"`
 
-	Category    string `json:"category,omitempty"`
-	Plugin      string `json:"plugin,omitempty"`
-	Description string `json:"description,omitempty"`
-	Resource    string `json:"resource,omitempty"`
-	Region      string `json:"region,omitempty"`
-	Status      string `json:"status,omitempty"`
-	Message     string `json:"message,omitempty"`
+	Category    string   `json:"category,omitempty"`
+	Plugin      string   `json:"plugin,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Resource    string   `json:"resource,omitempty"`
+	Region      string   `json:"region,omitempty"`
+	Status      string   `json:"status,omitempty"`
+	Message     string   `json:"message,omitempty"`
+	Compliance  []string `json:"compliance,omitempty"`
 }
 
 func (c *cloudSploitFinding) generateDataSourceID() {
@@ -169,4 +170,118 @@ func (g *cloudSploitClient) removeTempFiles(configFilePath, resutlFilePath strin
 		return err
 	}
 	return nil
+}
+
+const (
+	// CloudSploit Category
+	categoryCLB               string = "CLB"
+	categoryCompute           string = "Compute"
+	categoryCryptographicKeys string = "Cryptographic Keys"
+	categoryIAM               string = "IAM"
+	categoryKubernetes        string = "Kubernetes"
+	categoryLogging           string = "Logging"
+	categorySQL               string = "SQL"
+	categoryStorage           string = "Storage"
+	categoryVPCNetwork        string = "VPC Network"
+
+	// CloudSploit Result Code: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes
+	// Result Code Label:       https://github.com/aquasecurity/cloudsploit/blob/master/postprocess/output.js
+	resultOK      string = "OK"      // 0: PASS: No risks
+	resultWARN    string = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
+	resultFAIL    string = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
+	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
+)
+
+// complianceTagMap (key: `{Categor}/{Plugin}`, value: tag)
+var complianceTagMap = map[string][]string{
+	// CLB
+	categoryCLB + "/clbHttpsOnly": []string{"hippa", "pci"},
+	// GCE
+	categoryCompute + "/csekEncryptionEnabled":  []string{"hippa", "pci"},
+	categoryCompute + "/instanceLeastPrivilege": []string{"pci"},
+	categoryCompute + "/osLoginEnabled":         []string{"pci"},
+	// KMS
+	categoryCryptographicKeys + "/keyRotation": []string{"hipaa", "pci"},
+	// IAM
+	categoryIAM + "/serviceAccountKeyRotation": []string{"hipaa", "pci"},
+	// GKE
+	categoryKubernetes + "/loggingEnabled": []string{"hipaa"},
+	// Logging
+	categoryLogging + "/auditConfigurationLogging": []string{"hipaa", "pci"},
+	categoryLogging + "/customRoleLogging":         []string{"hipaa"},
+	categoryLogging + "/projectOwnershipLogging":   []string{"hipaa", "pci"},
+	categoryLogging + "/sqlConfigurationLogging":   []string{"hipaa"},
+	categoryLogging + "/storagePermissionsLogging": []string{"hipaa", "pci"},
+	categoryLogging + "/vpcFirewallRuleLogging":    []string{"hipaa"},
+	categoryLogging + "/vpcNetworkLogging":         []string{"hipaa", "pci"},
+	categoryLogging + "/vpcNetworkRouteLogging":    []string{"hipaa"},
+	// CloudSQL
+	categorySQL + "/dbPubliclyAccessible": []string{"hipaa", "pci"},
+	categorySQL + "/dbRestorable":         []string{"pci"},
+	categorySQL + "/dbSSLEnabled":         []string{"hipaa", "pci"},
+	// GCS
+	categoryStorage + "/bucketLogging": []string{"hipaa"},
+	// VPC
+	categoryVPCNetwork + "/defaultVpcInUse":        []string{"pci"},
+	categoryVPCNetwork + "/excessiveFirewallRules": []string{"pci"},
+	categoryVPCNetwork + "/flowLogsEnabled":        []string{"hipaa", "pci"},
+	categoryVPCNetwork + "/openAllPorts":           []string{"hipaa", "pci"},
+	categoryVPCNetwork + "/privateAccessEnabled":   []string{"pci"},
+}
+
+func (c *cloudSploitFinding) setCompliance() {
+	if tags, ok := complianceTagMap[c.Category+"/"+c.Plugin]; ok {
+		c.Compliance = tags
+	}
+}
+
+// scoreMap (key: `{Categor}/{Plugin}`, value: score)
+var scoreMap = map[string]float32{
+	// IAM
+	categoryIAM + "/corporateEmailsOnly": 0.8,
+	categoryIAM + "/serviceAccountAdmin": 0.6,
+	// CloudSQL
+	categorySQL + "/dbPubliclyAccessible": 0.8,
+	// GCS
+	categoryStorage + "/bucketAllUsersPolicy": 0.8,
+	// VPC
+	categoryVPCNetwork + "/openAllPorts":                0.8,
+	categoryVPCNetwork + "/openDNS":                     0.6,
+	categoryVPCNetwork + "/openDocker":                  0.6,
+	categoryVPCNetwork + "/openFTP":                     0.6,
+	categoryVPCNetwork + "/openHadoopNameNode":          0.6,
+	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.6,
+	categoryVPCNetwork + "/openKibana":                  0.6,
+	categoryVPCNetwork + "/openMySQL":                   0.6,
+	categoryVPCNetwork + "/openNetBIOS":                 0.6,
+	categoryVPCNetwork + "/openOracle":                  0.6,
+	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.6,
+	categoryVPCNetwork + "/openPostgreSQL":              0.6,
+	categoryVPCNetwork + "/openRDP":                     0.6,
+	categoryVPCNetwork + "/openRPC":                     0.6,
+	categoryVPCNetwork + "/openSMBoTCP":                 0.6,
+	categoryVPCNetwork + "/openSMTP":                    0.6,
+	categoryVPCNetwork + "/openSQLServer":               0.6,
+	categoryVPCNetwork + "/openSSH":                     0.6,
+	categoryVPCNetwork + "/openSalt":                    0.6,
+	categoryVPCNetwork + "/openTelnet":                  0.6,
+	categoryVPCNetwork + "/openVNCClient":               0.6,
+	categoryVPCNetwork + "/openVNCServer":               0.6,
+}
+
+func (c *cloudSploitFinding) getScore() float32 {
+	switch strings.ToUpper(c.Status) {
+	case resultOK:
+		return 0.0
+	case resultUNKNOWN:
+		return 0.1
+	case resultWARN:
+		return 0.3
+	default:
+		// FAIL
+		if score, ok := scoreMap[c.Category+"/"+c.Plugin]; ok {
+			return score
+		}
+		return 0.3
+	}
 }

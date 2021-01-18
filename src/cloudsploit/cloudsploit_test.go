@@ -127,3 +127,153 @@ func TestRemoveTempFile(t *testing.T) {
 		})
 	}
 }
+
+func TestGetScore(t *testing.T) {
+	cases := []struct {
+		name  string
+		input *cloudSploitFinding
+		want  float32
+	}{
+		{
+			name: "OK",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultOK,
+			},
+			want: 0.0,
+		},
+		{
+			name: "UNKNOWN",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultUNKNOWN,
+			},
+			want: 0.1,
+		},
+		{
+			name: "WARN",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultWARN,
+			},
+			want: 0.3,
+		},
+		{
+			name: "FAIL IAM high",
+			input: &cloudSploitFinding{
+				Category: categoryIAM,
+				Plugin:   "corporateEmailsOnly",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL IAM middle",
+			input: &cloudSploitFinding{
+				Category: categoryIAM,
+				Plugin:   "serviceAccountAdmin",
+				Status:   resultFAIL,
+			},
+			want: 0.6,
+		},
+		{
+			name: "FAIL SQL htgh",
+			input: &cloudSploitFinding{
+				Category: categorySQL,
+				Plugin:   "dbPubliclyAccessible",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL Storage htgh",
+			input: &cloudSploitFinding{
+				Category: categoryStorage,
+				Plugin:   "bucketAllUsersPolicy",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL VPC htgh",
+			input: &cloudSploitFinding{
+				Category: categoryVPCNetwork,
+				Plugin:   "openAllPorts",
+				Status:   resultFAIL,
+			},
+			want: 0.8,
+		},
+		{
+			name: "FAIL VPC middle",
+			input: &cloudSploitFinding{
+				Category: categoryVPCNetwork,
+				Plugin:   "openKibana",
+				Status:   resultFAIL,
+			},
+			want: 0.6,
+		},
+		{
+			name: "FAIL Other",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   resultFAIL,
+			},
+			want: 0.3,
+		},
+		{
+			name: "Status any",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+				Status:   "Any",
+			},
+			want: 0.3,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := c.input.getScore()
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestSetCompliance(t *testing.T) {
+	cases := []struct {
+		name  string
+		input *cloudSploitFinding
+		want  []string
+	}{
+		{
+			name: "OK",
+			input: &cloudSploitFinding{
+				Category: categoryCLB,
+				Plugin:   "clbHttpsOnly",
+			},
+			want: []string{"hippa", "pci"},
+		},
+		{
+			name: "Not hit tag",
+			input: &cloudSploitFinding{
+				Category: "Any",
+				Plugin:   "Any",
+			},
+			want: nil,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			c.input.setCompliance()
+			got := c.input.Compliance
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
