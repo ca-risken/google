@@ -14,7 +14,7 @@ require (
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sys v0.0.0-20210104204734-6f8348627aad // indirect
-	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/text v0.3.4
 	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
 	google.golang.org/grpc v1.34.0
 )

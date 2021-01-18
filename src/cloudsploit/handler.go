@@ -101,7 +101,7 @@ func (s *sqsHandler) initScanStatus(g *google.GCPDataSource) *google.AttachGCPDa
 }
 
 func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *cloudSploitFinding) error {
-	score := scoreCloudSploit(f)
+	score := f.getScore()
 	if score == 0.0 {
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
@@ -118,6 +118,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return nil
 	}
 
+	f.setCompliance()
 	buf, err := json.Marshal(f)
 	if err != nil {
 		appLogger.Errorf("Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
@@ -144,6 +145,9 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagCloudSploit, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
+	for _, complianceTag := range f.Compliance {
+		s.tagFinding(ctx, complianceTag, resp.Finding.FindingId, resp.Finding.ProjectId)
+	}
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -197,88 +201,4 @@ func cutString(input string, cut int) string {
 		return input[:cut] + " ..." // cut long text
 	}
 	return input
-}
-
-const (
-	// CloudSploit Category
-	categoryIAM        string = "IAM"
-	categorySQL        string = "SQL"
-	categoryStorage    string = "Storage"
-	categoryVPCNetwork string = "VPC Network"
-
-	// CloudSploit Result Code, source: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes
-	resultOK      string = "OK"      // 0: PASS: No risks
-	resultWARN    string = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
-	resultFAIL    string = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
-	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
-)
-
-var scoreMapIAM = map[string]float32{
-	"corporateEmailsOnly": 0.8,
-	"serviceAccountAdmin": 0.6,
-}
-var scoreMapSQL = map[string]float32{
-	"dbPubliclyAccessible": 0.8,
-}
-var scoreMapStorage = map[string]float32{
-	"bucketAllUsersPolicy": 0.8,
-}
-var scoreMapVPCNetwork = map[string]float32{
-	"openAllPorts":                0.8,
-	"openDNS":                     0.6,
-	"openDocker":                  0.6,
-	"openFTP":                     0.6,
-	"openHadoopNameNode":          0.6,
-	"openHadoopNameNodeWebUI":     0.6,
-	"openKibana":                  0.6,
-	"openMySQL":                   0.6,
-	"openNetBIOS":                 0.6,
-	"openOracle":                  0.6,
-	"openOracleAutoDataWarehouse": 0.6,
-	"openPostgreSQL":              0.6,
-	"openRDP":                     0.6,
-	"openRPC":                     0.6,
-	"openSMBoTCP":                 0.6,
-	"openSMTP":                    0.6,
-	"openSQLServer":               0.6,
-	"openSSH":                     0.6,
-	"openSalt":                    0.6,
-	"openTelnet":                  0.6,
-	"openVNCClient":               0.6,
-	"openVNCServer":               0.6,
-}
-
-func scoreCloudSploit(f *cloudSploitFinding) float32 {
-	// OK
-	if strings.ToUpper(f.Status) == resultOK {
-		return 0.0
-	}
-	// UNKNOWN
-	if strings.ToUpper(f.Status) == resultUNKNOWN {
-		return 0.1
-	}
-	// WARN
-	if strings.ToUpper(f.Status) == resultWARN {
-		return 0.3
-	}
-	// FAIL
-	switch f.Category {
-	case categoryIAM:
-		if score, ok := scoreMapIAM[f.Plugin]; ok {
-			return score
-		}
-	case categorySQL:
-		if score, ok := scoreMapSQL[f.Plugin]; ok {
-			return score
-		}
-	case categoryStorage:
-		if score, ok := scoreMapStorage[f.Plugin]; ok {
-			return score
-		}
-	case categoryVPCNetwork:
-		if score, ok := scoreMapVPCNetwork[f.Plugin]; ok {
-			return score
-		}
-	}
-	return 0.3
 }
