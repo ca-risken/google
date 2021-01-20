@@ -7,10 +7,12 @@ import (
 )
 
 const (
-	// AssetDataSource is the label for Cloud Asset Inventory.
+	// AssetDataSource is the DataSource label for Cloud Asset Inventory.
 	AssetDataSource = "google:asset"
-	// CloudSploitDataSource is the label for Aqua Cloud Sploit.
+	// CloudSploitDataSource is the DataSource label for Aqua Cloud Sploit.
 	CloudSploitDataSource = "google:cloudsploit"
+	// SCCDataSource is the DataSource label for Security Command Center.
+	SCCDataSource = "google:scc"
 )
 
 // GCPQueueMessage is the message for SQS queue
