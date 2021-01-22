@@ -138,7 +138,12 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 }
 
 func getFormatResourceName(project, service, resource string) string {
-	return fmt.Sprintf("%s/%s/%s", project, service, resource)
+	return fmt.Sprintf("%s/%s/%s", project, service, getShortName(resource))
+}
+
+func getShortName(name string) string {
+	array := strings.Split(name, "/")
+	return array[len(array)-1]
 }
 
 func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) error {
