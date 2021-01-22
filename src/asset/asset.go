@@ -10,21 +10,21 @@ import (
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
-type gcpServiceClient interface {
+type assetServiceClient interface {
 	listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator
 	analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error)
 }
 
-type gcpClient struct {
+type assetClient struct {
 	client *asset.Client
 }
 
-type gcpConfig struct {
+type assetConfig struct {
 	GoogleCredentialPath string `required:"true" split_words:"true"`
 }
 
-func newGCPClient() gcpServiceClient {
-	var conf gcpConfig
+func newAssetClient() assetServiceClient {
+	var conf assetConfig
 	err := envconfig.Process("", &conf)
 	if err != nil {
 		appLogger.Fatalf("Could not read confg. err: %+v", err)
@@ -38,16 +38,16 @@ func newGCPClient() gcpServiceClient {
 	if err := os.Remove(conf.GoogleCredentialPath); err != nil {
 		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", conf.GoogleCredentialPath, err)
 	}
-	return &gcpClient{client: c}
+	return &assetClient{client: c}
 }
 
-func (g *gcpClient) listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator {
+func (g *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator {
 	return g.client.SearchAllResources(ctx, &assetpb.SearchAllResourcesRequest{
 		Scope: "projects/" + gcpProjectID,
 	})
 }
 
-func (g *gcpClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error) {
+func (g *assetClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error) {
 	resp, err := g.client.AnalyzeIamPolicy(ctx, &assetpb.AnalyzeIamPolicyRequest{
 		AnalysisQuery: &assetpb.IamPolicyAnalysisQuery{
 			Scope: "projects/" + gcpProjectID,

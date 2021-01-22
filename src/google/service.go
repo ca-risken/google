@@ -62,12 +62,13 @@ func convertGCP(data *common.GCP) *google.GCP {
 		return &google.GCP{}
 	}
 	gcp := google.GCP{
-		GcpId:        data.GCPID,
-		Name:         data.Name,
-		ProjectId:    data.ProjectID,
-		GcpProjectId: data.GCPProjectID,
-		CreatedAt:    data.CreatedAt.Unix(),
-		UpdatedAt:    data.UpdatedAt.Unix(),
+		GcpId:             data.GCPID,
+		Name:              data.Name,
+		ProjectId:         data.ProjectID,
+		GcpOrganizationId: data.GCPOrganizationID,
+		GcpProjectId:      data.GCPProjectID,
+		CreatedAt:         data.CreatedAt.Unix(),
+		UpdatedAt:         data.UpdatedAt.Unix(),
 	}
 	return &gcp
 }
@@ -156,10 +157,11 @@ func convertGCPDataSource(data *gcpDataSource) *google.GCPDataSource {
 		StatusDetail:       data.StatusDetail,
 		CreatedAt:          data.CreatedAt.Unix(),
 		UpdatedAt:          data.UpdatedAt.Unix(),
-		Name:               data.Name,         // google_data_source.name
-		MaxScore:           data.MaxScore,     // google_data_source.max_score
-		Description:        data.Description,  // google_data_source.description
-		GcpProjectId:       data.GCPProjectID, // gcp.gcp_project_id
+		Name:               data.Name,              // google_data_source.name
+		MaxScore:           data.MaxScore,          // google_data_source.max_score
+		Description:        data.Description,       // google_data_source.description
+		GcpOrganizationId:  data.GCPOrganizationID, // gcp.gcp_organization_id
+		GcpProjectId:       data.GCPProjectID,      // gcp.gcp_project_id
 	}
 	if !zero.IsZeroVal(data.ScanAt) {
 		gcp.ScanAt = data.ScanAt.Unix()
@@ -225,6 +227,7 @@ func (g *googleService) DetachGCPDataSource(ctx context.Context, req *google.Det
 const (
 	cloudAssetDataSourceID  uint32 = 1001
 	cloudSploitDataSourceID uint32 = 1002
+	sccDataSourceID         uint32 = 1003
 )
 
 func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
@@ -246,6 +249,8 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 		resp, err = g.sqs.sendMsgForAsset(msg)
 	case cloudSploitDataSourceID:
 		resp, err = g.sqs.sendMsgForCloudSploit(msg)
+	case sccDataSourceID:
+		resp, err = g.sqs.sendMsgForSCC(msg)
 	default:
 		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
 	}
