@@ -194,39 +194,30 @@ const (
 
 // complianceTagMap (key: `{Categor}/{Plugin}`, value: tag)
 var complianceTagMap = map[string][]string{
-	// CLB
-	categoryCLB + "/clbHttpsOnly": []string{"hippa", "pci"},
-	// GCE
-	categoryCompute + "/csekEncryptionEnabled":  []string{"hippa", "pci"},
-	categoryCompute + "/instanceLeastPrivilege": []string{"pci"},
-	categoryCompute + "/osLoginEnabled":         []string{"pci"},
-	// KMS
-	categoryCryptographicKeys + "/keyRotation": []string{"hipaa", "pci"},
-	// IAM
-	categoryIAM + "/serviceAccountKeyRotation": []string{"hipaa", "pci"},
-	// GKE
-	categoryKubernetes + "/loggingEnabled": []string{"hipaa"},
-	// Logging
-	categoryLogging + "/auditConfigurationLogging": []string{"hipaa", "pci"},
-	categoryLogging + "/customRoleLogging":         []string{"hipaa"},
-	categoryLogging + "/projectOwnershipLogging":   []string{"hipaa", "pci"},
-	categoryLogging + "/sqlConfigurationLogging":   []string{"hipaa"},
-	categoryLogging + "/storagePermissionsLogging": []string{"hipaa", "pci"},
-	categoryLogging + "/vpcFirewallRuleLogging":    []string{"hipaa"},
-	categoryLogging + "/vpcNetworkLogging":         []string{"hipaa", "pci"},
-	categoryLogging + "/vpcNetworkRouteLogging":    []string{"hipaa"},
-	// CloudSQL
-	categorySQL + "/dbPubliclyAccessible": []string{"hipaa", "pci"},
-	categorySQL + "/dbRestorable":         []string{"pci"},
-	categorySQL + "/dbSSLEnabled":         []string{"hipaa", "pci"},
-	// GCS
-	categoryStorage + "/bucketLogging": []string{"hipaa"},
-	// VPC
-	categoryVPCNetwork + "/defaultVpcInUse":        []string{"pci"},
-	categoryVPCNetwork + "/excessiveFirewallRules": []string{"pci"},
-	categoryVPCNetwork + "/flowLogsEnabled":        []string{"hipaa", "pci"},
-	categoryVPCNetwork + "/openAllPorts":           []string{"hipaa", "pci"},
-	categoryVPCNetwork + "/privateAccessEnabled":   []string{"pci"},
+	categoryCLB + "/clbHttpsOnly":                  []string{"hippa", "pci"}, // CLB
+	categoryCompute + "/csekEncryptionEnabled":     []string{"hippa", "pci"}, // GCE
+	categoryCompute + "/instanceLeastPrivilege":    []string{"pci"},          // GCE
+	categoryCompute + "/osLoginEnabled":            []string{"pci"},          // GCE
+	categoryCryptographicKeys + "/keyRotation":     []string{"hipaa", "pci"}, // KMS
+	categoryIAM + "/serviceAccountKeyRotation":     []string{"hipaa", "pci"}, // IAM
+	categoryKubernetes + "/loggingEnabled":         []string{"hipaa"},        // GKE
+	categoryLogging + "/auditConfigurationLogging": []string{"hipaa", "pci"}, // Logging
+	categoryLogging + "/customRoleLogging":         []string{"hipaa"},        // Logging
+	categoryLogging + "/projectOwnershipLogging":   []string{"hipaa", "pci"}, // Logging
+	categoryLogging + "/sqlConfigurationLogging":   []string{"hipaa"},        // Logging
+	categoryLogging + "/storagePermissionsLogging": []string{"hipaa", "pci"}, // Logging
+	categoryLogging + "/vpcFirewallRuleLogging":    []string{"hipaa"},        // Logging
+	categoryLogging + "/vpcNetworkLogging":         []string{"hipaa", "pci"}, // Logging
+	categoryLogging + "/vpcNetworkRouteLogging":    []string{"hipaa"},        // Logging
+	categorySQL + "/dbPubliclyAccessible":          []string{"hipaa", "pci"}, // CloudSQL
+	categorySQL + "/dbRestorable":                  []string{"pci"},          // CloudSQL
+	categorySQL + "/dbSSLEnabled":                  []string{"hipaa", "pci"}, // CloudSQL
+	categoryStorage + "/bucketLogging":             []string{"hipaa"},        // GCS
+	categoryVPCNetwork + "/defaultVpcInUse":        []string{"pci"},          // VPC
+	categoryVPCNetwork + "/excessiveFirewallRules": []string{"pci"},          // VPC
+	categoryVPCNetwork + "/flowLogsEnabled":        []string{"hipaa", "pci"}, // VPC
+	categoryVPCNetwork + "/openAllPorts":           []string{"hipaa", "pci"}, // VPC
+	categoryVPCNetwork + "/privateAccessEnabled":   []string{"pci"},          // VPC
 }
 
 func (c *cloudSploitFinding) setCompliance() {
@@ -237,36 +228,33 @@ func (c *cloudSploitFinding) setCompliance() {
 
 // scoreMap (key: `{Categor}/{Plugin}`, value: score)
 var scoreMap = map[string]float32{
-	// IAM
-	categoryIAM + "/corporateEmailsOnly": 0.8,
-	categoryIAM + "/serviceAccountAdmin": 0.6,
-	// CloudSQL
-	categorySQL + "/dbPubliclyAccessible": 0.8,
-	// GCS
-	categoryStorage + "/bucketAllUsersPolicy": 0.8,
-	// VPC
-	categoryVPCNetwork + "/openAllPorts":                0.8,
-	categoryVPCNetwork + "/openDNS":                     0.6,
-	categoryVPCNetwork + "/openDocker":                  0.6,
-	categoryVPCNetwork + "/openFTP":                     0.6,
-	categoryVPCNetwork + "/openHadoopNameNode":          0.6,
-	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.6,
-	categoryVPCNetwork + "/openKibana":                  0.6,
-	categoryVPCNetwork + "/openMySQL":                   0.6,
-	categoryVPCNetwork + "/openNetBIOS":                 0.6,
-	categoryVPCNetwork + "/openOracle":                  0.6,
-	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.6,
-	categoryVPCNetwork + "/openPostgreSQL":              0.6,
-	categoryVPCNetwork + "/openRDP":                     0.6,
-	categoryVPCNetwork + "/openRPC":                     0.6,
-	categoryVPCNetwork + "/openSMBoTCP":                 0.6,
-	categoryVPCNetwork + "/openSMTP":                    0.6,
-	categoryVPCNetwork + "/openSQLServer":               0.6,
-	categoryVPCNetwork + "/openSSH":                     0.6,
-	categoryVPCNetwork + "/openSalt":                    0.6,
-	categoryVPCNetwork + "/openTelnet":                  0.6,
-	categoryVPCNetwork + "/openVNCClient":               0.6,
-	categoryVPCNetwork + "/openVNCServer":               0.6,
+	categoryCompute + "/instanceLeastPrivilege":         0.6, // GCE
+	categoryIAM + "/corporateEmailsOnly":                0.8, // IAM
+	categoryIAM + "/serviceAccountAdmin":                0.6, // IAM
+	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
+	categoryStorage + "/bucketAllUsersPolicy":           0.8, // GCS
+	categoryVPCNetwork + "/openAllPorts":                0.8, // VPC
+	categoryVPCNetwork + "/openDNS":                     0.6, // VPC
+	categoryVPCNetwork + "/openDocker":                  0.6, // VPC
+	categoryVPCNetwork + "/openFTP":                     0.6, // VPC
+	categoryVPCNetwork + "/openHadoopNameNode":          0.6, // VPC
+	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.6, // VPC
+	categoryVPCNetwork + "/openKibana":                  0.6, // VPC
+	categoryVPCNetwork + "/openMySQL":                   0.6, // VPC
+	categoryVPCNetwork + "/openNetBIOS":                 0.6, // VPC
+	categoryVPCNetwork + "/openOracle":                  0.6, // VPC
+	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.6, // VPC
+	categoryVPCNetwork + "/openPostgreSQL":              0.6, // VPC
+	categoryVPCNetwork + "/openRDP":                     0.6, // VPC
+	categoryVPCNetwork + "/openRPC":                     0.6, // VPC
+	categoryVPCNetwork + "/openSMBoTCP":                 0.6, // VPC
+	categoryVPCNetwork + "/openSMTP":                    0.6, // VPC
+	categoryVPCNetwork + "/openSQLServer":               0.6, // VPC
+	categoryVPCNetwork + "/openSSH":                     0.6, // VPC
+	categoryVPCNetwork + "/openSalt":                    0.6, // VPC
+	categoryVPCNetwork + "/openTelnet":                  0.6, // VPC
+	categoryVPCNetwork + "/openVNCClient":               0.6, // VPC
+	categoryVPCNetwork + "/openVNCServer":               0.6, // VPC
 }
 
 func (c *cloudSploitFinding) getScore() float32 {

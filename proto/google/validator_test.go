@@ -401,6 +401,13 @@ func TestValidate_GCPForUpsert(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "NG Length(gcp_organization_id)",
+			input: &GCPForUpsert{
+				GcpId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: stringLength129, GcpProjectId: "my-pj",
+			},
+			wantErr: true,
+		},
+		{
 			name: "NG Required(gcp_project_id)",
 			input: &GCPForUpsert{
 				GcpId: 1, Name: "name", ProjectId: 1,
