@@ -106,6 +106,7 @@ func (g *GCPForUpsert) Validate() error {
 	return validation.ValidateStruct(g,
 		validation.Field(&g.Name, validation.Required, validation.Length(0, 64)),
 		validation.Field(&g.ProjectId, validation.Required),
+		validation.Field(&g.GcpOrganizationId, validation.Length(0, 128)),
 		validation.Field(&g.GcpProjectId, validation.Required, validation.Length(0, 128)),
 	)
 }

@@ -66,6 +66,7 @@ GCP
 | gcp_id | [uint32](#uint32) |  |  |
 | name | [string](#string) |  |  |
 | project_id | [uint32](#uint32) |  |  |
+| gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
 | created_at | [int64](#int64) |  |  |
 | updated_at | [int64](#int64) |  |  |
@@ -91,6 +92,7 @@ GCPDataSource
 | scan_at | [int64](#int64) |  | gcp_data_source.scan_at |
 | created_at | [int64](#int64) |  | gcp_data_source.created_at |
 | updated_at | [int64](#int64) |  | gcp_data_source.updated_at |
+| gcp_organization_id | [string](#string) |  | gcp.gcp_organization_id |
 | gcp_project_id | [string](#string) |  | gcp.gcp_project_id |
 | name | [string](#string) |  | google_data_source.name |
 | description | [string](#string) |  | google_data_source.description |
@@ -132,6 +134,7 @@ GCPForUpsert
 | gcp_id | [uint32](#uint32) |  | Unique key for entity. |
 | name | [string](#string) |  |  |
 | project_id | [uint32](#uint32) |  |  |
+| gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
 
 

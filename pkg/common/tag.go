@@ -11,7 +11,6 @@ const (
 	TagServiceAccount = "serviceAccount"
 	// TagCloudSploit tag
 	TagCloudSploit = "cloudsploit"
-
 	// TagSCC tag
-	// TagSCC = "scc"
+	TagSCC = "scc"
 )
