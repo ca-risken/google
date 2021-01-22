@@ -28,6 +28,7 @@ services:
       - SQS_ENDPOINT=${SQS_ENDPOINT}
       - ASSET_QUEUE_URL=${ASSET_QUEUE_URL}
       - CLOUD_SPLOIT_QUEUE_URL=${CLOUD_SPLOIT_QUEUE_URL}
+      - SCC_QUEUE_URL=${SCC_QUEUE_URL}
     ports:
       - "11001:11001"
 
@@ -82,6 +83,32 @@ services:
       - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY}
     ports:
       - "11003:11003"
+
+  scc:
+    networks:
+      - google
+      - local-shared
+    build:
+      context: src/scc
+      args:
+        - GITHUB_USER=${GITHUB_USER}
+        - GITHUB_TOKEN=${GITHUB_TOKEN}
+    environment:
+      - DEBUG=${DEBUG}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - SQS_ENDPOINT=${SQS_ENDPOINT}
+      - SCC_QUEUE_NAME=${SCC_QUEUE_NAME}
+      - SCC_QUEUE_URL=${SCC_QUEUE_URL}
+      - FINDING_SVC_ADDR=${FINDING_SVC_ADDR}
+      - ALERT_SVC_ADDR=${ALERT_SVC_ADDR}
+      - GOOGLE_SVC_ADDR=${GOOGLE_SVC_ADDR}
+      - GOOGLE_CREDENTIAL_PATH=${GOOGLE_CREDENTIAL_PATH}
+      - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON}
+    ports:
+      - "11004:11004"
 
 networks:
   google:

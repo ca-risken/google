@@ -34,6 +34,7 @@ go-test: build
 	cd src/google      && go test ./...
 	cd src/asset       && go test ./...
 	cd src/cloudsploit && go test ./...
+	cd src/scc         && go test ./...
 
 go-mod-tidy: build
 	cd proto/google    && go mod tidy
@@ -41,6 +42,7 @@ go-mod-tidy: build
 	cd src/google      && go mod tidy
 	cd src/asset       && go mod tidy
 	cd src/cloudsploit && go mod tidy
+	cd src/scc         && go mod tidy
 
 go-mod-update:
 	cd src/google \
@@ -54,6 +56,10 @@ go-mod-update:
 		&& go get -u \
 			github.com/CyberAgent/mimosa-core/... \
 			github.com/CyberAgent/mimosa-google/...
+	cd src/scc \
+		&& go get -u \
+			github.com/CyberAgent/mimosa-core/... \
+			github.com/CyberAgent/mimosa-google/...
 
 # @see https://github.com/CyberAgent/mimosa-common/tree/master/local
 network:
@@ -61,12 +67,6 @@ network:
 
 run: go-test network
 	. env.sh && docker-compose up -d --build
-
-run-code: go-test network
-	. env.sh && docker-compose up -d --build code
-
-run-gitleaks: go-test network
-	. env.sh && docker-compose up -d --build gitleaks
 
 log:
 	. env.sh && docker-compose logs -f

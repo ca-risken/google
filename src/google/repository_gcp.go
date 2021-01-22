@@ -74,12 +74,14 @@ INSERT INTO gcp (
   gcp_id,
   name,
   project_id,
+  gcp_organization_id,
   gcp_project_id
 )
-VALUES (?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	name=VALUES(name),
 	project_id=VALUES(project_id),
+	gcp_organization_id=VALUES(gcp_organization_id),
 	gcp_project_id=VALUES(gcp_project_id)
 `
 
@@ -88,6 +90,7 @@ func (g *googleRepository) UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, err
 		gcp.GcpId,
 		convertZeroValueToNull(gcp.Name),
 		gcp.ProjectId,
+		convertZeroValueToNull(gcp.GcpOrganizationId),
 		gcp.GcpProjectId,
 	).Error; err != nil {
 		return nil, err
@@ -126,13 +129,14 @@ type gcpDataSource struct {
 	Name               string  // google_data_source.name
 	Description        string  // google_data_source.description
 	MaxScore           float32 // google_data_source.max_score
+	GCPOrganizationID  string  // gcp.gcp_organization_id
 	GCPProjectID       string  // gcp.gcp_project_id
 }
 
 func (g *googleRepository) ListGCPDataSource(projectID, gcpID uint32) (*[]gcpDataSource, error) {
 	query := `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)
@@ -158,7 +162,7 @@ where
 
 const selectGetGCPDataSource string = `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)

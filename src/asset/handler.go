@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
@@ -21,7 +20,7 @@ type sqsHandler struct {
 	findingClient finding.FindingServiceClient
 	alertClient   alert.AlertServiceClient
 	googleClient  google.GoogleServiceClient
-	gcpClient     gcpServiceClient
+	assetClient   assetServiceClient
 }
 
 func newHandler() *sqsHandler {
@@ -29,7 +28,7 @@ func newHandler() *sqsHandler {
 		findingClient: newFindingClient(),
 		alertClient:   newAlertClient(),
 		googleClient:  newGoogleClient(),
-		gcpClient:     newGCPClient(),
+		assetClient:   newAssetClient(),
 	}
 }
 
@@ -54,10 +53,10 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 		return err
 	}
-	scanStatus := s.initScanStatus(gcp)
+	scanStatus := common.InitScanStatus(gcp)
 
 	// Get cloud asset
-	it := s.gcpClient.listAsset(ctx, gcp.GcpProjectId)
+	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
 		resource, err := it.Next()
 		if err == iterator.Done {
@@ -70,8 +69,8 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		}
 		f := assetFinding{Asset: resource}
 		if isUserServiceAccount(resource.AssetType, resource.Name) {
-			email := common.GetShortName(resource.Name)
-			policy, err := s.gcpClient.analyzeServiceAccountPolicy(ctx, gcp.GcpProjectId, email)
+			email := getShortName(resource.Name)
+			policy, err := s.assetClient.analyzeServiceAccountPolicy(ctx, gcp.GcpProjectId, email)
 			if err != nil {
 				return s.updateScanStatusError(ctx, scanStatus, err.Error())
 			}
@@ -92,6 +91,11 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	return s.analyzeAlert(ctx, message.ProjectID)
 }
 
+func getShortName(name string) string {
+	array := strings.Split(name, "/")
+	return array[len(array)-1]
+}
+
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
 	data, err := s.googleClient.GetGCPDataSource(ctx, &google.GetGCPDataSourceRequest{
 		ProjectId:          projectID,
@@ -107,27 +111,13 @@ func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 	return data.GcpDataSource, nil
 }
 
-func (s *sqsHandler) initScanStatus(g *google.GCPDataSource) *google.AttachGCPDataSourceRequest {
-	return &google.AttachGCPDataSourceRequest{
-		ProjectId: g.ProjectId,
-		GcpDataSource: &google.GCPDataSourceForUpsert{
-			GcpId:              g.GcpId,
-			GoogleDataSourceId: g.GoogleDataSourceId,
-			ProjectId:          g.ProjectId,
-			ScanAt:             time.Now().Unix(),
-			Status:             google.Status_UNKNOWN, // After scan, will be updated
-			StatusDetail:       "",
-		},
-	}
-}
-
 func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *assetFinding) error {
 	score := scoreAsset(f)
 	if score == 0.0 {
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
 			Resource: &finding.ResourceForUpsert{
-				ResourceName: common.GetResourceName(gcpProjectID, common.GetShortName(f.Asset.AssetType), common.GetShortName(f.Asset.Name)),
+				ResourceName: common.GetShortResourceName(gcpProjectID, f.Asset.Name),
 				ProjectId:    projectID,
 			},
 		})
@@ -150,7 +140,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			Description:      fmt.Sprintf("GCP Cloud Asset: %s", f.Asset.DisplayName),
 			DataSource:       common.AssetDataSource,
 			DataSourceId:     f.Asset.Name,
-			ResourceName:     common.GetResourceName(gcpProjectID, common.GetShortName(f.Asset.AssetType), common.GetShortName(f.Asset.Name)),
+			ResourceName:     common.GetShortResourceName(gcpProjectID, f.Asset.Name),
 			ProjectId:        projectID,
 			OriginalScore:    score,
 			OriginalMaxScore: 1.0,
@@ -188,7 +178,7 @@ func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint6
 
 func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
 	putData.GcpDataSource.Status = google.Status_ERROR
-	statusDetail = cutString(statusDetail, 200)
+	statusDetail = common.CutString(statusDetail, 200)
 	putData.GcpDataSource.StatusDetail = statusDetail
 	return s.updateScanStatus(ctx, putData)
 }
@@ -213,13 +203,6 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 		ProjectId: projectID,
 	})
 	return err
-}
-
-func cutString(input string, cut int) string {
-	if len(input) > cut {
-		return input[:cut] + " ..." // cut long text
-	}
-	return input
 }
 
 const (

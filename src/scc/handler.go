@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
@@ -12,13 +11,15 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"google.golang.org/api/iterator"
+	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
 
 type sqsHandler struct {
 	findingClient finding.FindingServiceClient
 	alertClient   alert.AlertServiceClient
 	googleClient  google.GoogleServiceClient
-	cloudSploit   cloudSploitServiceClient
+	sccClient     sccServiceClient
 }
 
 func newHandler() *sqsHandler {
@@ -26,7 +27,7 @@ func newHandler() *sqsHandler {
 		findingClient: newFindingClient(),
 		alertClient:   newAlertClient(),
 		googleClient:  newGoogleClient(),
-		cloudSploit:   newCloudSploitClient(),
+		sccClient:     newSCCClient(),
 	}
 }
 
@@ -48,22 +49,33 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	}
 	scanStatus := common.InitScanStatus(gcp)
 
-	// Get cloud sploit
-	result, err := s.cloudSploit.run(ctx, gcp.GcpProjectId)
-	if err != nil {
-		appLogger.Errorf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+	// Get security command center
+	if gcp.GcpOrganizationId == "" || gcp.GcpProjectId == "" {
+		err := fmt.Errorf("Required GcpOrganizationId and GcpProjectId parameters, GcpOrganizationId=%s, GcpProjectId=%s",
+			gcp.GcpOrganizationId, gcp.GcpProjectId)
+		appLogger.Errorf("Invalid parameters, project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
-		return err
+		return s.updateScanStatusError(ctx, scanStatus, err.Error())
 	}
-	for _, f := range *result {
+	it := s.sccClient.listFinding(ctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	for {
+		f, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			appLogger.Errorf("Failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+			return s.updateScanStatusError(ctx, scanStatus, err.Error())
+		}
+		appLogger.Debugf("Got finding: %+v", f.Finding)
 		// Put finding
-		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
+		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, f.Finding); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 	}
-
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return err
 	}
@@ -80,59 +92,37 @@ func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 		return nil, err
 	}
 	if data == nil || data.GcpDataSource == nil {
-		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d, google_data_source_Id=%d", projectID, gcpID, googleDataSourceID)
+		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
 	}
 	return data.GcpDataSource, nil
 }
 
-func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *cloudSploitFinding) error {
-	score := f.getScore()
-	if score == 0.0 {
-		// PutResource
-		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
-			Resource: &finding.ResourceForUpsert{
-				ResourceName: common.GetShortResourceName(gcpProjectID, f.Resource),
-				ProjectId:    projectID,
-			},
-		})
-		if err != nil {
-			appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
-			return err
-		}
-		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
-		return nil
-	}
-
-	f.setCompliance()
+func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *sccpb.Finding) error {
 	buf, err := json.Marshal(f)
 	if err != nil {
-		appLogger.Errorf("Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+		appLogger.Errorf("Failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
 		return err
 	}
 	// PutFinding
 	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
 		Finding: &finding.FindingForUpsert{
-			Description:      f.Description,
-			DataSource:       common.CloudSploitDataSource,
-			DataSourceId:     f.DataSourceID,
-			ResourceName:     common.GetShortResourceName(gcpProjectID, f.Resource),
+			Description:      fmt.Sprintf("Security Command Center: %s", f.Category),
+			DataSource:       common.SCCDataSource,
+			DataSourceId:     f.Name,
+			ResourceName:     common.GetShortResourceName(gcpProjectID, f.ResourceName),
 			ProjectId:        projectID,
-			OriginalScore:    score,
+			OriginalScore:    scoreSCC(f),
 			OriginalMaxScore: 1.0,
 			Data:             string(buf),
 		},
 	})
 	if err != nil {
-		appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+		appLogger.Errorf("Failed to put finding project_id=%d, SCCName=%s, err=%+v", projectID, f.Name, err)
 		return err
 	}
 	// PutFindingTag
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, common.TagCloudSploit, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
-	for _, complianceTag := range f.Compliance {
-		s.tagFinding(ctx, complianceTag, resp.Finding.FindingId, resp.Finding.ProjectId)
-	}
+	s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId)
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -170,7 +160,7 @@ func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.Attac
 	if err != nil {
 		return err
 	}
-	appLogger.Infof("Success to update GCPDataSource status, response=%+v", resp)
+	appLogger.Infof("Success to update GCP DataSource status, response=%+v", resp)
 	return nil
 }
 
