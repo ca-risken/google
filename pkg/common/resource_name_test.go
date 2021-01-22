@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-func TestGetShortName(t *testing.T) {
+func TestGetShortResourceName(t *testing.T) {
+	myProject := "my-project"
 	cases := []struct {
 		name  string
 		input string
@@ -14,22 +15,22 @@ func TestGetShortName(t *testing.T) {
 		{
 			name:  "OK Blank",
 			input: "",
-			want:  "",
+			want:  "my-project/unknown/",
 		},
 		{
-			name:  "OK some-asset",
+			name:  "OK",
 			input: "//iam.googleapis.com/projects/my-project/service/some-asset",
-			want:  "some-asset",
+			want:  "my-project/service/some-asset",
 		},
 		{
-			name:  "OK some-asset 2",
+			name:  "Unknown service",
 			input: "some-asset",
-			want:  "some-asset",
+			want:  "my-project/unknown/some-asset",
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := GetShortName(c.input)
+			got := GetShortResourceName(myProject, c.input)
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
 			}

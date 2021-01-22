@@ -2,14 +2,19 @@ package common
 
 import "strings"
 
-// GetShortName return short resoruce name from slash chain format. e.g. "//{service}.googleapis.com/projects/{your-project}/{service}/{your-resource}"
-func GetShortName(name string) string {
-	// "name": "//iam.googleapis.com/projects/vulnasses/serviceAccounts/cloudsploit-scans@vulnasses.iam.gserviceaccount.com"
-	array := strings.Split(name, "/")
-	return array[len(array)-1]
+// UnknownService unknown service name label
+const UnknownService string = "unknown"
+
+// GetShortResourceName return short resoruce name from `fullResourceName`. (Resource name format: https://cloud.google.com/asset-inventory/docs/resource-name-format)
+func GetShortResourceName(gcpProjectID, fullResourceName string) string {
+	array := strings.Split(fullResourceName, "/")
+	if len(array) < 2 {
+		return getResourceName(gcpProjectID, UnknownService, fullResourceName)
+	}
+	return getResourceName(gcpProjectID, array[len(array)-2], array[len(array)-1])
 }
 
-// GetResourceName return common resoruce name format (`prjectID/serviceName/your-resouce`)
-func GetResourceName(gcpProjectID, serviceName, resourceName string) string {
+// getResourceName return `{gcpProjectID}/{serviceName}/{resourceName}`
+func getResourceName(gcpProjectID, serviceName, resourceName string) string {
 	return gcpProjectID + "/" + serviceName + "/" + resourceName
 }
