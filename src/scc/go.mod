@@ -8,10 +8,11 @@ require (
 	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20210108063741-eceb6a32f58c
 	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210122105021-0934041eb6a6
 	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210122105021-0934041eb6a6
-	github.com/aws/aws-sdk-go v1.36.30
-	github.com/h2ik/go-sqs-poller/v3 v3.1.1
+	github.com/aws/aws-sdk-go v1.37.10
+	github.com/gassara-kys/go-sqs-poller/worker/v4 v4.0.0-20210215110542-0be358599a2f
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/sirupsen/logrus v1.7.0
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect

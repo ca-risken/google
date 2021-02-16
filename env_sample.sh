@@ -32,6 +32,9 @@ export GOOGLE_SERVICE_ACCOUNT_JSON='{"key": "your credential json here..." }'
 export GOOGLE_SERVICE_ACCOUNT_EMAIL="risken@ca-security-hub.iam.gserviceaccount.com"
 export GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="your private key here..."
 
+# aws
+export AWS_REGION="ap-northeast-1"
+
 # gRPC server
 export FINDING_SVC_ADDR="finding:8001"
 export ALERT_SVC_ADDR="alert:8004"

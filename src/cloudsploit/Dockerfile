@@ -14,8 +14,8 @@ RUN apk add --no-cache ca-certificates tzdata git \
   && mkdir -p /var/scan/ && cd /var/scan/ \
   && git clone https://github.com/aquasecurity/cloudsploit.git -b v2.0.0 --depth 1 \
   && npm init --yes && npm install cloudsploit \
-  && cd /tmp/ && wget -q https://github.com/okzk/env-injector/releases/download/v0.0.5/env-injector_0.0.5_linux_amd64.tar.gz \
-  && tar xvfz env-injector_0.0.5_linux_amd64.tar.gz && mv env-injector /usr/local/bin/ && rm -rf /tmp/*
+  && cd /tmp/ && wget -q https://github.com/gassara-kys/env-injector/releases/download/v0.0.6/env-injector_0.0.6_Linux_x86_64.tar.gz \
+  && tar xvfz env-injector_0.0.6_Linux_x86_64.tar.gz && mv env-injector /usr/local/bin/ && rm -rf /tmp/*
 COPY --from=builder /go/bin/cloudsploit /usr/local/cloudsploit/bin/
 ENV PATH="$PATH:/var/scan/node_modules/.bin" \
     DEBUG= \
