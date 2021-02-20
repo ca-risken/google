@@ -179,8 +179,8 @@ func getStatus(s string) google.Status {
 		return google.Status_OK
 	case google.Status_CONFIGURED.String():
 		return google.Status_CONFIGURED
-	case google.Status_NOT_CONFIGURED.String():
-		return google.Status_NOT_CONFIGURED
+	case google.Status_IN_PROGRESS.String():
+		return google.Status_IN_PROGRESS
 	case google.Status_ERROR.String():
 		return google.Status_ERROR
 	default:
@@ -255,6 +255,16 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
 	}
 	if err != nil {
+		return nil, err
+	}
+	if _, err = g.repository.UpsertGCPDataSource(&google.GCPDataSourceForUpsert{
+		GcpId:              data.GCPID,
+		GoogleDataSourceId: data.GoogleDataSourceID,
+		ProjectId:          data.ProjectID,
+		Status:             google.Status_IN_PROGRESS,
+		StatusDetail:       fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		ScanAt:             data.ScanAt.Unix(),
+	}); err != nil {
 		return nil, err
 	}
 	appLogger.Infof("Invoke scanned, messageId: %v", resp.MessageId)
