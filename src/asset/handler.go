@@ -33,8 +33,9 @@ func newHandler() *sqsHandler {
 }
 
 type assetFinding struct {
-	Asset     *assetpb.ResourceSearchResult     `json:"asset"`
-	IAMPolicy *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy"`
+	Asset                *assetpb.ResourceSearchResult     `json:"asset"`
+	IAMPolicy            *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy"`
+	HasServiceAccountKey bool                              `json:"has_key"`
 }
 
 func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
@@ -70,6 +71,11 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		f := assetFinding{Asset: resource}
 		if isUserServiceAccount(resource.AssetType, resource.Name) {
 			email := getShortName(resource.Name)
+			hasKey, err := s.assetClient.hasUserManagedKeys(ctx, gcp.GcpProjectId, email)
+			if err != nil {
+				return s.updateScanStatusError(ctx, scanStatus, err.Error())
+			}
+			f.HasServiceAccountKey = hasKey
 			policy, err := s.assetClient.analyzeServiceAccountPolicy(ctx, gcp.GcpProjectId, email)
 			if err != nil {
 				return s.updateScanStatusError(ctx, scanStatus, err.Error())
@@ -226,6 +232,9 @@ func scoreAsset(f *assetFinding) float32 {
 	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
 		if f.IAMPolicy == nil || f.IAMPolicy.MainAnalysis == nil || f.IAMPolicy.MainAnalysis.AnalysisResults == nil {
 			return 0.0
+		}
+		if !f.HasServiceAccountKey {
+			return 0.1
 		}
 		for _, p := range f.IAMPolicy.MainAnalysis.AnalysisResults {
 			if p.IamBinding == nil {
