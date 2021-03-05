@@ -71,5 +71,8 @@ run: go-test network
 log:
 	. env.sh && docker-compose logs -f
 
+log-asset:
+	. env.sh && docker-compose logs -f asset 
+
 stop:
 	. env.sh && docker-compose down

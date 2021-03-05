@@ -68,6 +68,7 @@ func TestScoreAsset(t *testing.T) {
 					AssetType: assetTypeServiceAccount,
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
+				HasServiceAccountKey: true,
 				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
 					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
 						AnalysisResults: []*asset.IamPolicyAnalysisResult{
@@ -86,7 +87,8 @@ func TestScoreAsset(t *testing.T) {
 					AssetType: assetTypeServiceAccount,
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
-				IAMPolicy: &asset.AnalyzeIamPolicyResponse{},
+				HasServiceAccountKey: true,
+				IAMPolicy:            &asset.AnalyzeIamPolicyResponse{},
 			},
 			want: 0.0,
 		},
@@ -97,6 +99,7 @@ func TestScoreAsset(t *testing.T) {
 					AssetType: assetTypeServiceAccount,
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
+				HasServiceAccountKey: true,
 				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
 					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
 						AnalysisResults: []*asset.IamPolicyAnalysisResult{
@@ -107,6 +110,25 @@ func TestScoreAsset(t *testing.T) {
 				},
 			},
 			want: 0.8,
+		},
+		{
+			name: "OK Exists Admin ServiceAccount, But NO user keys",
+			input: &assetFinding{
+				Asset: &asset.ResourceSearchResult{
+					AssetType: assetTypeServiceAccount,
+					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
+				},
+				HasServiceAccountKey: false,
+				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
+					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
+						AnalysisResults: []*asset.IamPolicyAnalysisResult{
+							{IamBinding: &iam.Binding{Role: "roles/viewer"}},
+							{IamBinding: &iam.Binding{Role: roleOwner}}, // admin role
+						},
+					},
+				},
+			},
+			want: 0.1,
 		},
 	}
 	for _, c := range cases {
