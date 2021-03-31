@@ -13,4 +13,6 @@ const (
 	TagCloudSploit = "cloudsploit"
 	// TagSCC tag
 	TagSCC = "scc"
+	// TagPortscan tag
+	TagPortscan = "portscan"
 )
