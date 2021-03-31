@@ -69,15 +69,15 @@ func TestSplitPort(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			fromPort, toPort, err := scoreAsset(c.input)
+			fromPort, toPort, err := splitPort(c.input)
 			if !reflect.DeepEqual(c.wantFrom, fromPort) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.wantFrom, fromPort)
 			}
 			if !reflect.DeepEqual(c.wantFrom, fromPort) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.wantTo, toPort)
 			}
-			if isErr == (err != nil) {
-				t.Fatalf("Unexpected error occured: err=%+v, got=%+v", err)
+			if !c.isErr && err != nil {
+				t.Fatalf("Unexpected error occured: err=%+v", err)
 			}
 		})
 	}
