@@ -6,6 +6,7 @@ env:
     IMAGE_ASSET: "google/asset"
     IMAGE_CLOUDSPLOIT: "google/cloudsploit"
     IMAGE_SCC: "google/scc"
+    IMAGE_PORTSCAN: "google/portscan"
   parameter-store:
     GITHUB_USER: "/build/GITHUB_USER"
     GITHUB_TOKEN: "/build/GITHUB_TOKEN"
@@ -30,6 +31,7 @@ phases:
       - cd ${SRC}/asset       && go test ./...
       - cd ${SRC}/cloudsploit && go test ./...
       - cd ${SRC}/scc         && go test ./...
+      - cd ${SRC}/portscan    && go test ./...
 
       - echo Logging in to Amazon ECR...
       - $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
@@ -41,3 +43,4 @@ phases:
       - cd ${SRC}/asset       && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_ASSET}:${TAG} .
       - cd ${SRC}/cloudsploit && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_CLOUDSPLOIT}:${TAG} .
       - cd ${SRC}/scc         && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_SCC}:${TAG} .
+      - cd ${SRC}/portscan    && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_PORTSCAN}:${TAG} .

@@ -27,6 +27,8 @@ export CLOUD_SPLOIT_QUEUE_NAME="google-cloudsploit"
 export CLOUD_SPLOIT_QUEUE_URL="http://sqs:9324/queue/google-cloudsploit"
 export SCC_QUEUE_NAME="google-scc"
 export SCC_QUEUE_URL="http://sqs:9324/queue/google-scc"
+export PORTSCAN_QUEUE_NAME="google-portscan"
+export PORTSCAN_QUEUE_URL="http://sqs:9324/queue/google-portscan"
 export GOOGLE_CREDENTIAL_PATH="/path/to/your-credential-file"
 export GOOGLE_SERVICE_ACCOUNT_JSON='{"key": "your credential json here..." }'
 export GOOGLE_SERVICE_ACCOUNT_EMAIL="risken@ca-security-hub.iam.gserviceaccount.com"
@@ -39,3 +41,6 @@ export AWS_REGION="ap-northeast-1"
 export FINDING_SVC_ADDR="finding:8001"
 export ALERT_SVC_ADDR="alert:8004"
 export GOOGLE_SVC_ADDR="google:11001"
+
+# portscan
+export SCAN_EXCLUDE_PORT_NUMBER=1000

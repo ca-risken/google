@@ -18,12 +18,14 @@ type sqsConfig struct {
 	AssetQueueURL       string `split_words:"true" required:"true"`
 	CloudSploitQueueURL string `split_words:"true" required:"true"`
 	SCCQueueURL         string `split_words:"true" required:"true"`
+	PortscanQueueURL    string `split_words:"true" required:"true"`
 }
 
 type sqsAPI interface {
 	sendMsgForAsset(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
 	sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
 	sendMsgForSCC(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForPortscan(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
 }
 
 type sqsClient struct {
@@ -31,6 +33,7 @@ type sqsClient struct {
 	assetQueueURL       string
 	cloudSploitQueueURL string
 	sccQueueURL         string
+	portscanQueueURL    string
 }
 
 func newSQSClient() *sqsClient {
@@ -54,6 +57,7 @@ func newSQSClient() *sqsClient {
 		assetQueueURL:       conf.AssetQueueURL,
 		cloudSploitQueueURL: conf.CloudSploitQueueURL,
 		sccQueueURL:         conf.SCCQueueURL,
+		portscanQueueURL:    conf.PortscanQueueURL,
 	}
 }
 
@@ -67,6 +71,10 @@ func (s *sqsClient) sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.Sen
 
 func (s *sqsClient) sendMsgForSCC(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
 	return s.sendMsgForGCP(s.sccQueueURL, msg)
+}
+
+func (s *sqsClient) sendMsgForPortscan(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(s.portscanQueueURL, msg)
 }
 
 func (s *sqsClient) sendMsgForGCP(queueURL string, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {

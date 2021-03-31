@@ -6,6 +6,7 @@ env:
     IMAGE_ASSET: "google/asset"
     IMAGE_CLOUDSPLOIT: "google/cloudsploit"
     IMAGE_SCC: "google/scc"
+    IMAGE_PORTSCAN: "google/portscan"
   parameter-store:
     GITHUB_USER: "/build/GITHUB_USER"
     GITHUB_TOKEN: "/build/GITHUB_TOKEN"
@@ -32,6 +33,7 @@ phases:
       - cd ${SRC}/asset       && go test ./...
       - cd ${SRC}/cloudsploit && go test ./...
       - cd ${SRC}/scc         && go test ./...
+      - cd ${SRC}/portscan    && go test ./...
 
       - echo Logging in to Amazon ECR...
       - $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
@@ -43,6 +45,7 @@ phases:
       - cd ${SRC}/asset       && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_ASSET}:${TAG} .
       - cd ${SRC}/cloudsploit && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_CLOUDSPLOIT}:${TAG} .
       - cd ${SRC}/scc         && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_SCC}:${TAG} .
+      - cd ${SRC}/portscan    && docker build ${BUILD_OPT} --build-arg GITHUB_USER=${GITHUB_USER} --build-arg GITHUB_TOKEN=${GITHUB_TOKEN} -t ${IMAGE_PORTSCAN}:${TAG} .
 
       - echo Tagging the images...
       # tag the specific version
@@ -50,12 +53,14 @@ phases:
       - docker tag ${IMAGE_ASSET}:${TAG}       ${REGISTORY}/${IMAGE_ASSET}:${TAG}
       - docker tag ${IMAGE_CLOUDSPLOIT}:${TAG} ${REGISTORY}/${IMAGE_CLOUDSPLOIT}:${TAG}
       - docker tag ${IMAGE_SCC}:${TAG}         ${REGISTORY}/${IMAGE_SCC}:${TAG}
+      - docker tag ${IMAGE_PORTSCAN}:${TAG}    ${REGISTORY}/${IMAGE_PORTSCAN}:${TAG}
 
       # update latest version 
       - docker tag ${IMAGE_GOOGLE}:${TAG}      ${REGISTORY}/${IMAGE_GOOGLE}:latest
       - docker tag ${IMAGE_ASSET}:${TAG}       ${REGISTORY}/${IMAGE_ASSET}:latest
       - docker tag ${IMAGE_CLOUDSPLOIT}:${TAG} ${REGISTORY}/${IMAGE_CLOUDSPLOIT}:latest
       - docker tag ${IMAGE_SCC}:${TAG}         ${REGISTORY}/${IMAGE_SCC}:latest
+      - docker tag ${IMAGE_PORTSCAN}:${TAG}    ${REGISTORY}/${IMAGE_PORTSCAN}:latest
   post_build:
     commands:
       - echo Build completed on `date`
@@ -66,9 +71,11 @@ phases:
       - docker push ${REGISTORY}/${IMAGE_ASSET}:${TAG}
       - docker push ${REGISTORY}/${IMAGE_CLOUDSPLOIT}:${TAG}
       - docker push ${REGISTORY}/${IMAGE_SCC}:${TAG}
+      - docker push ${REGISTORY}/${IMAGE_PORTSCAN}:${TAG}
 
       # latest version
       - docker push ${REGISTORY}/${IMAGE_GOOGLE}:latest
       - docker push ${REGISTORY}/${IMAGE_ASSET}:latest
       - docker push ${REGISTORY}/${IMAGE_CLOUDSPLOIT}:latest
       - docker push ${REGISTORY}/${IMAGE_SCC}:latest
+      - docker push ${REGISTORY}/${IMAGE_PORTSCAN}:latest

@@ -228,6 +228,7 @@ const (
 	cloudAssetDataSourceID  uint32 = 1001
 	cloudSploitDataSourceID uint32 = 1002
 	sccDataSourceID         uint32 = 1003
+	portscanDataSourceID    uint32 = 1004
 )
 
 func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
@@ -251,6 +252,8 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 		resp, err = g.sqs.sendMsgForCloudSploit(msg)
 	case sccDataSourceID:
 		resp, err = g.sqs.sendMsgForSCC(msg)
+	case portscanDataSourceID:
+		resp, err = g.sqs.sendMsgForPortscan(msg)
 	default:
 		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
 	}
