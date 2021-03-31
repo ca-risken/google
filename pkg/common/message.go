@@ -13,6 +13,8 @@ const (
 	CloudSploitDataSource = "google:cloudsploit"
 	// SCCDataSource is the DataSource label for Security Command Center.
 	SCCDataSource = "google:scc"
+	// PortscanDataSource is the DataSource label for Portscan.
+	PortscanDataSource = "google:portscan"
 )
 
 // GCPQueueMessage is the message for SQS queue
