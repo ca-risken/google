@@ -252,7 +252,7 @@ func hasFullOpenRange(ranges []string) bool {
 func scanTarget(target *target) []*portscan.NmapResult {
 	results, err := portscan.Scan(target.Target, target.Protocol, target.FromPort, target.ToPort)
 	if err != nil {
-		appLogger.Infof("%v", err)
+		appLogger.Warnf("Error occured when scanning. err: %v", err)
 		return nil
 	}
 	var ret []*portscan.NmapResult
