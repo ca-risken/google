@@ -1,5 +1,5 @@
 FROM golang AS builder
-WORKDIR /go/src/github.com/CyberAgent/mimosa-google/src/google/
+WORKDIR /go/src/github.com/CyberAgent/mimosa-google/src/portscan/
 ADD *.go go.* ./
 ENV CGO_ENABLED=0 GO111MODULE=on GOPRIVATE="github.com/CyberAgent/*"
 ARG GITHUB_USER
@@ -10,29 +10,28 @@ RUN echo "password $GITHUB_TOKEN" >> ~/.netrc
 RUN go install -v
 
 FROM alpine
-RUN apk add --no-cache ca-certificates tzdata \
+RUN apk add --no-cache ca-certificates tzdata nmap nmap-scripts \
   && cd /tmp/ && wget -q https://github.com/gassara-kys/env-injector/releases/download/v0.0.6/env-injector_0.0.6_Linux_x86_64.tar.gz \
   && tar xvfz env-injector_0.0.6_Linux_x86_64.tar.gz && mv env-injector /usr/local/bin/ && rm -rf /tmp/*
-COPY --from=builder /go/bin/google /usr/local/google/bin/
-ENV PORT= \
-    DB_MASTER_HOST= \
-    DB_MASTER_USER= \
-    DB_MASTER_PASSWORD= \
-    DB_SLAVE_HOST= \
-    DB_SLAVE_USER= \
-    DB_SLAVE_PASSWORD= \
-    DB_SCHEMA=mimosa \
-    DB_PORT=3306 \
-    DB_LOG_MODE=false \
+COPY --from=builder /go/bin/portscan /usr/local/portscan/bin/
+ADD docker-entrypoint.sh /usr/local/bin
+ENV DEBUG= \
     AWS_REGION= \
     AWS_ACCESS_KEY_ID= \
     AWS_SECRET_ACCESS_KEY= \
     AWS_SESSION_TOKEN= \
     SQS_ENDPOINT= \
+    ASSET_QUEUE_NAME= \
     ASSET_QUEUE_URL= \
-    CLOUD_SPLOIT_QUEUE_URL= \
-    PORTSCAN_QUEUE_URL= \
+    MAX_NUMBER_OF_MESSAGE=10 \
+    WAIT_TIME_SECOND=20 \
+    FINDING_SVC_ADDR= \
+    ALERT_SVC_ADDR= \
+    GOOGLE_SVC_ADDR= \
+    GOOGLE_CREDENTIAL_PATH= \
+    GOOGLE_SERVICE_ACCOUNT_JSON= \
+    SCAN_EXCLUDE_PORT_NUMBER= \
     TZ=Asia/Tokyo
-WORKDIR /usr/local/google
-ENTRYPOINT ["/usr/local/bin/env-injector"]
-CMD ["bin/google"]
+WORKDIR /usr/local/portscan
+ENTRYPOINT ["env-injector", "docker-entrypoint.sh"]
+CMD ["bin/portscan"]
