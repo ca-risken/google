@@ -120,7 +120,7 @@ func TestValidate_PutGCPRequest(t *testing.T) {
 		{
 			name: "OK",
 			input: &PutGCPRequest{ProjectId: 1, Gcp: &GCPForUpsert{
-				Name: "name", ProjectId: 1, GcpProjectId: "1",
+				Name: "name", ProjectId: 1, GcpProjectId: "1", VerificationCode: "12345678",
 			}},
 		},
 		{
@@ -370,54 +370,75 @@ func TestValidate_GCPForUpsert(t *testing.T) {
 		{
 			name: "OK",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 		},
 		{
 			name: "OK minimize",
 			input: &GCPForUpsert{
-				Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
+				Name: "name", ProjectId: 1, GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 		},
 		{
 			name: "NG Required(name)",
 			input: &GCPForUpsert{
-				GcpId: 1, ProjectId: 1, GcpProjectId: "my-pj",
+				GcpId: 1, ProjectId: 1, GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(name)",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: stringLength65, ProjectId: 1, GcpProjectId: "my-pj",
+				GcpId: 1, Name: stringLength65, ProjectId: 1, GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(project_id)",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: "name", GcpProjectId: "my-pj",
+				GcpId: 1, Name: "name", GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(gcp_organization_id)",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: stringLength129, GcpProjectId: "my-pj",
+				GcpId: 1, Name: "name", ProjectId: 1, GcpOrganizationId: stringLength129, GcpProjectId: "my-pj", VerificationCode: "12345678",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(gcp_project_id)",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: "name", ProjectId: 1,
+				GcpId: 1, Name: "name", ProjectId: 1, VerificationCode: "12345678",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(gcp_project_id)",
 			input: &GCPForUpsert{
-				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: stringLength129,
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: stringLength129, VerificationCode: "12345678",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(verification_code)",
+			input: &GCPForUpsert{
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: "my-pj",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG MinLength(verification_code)",
+			input: &GCPForUpsert{
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: stringLength129, VerificationCode: "1234567",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG MaxLength(verification_code)",
+			input: &GCPForUpsert{
+				GcpId: 1, Name: "name", ProjectId: 1, GcpProjectId: stringLength129, VerificationCode: stringLength256,
 			},
 			wantErr: true,
 		},

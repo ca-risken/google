@@ -136,6 +136,7 @@ GCPForUpsert
 | project_id | [uint32](#uint32) |  |  |
 | gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
+| verification_code | [string](#string) |  |  |
 
 
 
