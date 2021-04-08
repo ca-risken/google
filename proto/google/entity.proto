@@ -64,6 +64,7 @@ message GCPForUpsert {
   uint32 project_id = 3;
   string gcp_organization_id = 4;
   string gcp_project_id = 5;
+  string verification_code = 6;
 }
 
 // GCPDataSourceForUpsert

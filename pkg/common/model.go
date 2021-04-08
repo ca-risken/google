@@ -19,6 +19,7 @@ type GCP struct {
 	ProjectID         uint32
 	GCPOrganizationID string `gorm:"column:gcp_organization_id"`
 	GCPProjectID      string `gorm:"column:gcp_project_id"`
+	VerificationCode  string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
