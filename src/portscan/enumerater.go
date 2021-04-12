@@ -122,7 +122,6 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 			Type:         "ForwardingRule",
 		})
 	}
-
 	return ret, nil
 }
 
@@ -227,7 +226,7 @@ func matchFirewallCompute(firewall *infoFirewall, instance *infoCompute) bool {
 	if firewall.Network != instance.Network {
 		return false
 	}
-	if zero.IsZeroVal(instance.Tags) {
+	if zero.IsZeroVal(firewall.TargetTags) {
 		return true
 	}
 	for _, instanceTag := range instance.Tags {
@@ -249,7 +248,7 @@ func hasFullOpenRange(ranges []string) bool {
 	return false
 }
 
-func scanTarget(target *target) []*portscan.NmapResult {
+func scan(target *target) []*portscan.NmapResult {
 	results, err := portscan.Scan(target.Target, target.Protocol, target.FromPort, target.ToPort)
 	if err != nil {
 		appLogger.Warnf("Error occured when scanning. err: %v", err)

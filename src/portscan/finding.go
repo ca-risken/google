@@ -12,43 +12,48 @@ import (
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 )
 
-func makeFinding(result *portscan.NmapResult, message *common.GCPQueueMessage) (*finding.FindingForUpsert, error) {
-	data, err := json.Marshal(map[string]portscan.NmapResult{"data": *result})
+func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, nmapResult *portscan.NmapResult) error {
+	data, err := json.Marshal(map[string]portscan.NmapResult{"data": *nmapResult})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	finding := &finding.FindingForUpsert{
-		Description:      result.GetDescription(),
-		DataSource:       common.PortscanDataSource,
-		DataSourceId:     result.GetDataSourceID(),
-		ResourceName:     result.ResourceName,
-		ProjectId:        message.ProjectID,
-		OriginalScore:    result.GetScore(),
-		OriginalMaxScore: 10.0,
-		Data:             string(data),
+	findings := nmapResult.GetFindings(projectID, common.PortscanDataSource, string(data))
+	tags := nmapResult.GetTags()
+	err = s.putFindings(ctx, findings, tags)
+	if err != nil {
+		return err
 	}
-	return finding, nil
+	return nil
 }
 
-func makeExcludeFinding(result *exclude, message *common.GCPQueueMessage) (*finding.FindingForUpsert, error) {
-	data, err := json.Marshal(map[string]exclude{"data": *result})
+func (s *sqsHandler) putExcludeFindings(ctx context.Context, excludeList []*exclude, message *common.GCPQueueMessage) error {
+	var findings []*finding.FindingForUpsert
+	for _, e := range excludeList {
+		data, err := json.Marshal(map[string]exclude{"data": *e})
+		if err != nil {
+			return err
+		}
+		finding := &finding.FindingForUpsert{
+			Description:      e.getDescription(),
+			DataSource:       common.PortscanDataSource,
+			DataSourceId:     e.getDataSourceID(),
+			ResourceName:     e.ResourceName,
+			ProjectId:        message.ProjectID,
+			OriginalScore:    6.0,
+			OriginalMaxScore: 10.0,
+			Data:             string(data),
+		}
+		findings = append(findings, finding)
+	}
+	err := s.putFindings(ctx, findings, []string{})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	finding := &finding.FindingForUpsert{
-		Description:      result.getDescription(),
-		DataSource:       common.PortscanDataSource,
-		DataSourceId:     result.getDataSourceID(),
-		ResourceName:     result.ResourceName,
-		ProjectId:        message.ProjectID,
-		OriginalScore:    6.0,
-		OriginalMaxScore: 10.0,
-		Data:             string(data),
-	}
-	return finding, nil
+
+	return nil
 }
 
-func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert) error {
+func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string) error {
 	for _, f := range findings {
 
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
@@ -57,6 +62,9 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 		}
 		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGCP)
 		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagPortscan)
+		for _, additionalTag := range additionalTags {
+			s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, additionalTag)
+		}
 	}
 
 	return nil
