@@ -47,13 +47,9 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	scanStatus := common.InitScanStatus(gcp)
 
 	// get target and scan target
-	findings, err := s.scan(ctx, gcp.GcpProjectId, message)
+	err = s.scan(ctx, gcp.GcpProjectId, message)
 	if err != nil {
 		return s.updateScanStatusError(ctx, scanStatus, err.Error())
-	}
-	if err := s.putFindings(ctx, findings); err != nil {
-		appLogger.Errorf("Failed put findings. err: %v", err)
-		return err
 	}
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
@@ -63,31 +59,27 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	return s.analyzeAlert(ctx, message.ProjectID)
 }
 
-func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage) ([]*finding.FindingForUpsert, error) {
+func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage) error {
 	targets, err := s.portscanClient.listTarget(ctx, gcpProjectId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	targets, excludeList := s.portscanClient.excludeTarget(targets)
-	var findings []*finding.FindingForUpsert
 	for _, target := range targets {
-		results := scanTarget(target)
+		results := scan(target)
 		for _, result := range results {
-			finding, err := makeFinding(result, message)
+			err := s.putNmapFindings(ctx, message.ProjectID, result)
 			if err != nil {
-				appLogger.Errorf("Failed making Finding err: %v", err)
+				appLogger.Errorf("Failed put Finding err: %v", err)
 			}
-			findings = append(findings, finding)
 		}
 	}
-	for _, exclude := range excludeList {
-		finding, err := makeExcludeFinding(exclude, message)
-		if err != nil {
-			appLogger.Errorf("Failed making exclude Finding err: %v", err)
-		}
-		findings = append(findings, finding)
+	err = s.putExcludeFindings(ctx, excludeList, message)
+	if err != nil {
+		appLogger.Errorf("Failed put exclude Finding err: %v", err)
 	}
-	return findings, nil
+
+	return nil
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
