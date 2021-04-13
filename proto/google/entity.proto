@@ -27,8 +27,9 @@ message GCP {
   uint32 project_id = 3;
   string gcp_organization_id = 4;
   string gcp_project_id = 5;
-  int64 created_at = 6;
-  int64 updated_at = 7;
+  string verification_code = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
 }
 
 // GCPDataSource

@@ -68,6 +68,7 @@ GCP
 | project_id | [uint32](#uint32) |  |  |
 | gcp_organization_id | [string](#string) |  |  |
 | gcp_project_id | [string](#string) |  |  |
+| verification_code | [string](#string) |  |  |
 | created_at | [int64](#int64) |  |  |
 | updated_at | [int64](#int64) |  |  |
 
