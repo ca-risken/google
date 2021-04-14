@@ -3,24 +3,23 @@ module github.com/CyberAgent/mimosa-google/src/asset
 go 1.16
 
 require (
-	cloud.google.com/go v0.77.0
-	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20210218135922-8cb0b0d8730e
-	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20210218135922-8cb0b0d8730e
-	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210220161906-ab5813b7a528
-	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210220161906-ab5813b7a528
-	github.com/aws/aws-sdk-go v1.37.15
+	cloud.google.com/go v0.81.0
+	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20210412053859-6f85123349ff
+	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20210412053859-6f85123349ff
+	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210413063714-8c11dcfcd932
+	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210413063714-8c11dcfcd932
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
+	github.com/aws/aws-sdk-go v1.38.18
 	github.com/gassara-kys/go-sqs-poller/worker/v4 v4.0.0-20210215110542-0be358599a2f
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/magefile/mage v1.11.0 // indirect
-	github.com/sirupsen/logrus v1.8.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
-	go.opencensus.io v0.22.6 // indirect
-	golang.org/x/net v0.0.0-20210220033124-5f55cee0dc0d // indirect
-	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93 // indirect
-	golang.org/x/sys v0.0.0-20210220050731-9a76102bfb43 // indirect
-	golang.org/x/text v0.3.5 // indirect
-	google.golang.org/api v0.40.0
-	google.golang.org/genproto v0.0.0-20210219173056-d891e3cb3b5b
-	google.golang.org/grpc v1.35.0
+	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect
+	golang.org/x/sys v0.0.0-20210412220455-f1c623a9e750 // indirect
+	google.golang.org/api v0.44.0
+	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46
+	google.golang.org/grpc v1.37.0
 )

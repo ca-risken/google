@@ -212,13 +212,13 @@ func TestPutGCP(t *testing.T) {
 		{
 			name: "OK",
 			input: &google.PutGCPRequest{ProjectId: 1, Gcp: &google.GCPForUpsert{
-				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj"},
+				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj", VerificationCode: "valid code"},
 			},
 			want: &google.PutGCPResponse{Gcp: &google.GCP{
-				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj", CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj", VerificationCode: "valid code", CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponce: &common.GCP{
-				GCPID: 1, Name: "one", ProjectID: 1, GCPProjectID: "pj", CreatedAt: now, UpdatedAt: now,
+				GCPID: 1, Name: "one", ProjectID: 1, GCPProjectID: "pj", VerificationCode: "valid code", CreatedAt: now, UpdatedAt: now,
 			},
 		},
 		{
@@ -229,7 +229,7 @@ func TestPutGCP(t *testing.T) {
 		{
 			name: "NG DB error",
 			input: &google.PutGCPRequest{ProjectId: 1, Gcp: &google.GCPForUpsert{
-				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj"},
+				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj", VerificationCode: "valid code"},
 			},
 			mockError: gorm.ErrInvalidSQL,
 			wantErr:   true,
@@ -417,7 +417,12 @@ func TestAttachGCPDataSource(t *testing.T) {
 	var ctx context.Context
 	now := time.Now()
 	mockDB := mockGoogleRepository{}
-	svc := googleService{repository: &mockDB}
+	mockRM := mockResourceManager{}
+	svc := googleService{
+		repository:      &mockDB,
+		resourceManager: &mockRM,
+	}
+	mockDB.On("GetGCP").Return(&common.GCP{}, nil)
 	cases := []struct {
 		name         string
 		input        *google.AttachGCPDataSourceRequest
@@ -547,4 +552,12 @@ func (m *mockGoogleRepository) UpsertGCPDataSource(_ *google.GCPDataSourceForUps
 func (m *mockGoogleRepository) DeleteGCPDataSource(projectID, gcpID, googleDataSourceID uint32) error {
 	args := m.Called()
 	return args.Error(0)
+}
+
+type mockResourceManager struct {
+	mock.Mock
+}
+
+func (m *mockResourceManager) verifyCode(ctx context.Context, gcpProjectID, verificationCode string) (bool, error) {
+	return true, nil
 }

@@ -71,6 +71,9 @@ run: go-test network
 log:
 	. env.sh && docker-compose logs -f
 
+log-google:
+	. env.sh && docker-compose logs -f google
+
 log-asset:
 	. env.sh && docker-compose logs -f asset 
 
