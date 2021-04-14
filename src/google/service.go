@@ -14,14 +14,16 @@ import (
 )
 
 type googleService struct {
-	repository googleRepoInterface
-	sqs        sqsAPI
+	repository      googleRepoInterface
+	sqs             sqsAPI
+	resourceManager resourceManagerServiceClient
 }
 
 func newGoogleService() google.GoogleServiceServer {
 	return &googleService{
-		repository: newGoogleRepository(),
-		sqs:        newSQSClient(),
+		repository:      newGoogleRepository(),
+		sqs:             newSQSClient(),
+		resourceManager: newResourceManagerClient(),
 	}
 }
 
@@ -67,6 +69,7 @@ func convertGCP(data *common.GCP) *google.GCP {
 		ProjectId:         data.ProjectID,
 		GcpOrganizationId: data.GCPOrganizationID,
 		GcpProjectId:      data.GCPProjectID,
+		VerificationCode:  data.VerificationCode,
 		CreatedAt:         data.CreatedAt.Unix(),
 		UpdatedAt:         data.UpdatedAt.Unix(),
 	}
@@ -206,6 +209,13 @@ func (g *googleService) AttachGCPDataSource(ctx context.Context, req *google.Att
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	gcp, err := g.repository.GetGCP(req.ProjectId, req.GcpDataSource.GcpId)
+	if err != nil {
+		return nil, err
+	}
+	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
+		return nil, err
+	}
 	registerd, err := g.repository.UpsertGCPDataSource(req.GcpDataSource)
 	if err != nil {
 		return nil, err
@@ -233,6 +243,13 @@ const (
 
 func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
 	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	gcp, err := g.repository.GetGCP(req.ProjectId, req.GcpId)
+	if err != nil {
+		return nil, err
+	}
+	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
 		return nil, err
 	}
 	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)

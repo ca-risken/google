@@ -14,6 +14,7 @@ RUN apk add --no-cache ca-certificates tzdata \
   && cd /tmp/ && wget -q https://github.com/gassara-kys/env-injector/releases/download/v0.0.6/env-injector_0.0.6_Linux_x86_64.tar.gz \
   && tar xvfz env-injector_0.0.6_Linux_x86_64.tar.gz && mv env-injector /usr/local/bin/ && rm -rf /tmp/*
 COPY --from=builder /go/bin/google /usr/local/google/bin/
+ADD docker-entrypoint.sh /usr/local/bin
 ENV PORT= \
     DB_MASTER_HOST= \
     DB_MASTER_USER= \
@@ -32,7 +33,9 @@ ENV PORT= \
     ASSET_QUEUE_URL= \
     CLOUD_SPLOIT_QUEUE_URL= \
     PORTSCAN_QUEUE_URL= \
+    GOOGLE_CREDENTIAL_PATH= \
+    GOOGLE_SERVICE_ACCOUNT_JSON= \
     TZ=Asia/Tokyo
 WORKDIR /usr/local/google
-ENTRYPOINT ["/usr/local/bin/env-injector"]
+ENTRYPOINT ["env-injector", "docker-entrypoint.sh"]
 CMD ["bin/google"]

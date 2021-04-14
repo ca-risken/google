@@ -75,14 +75,16 @@ INSERT INTO gcp (
   name,
   project_id,
   gcp_organization_id,
-  gcp_project_id
+  gcp_project_id,
+  verification_code
 )
-VALUES (?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
-	name=VALUES(name),
-	project_id=VALUES(project_id),
-	gcp_organization_id=VALUES(gcp_organization_id),
-	gcp_project_id=VALUES(gcp_project_id)
+  name=VALUES(name),
+  project_id=VALUES(project_id),
+  gcp_organization_id=VALUES(gcp_organization_id),
+  gcp_project_id=VALUES(gcp_project_id),
+  verification_code=VALUES(verification_code)
 `
 
 func (g *googleRepository) UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, error) {
@@ -92,6 +94,7 @@ func (g *googleRepository) UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, err
 		gcp.ProjectId,
 		convertZeroValueToNull(gcp.GcpOrganizationId),
 		gcp.GcpProjectId,
+		gcp.VerificationCode,
 	).Error; err != nil {
 		return nil, err
 	}
