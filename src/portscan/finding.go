@@ -55,7 +55,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, excludeList []*excl
 
 func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string) error {
 	for _, f := range findings {
-
+		appLogger.Infof("finding: %v", f)
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
 		if err != nil {
 			return err
