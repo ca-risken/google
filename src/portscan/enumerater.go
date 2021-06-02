@@ -68,19 +68,19 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 	var ret []*target
 	infFirewalls, err := listTargetFirewall(p.compute, gcpProjectID)
 	if err != nil {
-		appLogger.Fatalf("Failed to describe firewall service: %+v", err)
+		appLogger.Errorf("Failed to describe firewall service: %+v", err)
 		return nil, err
 	}
 
 	infComputes, err := listTargetCompute(p.compute, gcpProjectID)
 	if err != nil {
-		appLogger.Fatalf("Failed to describe compute service: %+v", err)
+		appLogger.Errorf("Failed to describe compute service: %+v", err)
 		return nil, err
 	}
 
 	infForwardings, err := listTargetForwardingRule(p.compute, gcpProjectID)
 	if err != nil {
-		appLogger.Fatalf("Failed to describe compute service: %+v", err)
+		appLogger.Errorf("Failed to describe compute service: %+v", err)
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func listTargetFirewall(com *compute.Service, gcpProjectID string) ([]*infoFirew
 	var ret []*infoFirewall
 	f, err := firewalls.List(gcpProjectID).Do()
 	if err != nil {
-		appLogger.Fatalf("Failed to list firewall rules: %+v", err)
+		appLogger.Errorf("Failed to list firewall rules: %+v", err)
 		return nil, err
 	}
 	for _, fItem := range f.Items {
@@ -173,7 +173,7 @@ func listTargetCompute(com *compute.Service, gcpProjectID string) ([]*infoComput
 	instances := compute.NewInstancesService(com)
 	i, err := instances.AggregatedList(gcpProjectID).Do()
 	if err != nil {
-		appLogger.Fatalf("Failed to describe Compute service: %+v", err)
+		appLogger.Errorf("Failed to describe Compute service: %+v", err)
 		return nil, err
 	}
 	var ret []*infoCompute
@@ -200,7 +200,7 @@ func listTargetForwardingRule(com *compute.Service, gcpProjectID string) ([]*inf
 	forwardings := compute.NewForwardingRulesService(com)
 	fw, err := forwardings.AggregatedList(gcpProjectID).Do()
 	if err != nil {
-		appLogger.Fatalf("Failed to list forwarding rules: %+v", err)
+		appLogger.Errorf("Failed to list forwarding rules: %+v", err)
 		return nil, err
 	}
 	var ret []*infoForwardingRule
