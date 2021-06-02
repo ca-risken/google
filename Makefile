@@ -14,21 +14,21 @@ clean:
 fmt: proto/**/*.proto
 	clang-format -i proto/**/*.proto
 
-doc: fmt
+proto-doc: fmt
 	protoc \
 		--proto_path=proto \
 		--error_format=gcc \
 		--doc_out=markdown,README.md:doc \
 		proto/**/*.proto;
 
-build: fmt
+proto-build: fmt
 	protoc \
 		--proto_path=proto \
 		--error_format=gcc \
 		--go_out=plugins=grpc,paths=source_relative:proto \
 		proto/**/*.proto;
 
-go-test: build
+go-test: proto-build
 	cd proto/google    && go test ./...
 	cd pkg/common      && go test ./...
 	cd src/google      && go test ./...
@@ -36,7 +36,7 @@ go-test: build
 	cd src/cloudsploit && go test ./...
 	cd src/scc         && go test ./...
 
-go-mod-tidy: build
+go-mod-tidy: proto-build
 	cd proto/google    && go mod tidy
 	cd pkg/common      && go mod tidy
 	cd src/google      && go mod tidy
@@ -65,8 +65,11 @@ go-mod-update:
 network:
 	@if [ -z "`docker network ls | grep local-shared`" ]; then docker network create local-shared; fi
 
-run: go-test network
-	. env.sh && docker-compose up -d --build
+build: go-test
+	. env.sh && docker-compose build
+
+run: build network
+	. env.sh && docker-compose up -d
 
 log:
 	. env.sh && docker-compose logs -f
