@@ -51,16 +51,18 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	// Get cloud sploit
 	result, err := s.cloudSploit.run(ctx, gcp.GcpProjectId)
 	if err != nil {
-		appLogger.Errorf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
-		return err
+		appLogger.Error(errMsg)
+		return s.updateScanStatusError(ctx, scanStatus, errMsg)
 	}
 	for _, f := range *result {
 		// Put finding
 		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
-			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+			errMsg := fmt.Sprintf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
-			return s.updateScanStatusError(ctx, scanStatus, err.Error())
+			appLogger.Error(errMsg)
+			return s.updateScanStatusError(ctx, scanStatus, errMsg)
 		}
 	}
 
