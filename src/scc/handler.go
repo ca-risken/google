@@ -123,6 +123,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	// PutFindingTag
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId)
+	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }

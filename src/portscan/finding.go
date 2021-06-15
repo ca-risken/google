@@ -12,13 +12,14 @@ import (
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 )
 
-func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, nmapResult *portscan.NmapResult) error {
+func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpProjectID string, nmapResult *portscan.NmapResult) error {
 	data, err := json.Marshal(map[string]portscan.NmapResult{"data": *nmapResult})
 	if err != nil {
 		return err
 	}
 	findings := nmapResult.GetFindings(projectID, common.PortscanDataSource, string(data))
 	tags := nmapResult.GetTags()
+	tags = append(tags, gcpProjectID)
 	err = s.putFindings(ctx, findings, tags)
 	if err != nil {
 		return err
@@ -26,7 +27,7 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, nmap
 	return nil
 }
 
-func (s *sqsHandler) putExcludeFindings(ctx context.Context, excludeList []*exclude, message *common.GCPQueueMessage) error {
+func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string, excludeList []*exclude, message *common.GCPQueueMessage) error {
 	var findings []*finding.FindingForUpsert
 	for _, e := range excludeList {
 		data, err := json.Marshal(map[string]exclude{"data": *e})
@@ -45,7 +46,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, excludeList []*excl
 		}
 		findings = append(findings, finding)
 	}
-	err := s.putFindings(ctx, findings, []string{})
+	err := s.putFindings(ctx, findings, []string{gcpProjectID})
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,6 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 			s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, additionalTag)
 		}
 	}
-
 	return nil
 }
 

@@ -132,6 +132,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagCloudSploit, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
+	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
 	for _, complianceTag := range f.Compliance {
 		s.tagFinding(ctx, complianceTag, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}

@@ -68,13 +68,13 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 	for _, target := range targets {
 		results := scan(target)
 		for _, result := range results {
-			err := s.putNmapFindings(ctx, message.ProjectID, result)
+			err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
 			if err != nil {
 				appLogger.Errorf("Failed put Finding err: %v", err)
 			}
 		}
 	}
-	err = s.putExcludeFindings(ctx, excludeList, message)
+	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, message)
 	if err != nil {
 		appLogger.Errorf("Failed put exclude Finding err: %v", err)
 	}
