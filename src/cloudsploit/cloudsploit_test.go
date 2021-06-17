@@ -210,7 +210,7 @@ func TestGetScore(t *testing.T) {
 			name: "FAIL VPC middle",
 			input: &cloudSploitFinding{
 				Category: categoryVPCNetwork,
-				Plugin:   "openKibana",
+				Plugin:   "openSSH",
 				Status:   resultFAIL,
 			},
 			want: 0.6,

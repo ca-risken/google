@@ -228,33 +228,36 @@ func (c *cloudSploitFinding) setCompliance() {
 
 // scoreMap (key: `{Categor}/{Plugin}`, value: score)
 var scoreMap = map[string]float32{
+	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
 	categoryCompute + "/instanceLeastPrivilege":         0.6, // GCE
+	categoryStorage + "/bucketAllUsersPolicy":           0.8, // GCS
+	categoryKubernetes + "/loggingEnabled":              0.6, // GKE
 	categoryIAM + "/corporateEmailsOnly":                0.8, // IAM
 	categoryIAM + "/serviceAccountAdmin":                0.6, // IAM
-	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
-	categoryStorage + "/bucketAllUsersPolicy":           0.8, // GCS
+	categoryIAM + "/serviceAccountUser":                 0.6, // IAM
 	categoryVPCNetwork + "/openAllPorts":                0.8, // VPC
-	categoryVPCNetwork + "/openDNS":                     0.6, // VPC
-	categoryVPCNetwork + "/openDocker":                  0.6, // VPC
-	categoryVPCNetwork + "/openFTP":                     0.6, // VPC
-	categoryVPCNetwork + "/openHadoopNameNode":          0.6, // VPC
-	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.6, // VPC
-	categoryVPCNetwork + "/openKibana":                  0.6, // VPC
-	categoryVPCNetwork + "/openMySQL":                   0.6, // VPC
-	categoryVPCNetwork + "/openNetBIOS":                 0.6, // VPC
-	categoryVPCNetwork + "/openOracle":                  0.6, // VPC
-	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.6, // VPC
-	categoryVPCNetwork + "/openPostgreSQL":              0.6, // VPC
-	categoryVPCNetwork + "/openRDP":                     0.6, // VPC
-	categoryVPCNetwork + "/openRPC":                     0.6, // VPC
-	categoryVPCNetwork + "/openSMBoTCP":                 0.6, // VPC
-	categoryVPCNetwork + "/openSMTP":                    0.6, // VPC
-	categoryVPCNetwork + "/openSQLServer":               0.6, // VPC
+	categoryVPCNetwork + "/openCIFS":                    0.8, // VPC
+	categoryVPCNetwork + "/openDNS":                     0.8, // VPC
+	categoryVPCNetwork + "/openDocker":                  0.8, // VPC
+	categoryVPCNetwork + "/openFTP":                     0.8, // VPC
+	categoryVPCNetwork + "/openHadoopNameNode":          0.8, // VPC
+	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.8, // VPC
+	categoryVPCNetwork + "/openKibana":                  0.8, // VPC
+	categoryVPCNetwork + "/openMySQL":                   0.8, // VPC
+	categoryVPCNetwork + "/openNetBIOS":                 0.8, // VPC
+	categoryVPCNetwork + "/openOracle":                  0.8, // VPC
+	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.8, // VPC
+	categoryVPCNetwork + "/openPostgreSQL":              0.8, // VPC
+	categoryVPCNetwork + "/openRDP":                     0.8, // VPC
+	categoryVPCNetwork + "/openRPC":                     0.8, // VPC
+	categoryVPCNetwork + "/openSMBoTCP":                 0.8, // VPC
+	categoryVPCNetwork + "/openSMTP":                    0.8, // VPC
+	categoryVPCNetwork + "/openSQLServer":               0.8, // VPC
 	categoryVPCNetwork + "/openSSH":                     0.6, // VPC
-	categoryVPCNetwork + "/openSalt":                    0.6, // VPC
-	categoryVPCNetwork + "/openTelnet":                  0.6, // VPC
-	categoryVPCNetwork + "/openVNCClient":               0.6, // VPC
-	categoryVPCNetwork + "/openVNCServer":               0.6, // VPC
+	categoryVPCNetwork + "/openSalt":                    0.8, // VPC
+	categoryVPCNetwork + "/openTelnet":                  0.8, // VPC
+	categoryVPCNetwork + "/openVNCClient":               0.8, // VPC
+	categoryVPCNetwork + "/openVNCServer":               0.8, // VPC
 }
 
 func (c *cloudSploitFinding) getScore() float32 {
