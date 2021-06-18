@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
@@ -89,6 +90,8 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
+		// Control the number of API requests so that they are not exceeded.
+		time.Sleep(time.Millisecond * 500)
 	}
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
