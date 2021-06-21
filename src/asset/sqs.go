@@ -20,6 +20,8 @@ type sqsConfig struct {
 	AssetQueueURL      string `split_words:"true" default:"http://localhost:9324/queue/google-asset"`
 	MaxNumberOfMessage int64  `split_words:"true" default:"10"`
 	WaitTimeSecond     int64  `split_words:"true" default:"20"`
+
+	WaitMilliSecPerRequest int64 `split_words:"true" default:"500"`
 }
 
 func newSQSConsumer() *worker.Worker {
