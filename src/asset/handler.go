@@ -13,6 +13,7 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/kelseyhightower/envconfig"
 	"google.golang.org/api/iterator"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
@@ -22,14 +23,26 @@ type sqsHandler struct {
 	alertClient   alert.AlertServiceClient
 	googleClient  google.GoogleServiceClient
 	assetClient   assetServiceClient
+
+	waitMilliSecPerRequest int
+}
+
+type assetConf struct {
+	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
 }
 
 func newHandler() *sqsHandler {
+	var conf assetConf
+	err := envconfig.Process("", &conf)
+	if err != nil {
+		appLogger.Fatal(err.Error())
+	}
 	return &sqsHandler{
-		findingClient: newFindingClient(),
-		alertClient:   newAlertClient(),
-		googleClient:  newGoogleClient(),
-		assetClient:   newAssetClient(),
+		findingClient:          newFindingClient(),
+		alertClient:            newAlertClient(),
+		googleClient:           newGoogleClient(),
+		assetClient:            newAssetClient(),
+		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
 	}
 }
 
@@ -91,7 +104,7 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 		// Control the number of API requests so that they are not exceeded.
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Duration(s.waitMilliSecPerRequest) * time.Millisecond)
 	}
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
