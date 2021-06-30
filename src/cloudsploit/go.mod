@@ -3,6 +3,7 @@ module github.com/CyberAgent/mimosa-google/src/cloudsploit
 go 1.16
 
 require (
+	github.com/CyberAgent/mimosa-common/pkg/logging v0.0.0-20210630072301-2132695e8329
 	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20210412053859-6f85123349ff
 	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20210412053859-6f85123349ff
 	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210413063714-8c11dcfcd932
@@ -11,7 +12,6 @@ require (
 	github.com/aws/aws-sdk-go v1.38.18
 	github.com/gassara-kys/go-sqs-poller/worker/v4 v4.0.0-20210215110542-0be358599a2f
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/magefile/mage v1.11.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858

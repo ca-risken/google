@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/CyberAgent/mimosa-common/pkg/logging"
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
 	"github.com/CyberAgent/mimosa-google/pkg/common"
@@ -36,26 +37,39 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msg, err)
 		return err
 	}
+	requestID, err := logging.GenerateRequestID(fmt.Sprint(message.ProjectID))
+	if err != nil {
+		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
+		requestID = fmt.Sprint(message.ProjectID)
+	}
 
+	appLogger.Infof("start portscan, RequestID=%s", requestID)
 	ctx := context.Background()
+	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 		return err
 	}
+	appLogger.Infof("end getGCPDataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
 
 	// get target and scan target
+	appLogger.Infof("start exec scan, RequestID=%s", requestID)
 	err = s.scan(ctx, gcp.GcpProjectId, message)
 	if err != nil {
 		return s.updateScanStatusError(ctx, scanStatus, err.Error())
 	}
+	appLogger.Infof("end exec scan, RequestID=%s", requestID)
 
+	appLogger.Infof("start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return err
 	}
+	appLogger.Infof("end update scan status, RequestID=%s", requestID)
 
+	appLogger.Infof("end portscan, RequestID=%s", requestID)
 	return s.analyzeAlert(ctx, message.ProjectID)
 }
 
