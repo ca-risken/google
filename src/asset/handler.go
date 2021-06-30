@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CyberAgent/mimosa-common/pkg/logging"
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
 	"github.com/CyberAgent/mimosa-google/pkg/common"
@@ -60,19 +61,30 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msg, err)
 		return err
 	}
+	requestID, err := logging.GenerateRequestID(fmt.Sprint(message.ProjectID))
+	if err != nil {
+		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
+		requestID = fmt.Sprint(message.ProjectID)
+	}
 
+	appLogger.Infof("start google asset scan, RequestID=%s", requestID)
 	ctx := context.Background()
+	appLogger.Infof("start get GCP DataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 		return err
 	}
+	appLogger.Infof("end get GCP DataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
 
 	// Get cloud asset
+	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
+	assetCount := 0
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
+		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
 		resource, err := it.Next()
 		if err == iterator.Done {
 			break
@@ -82,6 +94,9 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
+		assetCount++
+		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
+
 		f := assetFinding{Asset: resource}
 		if isUserServiceAccount(resource.AssetType, resource.Name) {
 			email := getShortName(resource.Name)
@@ -98,18 +113,25 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		}
 		appLogger.Debugf("Got: %+v", resource)
 		// Put finding
+		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
 		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
+		appLogger.Debugf("end putFinding, RequestID=%s", requestID)
 		// Control the number of API requests so that they are not exceeded.
 		time.Sleep(time.Duration(s.waitMilliSecPerRequest) * time.Millisecond)
 	}
+	appLogger.Infof("Got %d assets, RequestID=%s", assetCount, requestID)
+	appLogger.Infof("end CloudAsset API, RequestID=%s", requestID)
 
+	appLogger.Infof("start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return err
 	}
+	appLogger.Infof("end update scan status, RequestID=%s", requestID)
+	appLogger.Infof("end google asset scan, RequestID=%s", requestID)
 	return s.analyzeAlert(ctx, message.ProjectID)
 }
 
