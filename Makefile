@@ -21,14 +21,14 @@ proto-doc: fmt
 		--doc_out=markdown,README.md:doc \
 		proto/**/*.proto;
 
-proto-build: fmt
+proto: fmt
 	protoc \
 		--proto_path=proto \
 		--error_format=gcc \
 		--go_out=plugins=grpc,paths=source_relative:proto \
 		proto/**/*.proto;
 
-go-test: proto-build
+go-test: proto
 	cd proto/google    && go test ./...
 	cd pkg/common      && go test ./...
 	cd src/google      && go test ./...
@@ -36,7 +36,7 @@ go-test: proto-build
 	cd src/cloudsploit && go test ./...
 	cd src/scc         && go test ./...
 
-go-mod-tidy: proto-build
+go-mod-tidy: proto
 	cd proto/google    && go mod tidy
 	cd pkg/common      && go mod tidy
 	cd src/google      && go mod tidy
