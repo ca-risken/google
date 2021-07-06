@@ -100,4 +100,5 @@ message InvokeScanGCPRequest {
   uint32 project_id = 1;
   uint32 gcp_id = 2;
   uint32 google_data_source_id = 3;
+  bool scan_only = 4;
 }

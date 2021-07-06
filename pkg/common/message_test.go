@@ -16,6 +16,10 @@ func TestValidate(t *testing.T) {
 			input: &GCPQueueMessage{GCPID: 1, ProjectID: 1, GoogleDataSourceID: 1},
 		},
 		{
+			name:  "OK(scan_only)",
+			input: &GCPQueueMessage{GCPID: 1, ProjectID: 1, GoogleDataSourceID: 1, ScanOnly: true},
+		},
+		{
 			name:    "NG Required(gcp_id)",
 			input:   &GCPQueueMessage{ProjectID: 1, GoogleDataSourceID: 1},
 			wantErr: true,
@@ -54,6 +58,11 @@ func TestParseMessage(t *testing.T) {
 			name:  "OK",
 			input: `{"gcp_id":1, "project_id":1, "google_data_source_id":1}`,
 			want:  &GCPQueueMessage{GCPID: 1, ProjectID: 1, GoogleDataSourceID: 1},
+		},
+		{
+			name:  "OK(scan_only)",
+			input: `{"gcp_id":1, "project_id":1, "google_data_source_id":1, "scan_only":"true"}`,
+			want:  &GCPQueueMessage{GCPID: 1, ProjectID: 1, GoogleDataSourceID: 1, ScanOnly: true},
 		},
 		{
 			name:    "NG Json parse erroro",
