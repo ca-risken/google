@@ -53,27 +53,27 @@ type assetFinding struct {
 	HasServiceAccountKey bool                              `json:"has_key"`
 }
 
-func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
-	msgBody := aws.StringValue(msg.Body)
+func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
-	message, err := common.ParseMessage(msgBody)
+	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msg, err)
+		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return err
 	}
-	requestID, err := logging.GenerateRequestID(fmt.Sprint(message.ProjectID))
+	requestID, err := logging.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
-		requestID = fmt.Sprint(message.ProjectID)
+		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
 	appLogger.Infof("start google asset scan, RequestID=%s", requestID)
 	ctx := context.Background()
 	appLogger.Infof("start get GCP DataSource, RequestID=%s", requestID)
-	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
+	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return err
 	}
 	appLogger.Infof("end get GCP DataSource, RequestID=%s", requestID)
@@ -91,7 +91,7 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		}
 		if err != nil {
 			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 		assetCount++
@@ -114,9 +114,9 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		appLogger.Debugf("Got: %+v", resource)
 		// Put finding
 		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
-		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
+		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
 		appLogger.Debugf("end putFinding, RequestID=%s", requestID)
@@ -132,7 +132,10 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	}
 	appLogger.Infof("end update scan status, RequestID=%s", requestID)
 	appLogger.Infof("end google asset scan, RequestID=%s", requestID)
-	return s.analyzeAlert(ctx, message.ProjectID)
+	if msg.ScanOnly {
+		return nil
+	}
+	return s.analyzeAlert(ctx, msg.ProjectID)
 }
 
 func getShortName(name string) string {

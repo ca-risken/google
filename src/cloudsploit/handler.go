@@ -31,27 +31,27 @@ func newHandler() *sqsHandler {
 	}
 }
 
-func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
-	msgBody := aws.StringValue(msg.Body)
+func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
-	message, err := common.ParseMessage(msgBody)
+	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msg, err)
+		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return err
 	}
-	requestID, err := logging.GenerateRequestID(fmt.Sprint(message.ProjectID))
+	requestID, err := logging.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
-		requestID = fmt.Sprint(message.ProjectID)
+		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
 	appLogger.Infof("start CloudSploit scan, RequestID=%s", requestID)
 	ctx := context.Background()
 	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
-	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
+	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return err
 	}
 	appLogger.Infof("end getGCPDataSource, RequestID=%s", requestID)
@@ -63,16 +63,16 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 	appLogger.Infof("end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		appLogger.Error(errMsg)
 		return s.updateScanStatusError(ctx, scanStatus, errMsg)
 	}
 	appLogger.Infof("start put finding, RequestID=%s", requestID)
 	for _, f := range *result {
 		// Put finding
-		if err := s.putFindings(ctx, message.ProjectID, gcp.GcpProjectId, &f); err != nil {
+		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {
 			errMsg := fmt.Sprintf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			appLogger.Error(errMsg)
 			return s.updateScanStatusError(ctx, scanStatus, errMsg)
 		}
@@ -84,9 +84,11 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		return err
 	}
 	appLogger.Infof("end update scan status, RequestID=%s", requestID)
-
 	appLogger.Infof("end CloudSploit scan, RequestID=%s", requestID)
-	return s.analyzeAlert(ctx, message.ProjectID)
+	if msg.ScanOnly {
+		return nil
+	}
+	return s.analyzeAlert(ctx, msg.ProjectID)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
