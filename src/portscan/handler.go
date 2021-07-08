@@ -29,27 +29,27 @@ func newHandler() *sqsHandler {
 	}
 }
 
-func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
-	msgBody := aws.StringValue(msg.Body)
+func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
-	message, err := common.ParseMessage(msgBody)
+	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msg, err)
+		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msgBody, err)
 		return err
 	}
-	requestID, err := logging.GenerateRequestID(fmt.Sprint(message.ProjectID))
+	requestID, err := logging.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
-		requestID = fmt.Sprint(message.ProjectID)
+		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
 	appLogger.Infof("start portscan, RequestID=%s", requestID)
 	ctx := context.Background()
 	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
-	gcp, err := s.getGCPDataSource(ctx, message.ProjectID, message.GCPID, message.GoogleDataSourceID)
+	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-			message.ProjectID, message.GCPID, message.GoogleDataSourceID, err)
+			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return err
 	}
 	appLogger.Infof("end getGCPDataSource, RequestID=%s", requestID)
@@ -57,7 +57,7 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 
 	// get target and scan target
 	appLogger.Infof("start exec scan, RequestID=%s", requestID)
-	err = s.scan(ctx, gcp.GcpProjectId, message)
+	err = s.scan(ctx, gcp.GcpProjectId, msg)
 	if err != nil {
 		return s.updateScanStatusError(ctx, scanStatus, err.Error())
 	}
@@ -68,9 +68,11 @@ func (s *sqsHandler) HandleMessage(msg *sqs.Message) error {
 		return err
 	}
 	appLogger.Infof("end update scan status, RequestID=%s", requestID)
-
 	appLogger.Infof("end portscan, RequestID=%s", requestID)
-	return s.analyzeAlert(ctx, message.ProjectID)
+	if msg.ScanOnly {
+		return nil
+	}
+	return s.analyzeAlert(ctx, msg.ProjectID)
 }
 
 func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage) error {
@@ -92,7 +94,6 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 	if err != nil {
 		appLogger.Errorf("Failed put exclude Finding err: %v", err)
 	}
-
 	return nil
 }
 

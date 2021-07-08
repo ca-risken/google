@@ -35,6 +35,7 @@ go-test: proto
 	cd src/asset       && go test ./...
 	cd src/cloudsploit && go test ./...
 	cd src/scc         && go test ./...
+	cd src/portscan    && go test ./...
 
 go-mod-tidy: proto
 	cd proto/google    && go mod tidy
@@ -43,6 +44,7 @@ go-mod-tidy: proto
 	cd src/asset       && go mod tidy
 	cd src/cloudsploit && go mod tidy
 	cd src/scc         && go mod tidy
+	cd src/portscan    && go mod tidy
 
 go-mod-update:
 	cd src/google \
@@ -57,6 +59,10 @@ go-mod-update:
 			github.com/CyberAgent/mimosa-core/... \
 			github.com/CyberAgent/mimosa-google/...
 	cd src/scc \
+		&& go get -u \
+			github.com/CyberAgent/mimosa-core/... \
+			github.com/CyberAgent/mimosa-google/...
+	cd src/portscan \
 		&& go get -u \
 			github.com/CyberAgent/mimosa-core/... \
 			github.com/CyberAgent/mimosa-google/...
