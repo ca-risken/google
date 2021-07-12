@@ -305,7 +305,7 @@ func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*go
 			GcpId:              gcp.GCPID,
 			ProjectId:          gcp.ProjectID,
 			GoogleDataSourceId: gcp.GoogleDataSourceID,
-			// ScanOnly: true, // TODO
+			ScanOnly:           true,
 		}); err != nil {
 			// エラーログはいて握りつぶす（すべてのスキャナ登録しきる）
 			appLogger.Errorf("InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
