@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -9,8 +10,8 @@ import (
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/jinzhu/gorm"
 	"github.com/vikyd/zero"
+	"gorm.io/gorm"
 )
 
 type googleService struct {
@@ -47,7 +48,7 @@ func (g *googleService) ListGoogleDataSource(ctx context.Context, req *google.Li
 	}
 	list, err := g.repository.ListGoogleDataSource(req.GoogleDataSourceId, req.Name)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGoogleDataSourceResponse{}, nil
 		}
 		return nil, err
@@ -82,7 +83,7 @@ func (g *googleService) ListGCP(ctx context.Context, req *google.ListGCPRequest)
 	}
 	list, err := g.repository.ListGCP(req.ProjectId, req.GcpId, req.GcpProjectId)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGCPResponse{}, nil
 		}
 		return nil, err
@@ -100,7 +101,7 @@ func (g *googleService) GetGCP(ctx context.Context, req *google.GetGCPRequest) (
 	}
 	data, err := g.repository.GetGCP(req.ProjectId, req.GcpId)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.GetGCPResponse{}, nil
 		}
 		return nil, err
@@ -136,7 +137,7 @@ func (g *googleService) ListGCPDataSource(ctx context.Context, req *google.ListG
 	}
 	list, err := g.repository.ListGCPDataSource(req.ProjectId, req.GcpId)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGCPDataSourceResponse{}, nil
 		}
 		return nil, err
@@ -197,7 +198,7 @@ func (g *googleService) GetGCPDataSource(ctx context.Context, req *google.GetGCP
 	}
 	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.GetGCPDataSourceResponse{}, nil
 		}
 		return nil, err
@@ -295,7 +296,7 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*google.Empty, error) {
 	list, err := g.repository.ListGCPDataSource(0, 0)
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.Empty{}, nil
 		}
 		return nil, err
