@@ -15,7 +15,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
-	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	google.golang.org/genproto v0.0.0-20210707164411-8c882eb9abba // indirect
 	google.golang.org/grpc v1.39.0
