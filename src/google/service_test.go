@@ -8,8 +8,8 @@ import (
 
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 	"github.com/CyberAgent/mimosa-google/proto/google"
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 const (
@@ -53,9 +53,9 @@ func TestListGoogleDataSource(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.ListGoogleDataSourceRequest{GoogleDataSourceId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -115,9 +115,9 @@ func TestListGCP(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.ListGCPRequest{ProjectId: 1, GcpId: 1, GcpProjectId: "pj"},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -171,9 +171,9 @@ func TestGetGCP(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.GetGCPRequest{ProjectId: 1, GcpId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -227,11 +227,11 @@ func TestPutGCP(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NG DB error",
+			name: "Invalid DB error",
 			input: &google.PutGCPRequest{ProjectId: 1, Gcp: &google.GCPForUpsert{
 				GcpId: 1, Name: "one", ProjectId: 1, GcpProjectId: "pj", VerificationCode: "valid code"},
 			},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -274,9 +274,9 @@ func TestDeleteGCP(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.DeleteGCPRequest{ProjectId: 1, GcpId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -328,9 +328,9 @@ func TestListGCPDataSource(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.ListGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -388,9 +388,9 @@ func TestGetGCPDataSource(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.GetGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -449,11 +449,11 @@ func TestAttachGCPDataSource(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NG DB error",
+			name: "Invalid DB error",
 			input: &google.AttachGCPDataSourceRequest{ProjectId: 1, GcpDataSource: &google.GCPDataSourceForUpsert{
 				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: google.Status_OK, StatusDetail: "", ScanAt: now.Unix()},
 			},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
@@ -496,9 +496,9 @@ func TestDetachGCPDataSource(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "NG DB error",
+			name:      "Invalid DB error",
 			input:     &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
-			mockError: gorm.ErrInvalidSQL,
+			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
