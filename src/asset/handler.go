@@ -169,10 +169,10 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			},
 		})
 		if err != nil {
-			appLogger.Errorf("Failed to put finding project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+			appLogger.Errorf("Failed to put resource project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
 			return err
 		}
-		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
+		appLogger.Debugf("Success to PutResource, resource_id=%d", resp.Resource.ResourceId)
 		return nil
 	}
 
@@ -205,7 +205,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
 		s.tagFinding(ctx, common.TagServiceAccount, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
-	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
