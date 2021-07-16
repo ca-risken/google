@@ -81,20 +81,22 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 
 	// Get cloud asset
 	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
-	assetCount := 0
+	loopCounter := 0
+	assetCounter := 0
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
 		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
+		loopCounter++
 		resource, err := it.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
+			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, assetCounter=%d, loopCounter=%d, RequestID=%s, err=%+v",
+				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, assetCounter, loopCounter, requestID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
-		assetCount++
+		assetCounter++
 		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
 
 		f := assetFinding{Asset: resource}
@@ -123,7 +125,7 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 		// Control the number of API requests so that they are not exceeded.
 		time.Sleep(time.Duration(s.waitMilliSecPerRequest) * time.Millisecond)
 	}
-	appLogger.Infof("Got %d assets, RequestID=%s", assetCount, requestID)
+	appLogger.Infof("Got %d assets, RequestID=%s", assetCounter, requestID)
 	appLogger.Infof("end CloudAsset API, RequestID=%s", requestID)
 
 	appLogger.Infof("start update scan status, RequestID=%s", requestID)
@@ -169,10 +171,10 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			},
 		})
 		if err != nil {
-			appLogger.Errorf("Failed to put finding project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+			appLogger.Errorf("Failed to put resource project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
 			return err
 		}
-		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
+		appLogger.Debugf("Success to PutResource, resource_id=%d", resp.Resource.ResourceId)
 		return nil
 	}
 
@@ -205,7 +207,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
 		s.tagFinding(ctx, common.TagServiceAccount, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
-	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
