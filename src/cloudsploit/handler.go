@@ -120,7 +120,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 			return err
 		}
-		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
+		appLogger.Debugf("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
 		return nil
 	}
 
@@ -156,7 +156,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	for _, complianceTag := range f.Compliance {
 		s.tagFinding(ctx, complianceTag, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
-	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
