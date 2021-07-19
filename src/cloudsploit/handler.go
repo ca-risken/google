@@ -117,14 +117,14 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			},
 		})
 		if err != nil {
-			appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+			appLogger.Errorf("Failed to put reousrce project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 			return err
 		}
-		appLogger.Infof("Success to PutResource, finding_id=%d", resp.Resource.ResourceId)
+		appLogger.Debugf("Success to PutResource, resource_id=%d", resp.Resource.ResourceId)
 		return nil
 	}
 
-	f.setCompliance()
+	f.setTags()
 	buf, err := json.Marshal(f)
 	if err != nil {
 		appLogger.Errorf("Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
@@ -153,10 +153,10 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, f.Plugin, resp.Finding.FindingId, resp.Finding.ProjectId)
-	for _, complianceTag := range f.Compliance {
-		s.tagFinding(ctx, complianceTag, resp.Finding.FindingId, resp.Finding.ProjectId)
+	for _, t := range f.Tags {
+		s.tagFinding(ctx, t, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
-	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 

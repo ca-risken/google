@@ -244,7 +244,7 @@ func TestGetScore(t *testing.T) {
 	}
 }
 
-func TestSetCompliance(t *testing.T) {
+func TestSetTags(t *testing.T) {
 	cases := []struct {
 		name  string
 		input *cloudSploitFinding
@@ -269,8 +269,8 @@ func TestSetCompliance(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.input.setCompliance()
-			got := c.input.Compliance
+			c.input.setTags()
+			got := c.input.Tags
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
 			}
