@@ -73,7 +73,7 @@ type cloudSploitFinding struct {
 	Region      string   `json:"region,omitempty"`
 	Status      string   `json:"status,omitempty"`
 	Message     string   `json:"message,omitempty"`
-	Compliance  []string `json:"compliance,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
 }
 
 func (c *cloudSploitFinding) generateDataSourceID() {
@@ -192,37 +192,47 @@ const (
 	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
 )
 
-// complianceTagMap (key: `{Categor}/{Plugin}`, value: tag)
-var complianceTagMap = map[string][]string{
-	categoryCLB + "/clbHttpsOnly":                  {"hippa", "pci"}, // CLB
-	categoryCompute + "/csekEncryptionEnabled":     {"hippa", "pci"}, // GCE
-	categoryCompute + "/instanceLeastPrivilege":    {"pci"},          // GCE
-	categoryCompute + "/osLoginEnabled":            {"pci"},          // GCE
-	categoryCryptographicKeys + "/keyRotation":     {"hipaa", "pci"}, // KMS
-	categoryIAM + "/serviceAccountKeyRotation":     {"hipaa", "pci"}, // IAM
-	categoryKubernetes + "/loggingEnabled":         {"hipaa"},        // GKE
-	categoryLogging + "/auditConfigurationLogging": {"hipaa", "pci"}, // Logging
-	categoryLogging + "/customRoleLogging":         {"hipaa"},        // Logging
-	categoryLogging + "/projectOwnershipLogging":   {"hipaa", "pci"}, // Logging
-	categoryLogging + "/sqlConfigurationLogging":   {"hipaa"},        // Logging
-	categoryLogging + "/storagePermissionsLogging": {"hipaa", "pci"}, // Logging
-	categoryLogging + "/vpcFirewallRuleLogging":    {"hipaa"},        // Logging
-	categoryLogging + "/vpcNetworkLogging":         {"hipaa", "pci"}, // Logging
-	categoryLogging + "/vpcNetworkRouteLogging":    {"hipaa"},        // Logging
-	categorySQL + "/dbPubliclyAccessible":          {"hipaa", "pci"}, // CloudSQL
-	categorySQL + "/dbRestorable":                  {"pci"},          // CloudSQL
-	categorySQL + "/dbSSLEnabled":                  {"hipaa", "pci"}, // CloudSQL
-	categoryStorage + "/bucketLogging":             {"hipaa"},        // GCS
-	categoryVPCNetwork + "/defaultVpcInUse":        {"pci"},          // VPC
-	categoryVPCNetwork + "/excessiveFirewallRules": {"pci"},          // VPC
-	categoryVPCNetwork + "/flowLogsEnabled":        {"hipaa", "pci"}, // VPC
-	categoryVPCNetwork + "/openAllPorts":           {"hipaa", "pci"}, // VPC
-	categoryVPCNetwork + "/privateAccessEnabled":   {"pci"},          // VPC
+// pluginTagMap (key: `{Categor}/{Plugin}`, value: tag)
+var pluginTagMap = map[string][]string{
+	categoryCLB + "/clbHttpsOnly":                  {"hippa", "pci"},       // CLB
+	categoryCLB + "/clbNoInstances":                {"cost"},               // CLB
+	categoryCompute + "/autoscaleEnabled":          {"reliability"},        // GCE
+	categoryCompute + "/csekEncryptionEnabled":     {"hippa", "pci"},       // GCE
+	categoryCompute + "/instanceLeastPrivilege":    {"pci"},                // GCE
+	categoryCompute + "/instanceMaxCount":          {"reliability"},        // GCE
+	categoryCompute + "/instancesMultiAz":          {"reliability"},        // GCE
+	categoryCompute + "/osLoginEnabled":            {"pci"},                // GCE
+	categoryCryptographicKeys + "/keyRotation":     {"hipaa", "pci"},       // KMS
+	categoryIAM + "/serviceAccountKeyRotation":     {"hipaa", "pci"},       // IAM
+	categoryIAM + "/serviceLimits":                 {"reliability"},        // IAM
+	categoryKubernetes + "/autoNodeRepairEnabled":  {"reliability"},        // GKE
+	categoryKubernetes + "/loggingEnabled":         {"hipaa"},              // GKE
+	categoryLogging + "/auditConfigurationLogging": {"hipaa", "pci"},       // Logging
+	categoryLogging + "/customRoleLogging":         {"hipaa"},              // Logging
+	categoryLogging + "/projectOwnershipLogging":   {"hipaa", "pci"},       // Logging
+	categoryLogging + "/sqlConfigurationLogging":   {"hipaa"},              // Logging
+	categoryLogging + "/storagePermissionsLogging": {"hipaa", "pci"},       // Logging
+	categoryLogging + "/vpcFirewallRuleLogging":    {"hipaa"},              // Logging
+	categoryLogging + "/vpcNetworkLogging":         {"hipaa", "pci"},       // Logging
+	categoryLogging + "/vpcNetworkRouteLogging":    {"hipaa"},              // Logging
+	categorySQL + "/dbAutomatedBackups":            {"reliability"},        // CloudSQL
+	categorySQL + "/dbMultiAz":                     {"reliability"},        // CloudSQL
+	categorySQL + "/dbPubliclyAccessible":          {"hipaa", "pci"},       // CloudSQL
+	categorySQL + "/dbRestorable":                  {"pci", "reliability"}, // CloudSQL
+	categorySQL + "/dbSSLEnabled":                  {"hipaa", "pci"},       // CloudSQL
+	categoryStorage + "/bucketLogging":             {"hipaa"},              // GCS
+	categoryStorage + "/bucketVersioning":          {"reliability"},        // GCS
+	categoryVPCNetwork + "/defaultVpcInUse":        {"pci"},                // VPC
+	categoryVPCNetwork + "/excessiveFirewallRules": {"pci"},                // VPC
+	categoryVPCNetwork + "/flowLogsEnabled":        {"hipaa", "pci"},       // VPC
+	categoryVPCNetwork + "/multipleSubnets":        {"reliability"},        // VPC
+	categoryVPCNetwork + "/openAllPorts":           {"hipaa", "pci"},       // VPC
+	categoryVPCNetwork + "/privateAccessEnabled":   {"pci"},                // VPC
 }
 
-func (c *cloudSploitFinding) setCompliance() {
-	if tags, ok := complianceTagMap[c.Category+"/"+c.Plugin]; ok {
-		c.Compliance = tags
+func (c *cloudSploitFinding) setTags() {
+	if tags, ok := pluginTagMap[c.Category+"/"+c.Plugin]; ok {
+		c.Tags = tags
 	}
 }
 
