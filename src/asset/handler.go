@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	asset "cloud.google.com/go/asset/apiv1"
 	"github.com/CyberAgent/mimosa-common/pkg/logging"
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
@@ -26,10 +27,14 @@ type sqsHandler struct {
 	assetClient   assetServiceClient
 
 	waitMilliSecPerRequest int
+	assetAPIRetryNum       int
+	assetAPIRetryWaitSec   int
 }
 
 type assetConf struct {
-	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
+	WaitMilliSecPerRequest int `default:"500" split_words:"true"`
+	AssetAPIRetryNum       int `default:"3" split_words:"true"`
+	AssetAPIRetryWaitSec   int `default:"3" split_words:"true"`
 }
 
 func newHandler() *sqsHandler {
@@ -44,6 +49,8 @@ func newHandler() *sqsHandler {
 		googleClient:           newGoogleClient(),
 		assetClient:            newAssetClient(),
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
+		assetAPIRetryNum:       conf.AssetAPIRetryNum,
+		assetAPIRetryWaitSec:   conf.AssetAPIRetryWaitSec,
 	}
 }
 
@@ -85,10 +92,10 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 	assetCounter := 0
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
-		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
 		loopCounter++
-		resource, err := it.Next()
-		if err == iterator.Done {
+		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
+		resource, done, err := s.listAssetIterationCallWithRetry(it)
+		if done {
 			break
 		}
 		if err != nil {
@@ -291,4 +298,19 @@ func scoreAsset(f *assetFinding) float32 {
 		return 0.1
 	}
 	return 0.0
+}
+
+func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchResultIterator) (resource *assetpb.ResourceSearchResult, done bool, err error) {
+	for i := 0; i < s.assetAPIRetryNum; i++ {
+		resource, err := it.Next()
+		if err == iterator.Done {
+			return nil, true, nil
+		}
+		if err == nil {
+			return resource, false, nil
+		}
+		appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, err=%+v", s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, err)
+		time.Sleep(time.Duration(s.assetAPIRetryWaitSec+i) * time.Second)
+	}
+	return nil, false, err
 }
