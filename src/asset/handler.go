@@ -301,16 +301,18 @@ func scoreAsset(f *assetFinding) float32 {
 }
 
 func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchResultIterator) (resource *assetpb.ResourceSearchResult, done bool, err error) {
-	for i := 0; i < s.assetAPIRetryNum; i++ {
-		resource, err := it.Next()
+	for i := 0; i <= s.assetAPIRetryNum; i++ {
+		if i > 0 {
+			appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, err=%+v", s.assetAPIRetryWaitSec+i, i, s.assetAPIRetryNum, err)
+			time.Sleep(time.Duration(s.assetAPIRetryWaitSec+i) * time.Second)
+		}
+		resource, err := it.Next() // Call API
 		if err == iterator.Done {
-			return nil, true, nil
+			return resource, true, nil
 		}
 		if err == nil {
 			return resource, false, nil
 		}
-		appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, err=%+v", s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, err)
-		time.Sleep(time.Duration(s.assetAPIRetryWaitSec+i) * time.Second)
 	}
-	return nil, false, err
+	return nil, false, fmt.Errorf("Failed to call CloudAsset API (Retry %d times , But all failed.)", s.assetAPIRetryNum)
 }
