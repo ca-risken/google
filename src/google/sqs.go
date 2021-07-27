@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -52,6 +53,7 @@ func newSQSClient() *sqsClient {
 		Region:   &conf.AWSRegion,
 		Endpoint: &conf.SQSEndpoint,
 	})
+	xray.AWS(session.Client)
 	return &sqsClient{
 		svc:                 session,
 		assetQueueURL:       conf.AssetQueueURL,

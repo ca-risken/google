@@ -517,39 +517,39 @@ type mockGoogleRepository struct {
 	mock.Mock
 }
 
-func (m *mockGoogleRepository) ListGoogleDataSource(googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error) {
+func (m *mockGoogleRepository) ListGoogleDataSource(ctx context.Context, googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error) {
 	args := m.Called()
 	return args.Get(0).(*[]common.GoogleDataSource), args.Error(1)
 }
-func (m *mockGoogleRepository) ListGCP(projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error) {
+func (m *mockGoogleRepository) ListGCP(ctx context.Context, projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error) {
 	args := m.Called()
 	return args.Get(0).(*[]common.GCP), args.Error(1)
 }
-func (m *mockGoogleRepository) GetGCP(projectID, gcpID uint32) (*common.GCP, error) {
+func (m *mockGoogleRepository) GetGCP(ctx context.Context, projectID, gcpID uint32) (*common.GCP, error) {
 	args := m.Called()
 	return args.Get(0).(*common.GCP), args.Error(1)
 }
-func (m *mockGoogleRepository) UpsertGCP(data *google.GCPForUpsert) (*common.GCP, error) {
+func (m *mockGoogleRepository) UpsertGCP(ctx context.Context, data *google.GCPForUpsert) (*common.GCP, error) {
 	args := m.Called()
 	return args.Get(0).(*common.GCP), args.Error(1)
 }
-func (m *mockGoogleRepository) DeleteGCP(projectID uint32, gcpID uint32) error {
+func (m *mockGoogleRepository) DeleteGCP(ctx context.Context, projectID uint32, gcpID uint32) error {
 	args := m.Called()
 	return args.Error(0)
 }
-func (m *mockGoogleRepository) ListGCPDataSource(projectID, gcpID uint32) (*[]gcpDataSource, error) {
+func (m *mockGoogleRepository) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]gcpDataSource, error) {
 	args := m.Called()
 	return args.Get(0).(*[]gcpDataSource), args.Error(1)
 }
-func (m *mockGoogleRepository) GetGCPDataSource(projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error) {
+func (m *mockGoogleRepository) GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error) {
 	args := m.Called()
 	return args.Get(0).(*gcpDataSource), args.Error(1)
 }
-func (m *mockGoogleRepository) UpsertGCPDataSource(_ *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
+func (m *mockGoogleRepository) UpsertGCPDataSource(ctx context.Context, _ *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
 	args := m.Called()
 	return args.Get(0).(*gcpDataSource), args.Error(1)
 }
-func (m *mockGoogleRepository) DeleteGCPDataSource(projectID, gcpID, googleDataSourceID uint32) error {
+func (m *mockGoogleRepository) DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error {
 	args := m.Called()
 	return args.Error(0)
 }
