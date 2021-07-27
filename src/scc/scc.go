@@ -6,6 +6,7 @@ import (
 	"os"
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/kelseyhightower/envconfig"
 	"google.golang.org/api/option"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
@@ -43,10 +44,13 @@ func newSCCClient() sccServiceClient {
 
 func (g *sccClient) listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
 	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
-	return g.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
+	_, segment := xray.BeginSubsegment(ctx, "ListFindings")
+	ret := g.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
 		Parent: fmt.Sprintf("organizations/%s/sources/-", gcpOrganizationID),
 		Filter: fmt.Sprintf("source_properties.ProjectId = \"%s\"", gcpProjectID),
 	})
+	segment.Close(nil)
+	return ret
 }
 
 func scoreSCC(f *sccpb.Finding) float32 {
