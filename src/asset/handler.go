@@ -34,7 +34,7 @@ type sqsHandler struct {
 type assetConf struct {
 	WaitMilliSecPerRequest int `default:"500" split_words:"true"`
 	AssetAPIRetryNum       int `default:"3" split_words:"true"`
-	AssetAPIRetryWaitSec   int `default:"3" split_words:"true"`
+	AssetAPIRetryWaitSec   int `default:"30" split_words:"true"`
 }
 
 func newHandler() *sqsHandler {
@@ -43,6 +43,7 @@ func newHandler() *sqsHandler {
 	if err != nil {
 		appLogger.Fatal(err.Error())
 	}
+	appLogger.Infof("Created SQS handler, assetConf=%+v", conf)
 	return &sqsHandler{
 		findingClient:          newFindingClient(),
 		alertClient:            newAlertClient(),
@@ -312,8 +313,12 @@ func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchRes
 		if err == nil {
 			return resource, false, nil
 		}
+		// https://cloud.google.com/apis/design/errors#retrying_errors
+		// > For 429 RESOURCE_EXHAUSTED errors, the client may retry at the higher level with minimum 30s delay.
+		// > Such retries are only useful for long running background jobs.
 		if i < s.assetAPIRetryNum {
-			appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, err=%+v", s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, err)
+			appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, API Result=%+v, err=%+v",
+				s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, resource, err)
 		}
 	}
 	return nil, false, fmt.Errorf("Failed to call CloudAsset API (Retry %d times , But all failed), err=%+v", s.assetAPIRetryNum, err)
