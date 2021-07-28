@@ -49,6 +49,7 @@ func newSQSConsumer() *worker.Worker {
 			Region: &conf.AWSRegion,
 		})
 	}
+	appLogger.Infof("Created SQS client, sqsConfig=%+v", conf)
 	return &worker.Worker{
 		Config: &worker.Config{
 			QueueName:          conf.AssetQueueName,
