@@ -7,7 +7,6 @@ import (
 
 	asset "cloud.google.com/go/asset/apiv1"
 	admin "cloud.google.com/go/iam/admin/apiv1"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/kelseyhightower/envconfig"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
@@ -64,8 +63,7 @@ const (
 )
 
 func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator {
-	_, segment := xray.BeginSubsegment(ctx, "asset.SearchAllResources")
-	ret := a.asset.SearchAllResources(ctx, &assetpb.SearchAllResourcesRequest{
+	return a.asset.SearchAllResources(ctx, &assetpb.SearchAllResourcesRequest{
 		Scope: "projects/" + gcpProjectID,
 		AssetTypes: []string{
 			assetTypeServiceAccount,
@@ -74,12 +72,9 @@ func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset
 			assetTypeBucket,
 		},
 	})
-	segment.Close(nil)
-	return ret
 }
 
 func (a *assetClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error) {
-	_, segment := xray.BeginSubsegment(ctx, "asset.AnalyzeIamPolicy")
 	resp, err := a.asset.AnalyzeIamPolicy(ctx, &assetpb.AnalyzeIamPolicyRequest{
 		AnalysisQuery: &assetpb.IamPolicyAnalysisQuery{
 			Scope: "projects/" + gcpProjectID,
@@ -88,7 +83,6 @@ func (a *assetClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjec
 			},
 		},
 	})
-	segment.Close(err)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +93,12 @@ func (a *assetClient) hasUserManagedKeys(ctx context.Context, gcpProjectID, emai
 	// doc: https://cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts.keys/list
 	name := fmt.Sprintf("projects/%s/serviceAccounts/%s", gcpProjectID, email)
 	// keys, err := a.admin.Projects.ServiceAccounts.Keys.List(name).Context(ctx).Do(&iampb.)
-	_, segment := xray.BeginSubsegment(ctx, "admin.ListServiceAccountKeys")
 	keys, err := a.admin.ListServiceAccountKeys(ctx, &adminpb.ListServiceAccountKeysRequest{
 		Name: name,
 		KeyTypes: []adminpb.ListServiceAccountKeysRequest_KeyType{
 			adminpb.ListServiceAccountKeysRequest_USER_MANAGED,
 		},
 	})
-	segment.Close(err)
 	if err != nil {
 		return false, err
 	}

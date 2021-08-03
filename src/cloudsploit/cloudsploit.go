@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -92,9 +91,7 @@ func (g *cloudSploitClient) run(ctx context.Context, gcpProjectID string) (*[]cl
 	}
 
 	// Exec CloudSploit
-	_, segment := xray.BeginSubsegment(ctx, "runCloudSploit")
 	result, resultJSON, err := g.execCloudSploit(gcpProjectID, unixNano, configJs)
-	segment.Close(err)
 	if err != nil {
 		appLogger.Errorf("Failed to exec cloudsploit, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return nil, err

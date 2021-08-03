@@ -13,6 +13,7 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-xray-sdk-go/xray"
 )
 
 type sqsHandler struct {
@@ -58,7 +59,9 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	// Get cloud sploit
 	appLogger.Infof("start Run cloudsploit, RequestID=%s", requestID)
-	result, err := s.cloudSploit.run(ctx, gcp.GcpProjectId)
+	xctx, segment := xray.BeginSubsegment(ctx, "runCloudSploit")
+	result, err := s.cloudSploit.run(xctx, gcp.GcpProjectId)
+	segment.Close(err)
 	appLogger.Infof("end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",

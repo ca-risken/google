@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	portscan "github.com/CyberAgent/mimosa-common/pkg/portscan"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/vikyd/zero"
 	compute "google.golang.org/api/compute/v1"
@@ -67,25 +66,19 @@ func newPortscanClient() portscanServiceClient {
 
 func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([]*target, error) {
 	var ret []*target
-	_, segment := xray.BeginSubsegment(ctx, "listTargetFirewall")
 	infFirewalls, err := listTargetFirewall(p.compute, gcpProjectID)
-	segment.Close(err)
 	if err != nil {
 		appLogger.Errorf("Failed to describe firewall service: %+v", err)
 		return nil, err
 	}
 
-	_, segment = xray.BeginSubsegment(ctx, "listTargetCompute")
 	infComputes, err := listTargetCompute(p.compute, gcpProjectID)
-	segment.Close(err)
 	if err != nil {
 		appLogger.Errorf("Failed to describe compute service: %+v", err)
 		return nil, err
 	}
 
-	_, segment = xray.BeginSubsegment(ctx, "listTargetForwardingRule")
 	infForwardings, err := listTargetForwardingRule(p.compute, gcpProjectID)
-	segment.Close(err)
 	if err != nil {
 		appLogger.Errorf("Failed to describe compute service: %+v", err)
 		return nil, err
