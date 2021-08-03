@@ -54,9 +54,23 @@ func newAssetClient() assetServiceClient {
 	}
 }
 
+const (
+	// Supported asset types: https://cloud.google.com/asset-inventory/docs/supported-asset-types
+	assetTypeServiceAccount    string = "iam.googleapis.com/ServiceAccount"    // IAM
+	assetTypeServiceAccountKey string = "iam.googleapis.com/ServiceAccountKey" // IAM
+	assetTypeRole              string = "iam.googleapis.com/Role"              // IAM
+	assetTypeBucket            string = "storage.googleapis.com/Bucket"        // Storage
+)
+
 func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator {
 	return a.asset.SearchAllResources(ctx, &assetpb.SearchAllResourcesRequest{
 		Scope: "projects/" + gcpProjectID,
+		AssetTypes: []string{
+			assetTypeServiceAccount,
+			assetTypeServiceAccountKey,
+			assetTypeRole,
+			assetTypeBucket,
+		},
 	})
 }
 

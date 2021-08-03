@@ -264,8 +264,6 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 }
 
 const (
-	// Supported asset types: https://cloud.google.com/asset-inventory/docs/supported-asset-types
-	assetTypeServiceAccount        string = "iam.googleapis.com/ServiceAccount"
 	userServiceAccountEmailPattern string = ".iam.gserviceaccount.com"
 
 	// Basic roles: https://cloud.google.com/iam/docs/understanding-roles
