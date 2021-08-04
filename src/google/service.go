@@ -266,13 +266,13 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	var resp *sqs.SendMessageOutput
 	switch data.GoogleDataSourceID {
 	case cloudAssetDataSourceID:
-		resp, err = g.sqs.sendMsgForAsset(msg)
+		resp, err = g.sqs.sendMsgForAsset(ctx, msg)
 	case cloudSploitDataSourceID:
-		resp, err = g.sqs.sendMsgForCloudSploit(msg)
+		resp, err = g.sqs.sendMsgForCloudSploit(ctx, msg)
 	case sccDataSourceID:
-		resp, err = g.sqs.sendMsgForSCC(msg)
+		resp, err = g.sqs.sendMsgForSCC(ctx, msg)
 	case portscanDataSourceID:
-		resp, err = g.sqs.sendMsgForPortscan(msg)
+		resp, err = g.sqs.sendMsgForPortscan(ctx, msg)
 	default:
 		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
 	}
