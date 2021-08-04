@@ -195,7 +195,7 @@ func TestGetScore(t *testing.T) {
 				Plugin:   "bucketAllUsersPolicy",
 				Status:   resultFAIL,
 			},
-			want: 0.8,
+			want: 0.6,
 		},
 		{
 			name: "FAIL VPC htgh",

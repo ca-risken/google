@@ -240,7 +240,7 @@ func (c *cloudSploitFinding) setTags() {
 var scoreMap = map[string]float32{
 	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
 	categoryCompute + "/instanceLeastPrivilege":         0.6, // GCE
-	categoryStorage + "/bucketAllUsersPolicy":           0.8, // GCS
+	categoryStorage + "/bucketAllUsersPolicy":           0.6, // GCS
 	categoryKubernetes + "/loggingEnabled":              0.6, // GKE
 	categoryIAM + "/corporateEmailsOnly":                0.8, // IAM
 	categoryIAM + "/serviceAccountAdmin":                0.6, // IAM
