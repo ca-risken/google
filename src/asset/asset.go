@@ -6,7 +6,9 @@ import (
 	"os"
 
 	asset "cloud.google.com/go/asset/apiv1"
+	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
+	"cloud.google.com/go/storage"
 	"github.com/kelseyhightower/envconfig"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
@@ -17,11 +19,13 @@ type assetServiceClient interface {
 	listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator
 	analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error)
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
+	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
 }
 
 type assetClient struct {
 	asset *asset.Client
 	admin *admin.IamClient
+	gcs   *storage.Client
 }
 
 type assetConfig struct {
@@ -43,7 +47,10 @@ func newAssetClient() assetServiceClient {
 	if err != nil {
 		appLogger.Fatalf("Failed to authenticate for Google IAM Admin API client: %+v", err)
 	}
-
+	st, err := storage.NewClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	if err != nil {
+		appLogger.Fatalf("Failed to authenticate for Google Cloud Storage client: %+v", err)
+	}
 	// Remove credential file for Security
 	if err := os.Remove(conf.GoogleCredentialPath); err != nil {
 		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", conf.GoogleCredentialPath, err)
@@ -51,6 +58,7 @@ func newAssetClient() assetServiceClient {
 	return &assetClient{
 		asset: as,
 		admin: ad,
+		gcs:   st,
 	}
 }
 
@@ -106,4 +114,14 @@ func (a *assetClient) hasUserManagedKeys(ctx context.Context, gcpProjectID, emai
 		return true, nil
 	}
 	return false, nil
+}
+
+func (a *assetClient) getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error) {
+	b := a.gcs.Bucket(bucketName)
+	policy, err := b.IAM().Policy(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to Bucket IAM Policy API, err=%+v", err)
+	}
+	appLogger.Debugf("BucketPolicy: %+v", policy)
+	return policy, nil
 }

@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.86.0
+	cloud.google.com/go/storage v1.10.0
 	github.com/CyberAgent/mimosa-common/pkg/logging v0.0.0-20210707094034-b513f64f04b9
 	github.com/CyberAgent/mimosa-common/pkg/xray v0.0.0-20210803120909-2cc57e3c75d2
 	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20210707124600-11b1f052c30a

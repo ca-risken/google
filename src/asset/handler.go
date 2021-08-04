@@ -8,6 +8,7 @@ import (
 	"time"
 
 	asset "cloud.google.com/go/asset/apiv1"
+	"cloud.google.com/go/iam"
 	"github.com/CyberAgent/mimosa-common/pkg/logging"
 	"github.com/CyberAgent/mimosa-core/proto/alert"
 	"github.com/CyberAgent/mimosa-core/proto/finding"
@@ -57,8 +58,9 @@ func newHandler() *sqsHandler {
 
 type assetFinding struct {
 	Asset                *assetpb.ResourceSearchResult     `json:"asset"`
-	IAMPolicy            *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy"`
-	HasServiceAccountKey bool                              `json:"has_key"`
+	IAMPolicy            *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy,omitempty"`
+	HasServiceAccountKey bool                              `json:"has_key,omitempty"`
+	BucketPolicy         *iam.Policy                       `json:"bucket_policy,omitempty"`
 }
 
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
@@ -106,24 +108,15 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		assetCounter++
 		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
 
-		f := assetFinding{Asset: resource}
-		if isUserServiceAccount(resource.AssetType, resource.Name) {
-			email := getShortName(resource.Name)
-			hasKey, err := s.assetClient.hasUserManagedKeys(ctx, gcp.GcpProjectId, email)
-			if err != nil {
-				return s.updateScanStatusError(ctx, scanStatus, err.Error())
-			}
-			f.HasServiceAccountKey = hasKey
-			policy, err := s.assetClient.analyzeServiceAccountPolicy(ctx, gcp.GcpProjectId, email)
-			if err != nil {
-				return s.updateScanStatusError(ctx, scanStatus, err.Error())
-			}
-			f.IAMPolicy = policy
+		f, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, resource)
+		if err != nil {
+			appLogger.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
+			return s.updateScanStatusError(ctx, scanStatus, err.Error())
 		}
-		appLogger.Debugf("Got: %+v", resource)
 		// Put finding
 		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
-		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {
+		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			return s.updateScanStatusError(ctx, scanStatus, err.Error())
@@ -214,6 +207,9 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
 		s.tagFinding(ctx, common.TagServiceAccount, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
+	if f.Asset.AssetType == assetTypeBucket {
+		s.tagFinding(ctx, "storage", resp.Finding.FindingId, resp.Finding.ProjectId)
+	}
 	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -270,6 +266,33 @@ const (
 	roleEditor string = "roles/editor"
 )
 
+func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID string, r *assetpb.ResourceSearchResult) (*assetFinding, error) {
+	appLogger.Debugf("Resource details: %+v", r)
+	f := assetFinding{Asset: r}
+	var err error
+	// IAM
+	if isUserServiceAccount(r.AssetType, r.Name) {
+		email := getShortName(r.Name)
+		f.HasServiceAccountKey, err = s.assetClient.hasUserManagedKeys(ctx, gcpProjectID, email)
+		if err != nil {
+			return nil, err
+		}
+		f.IAMPolicy, err = s.assetClient.analyzeServiceAccountPolicy(ctx, gcpProjectID, email)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Storage
+	if r.AssetType == assetTypeBucket {
+		f.BucketPolicy, err = s.assetClient.getStorageBucketPolicy(ctx, r.DisplayName)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &f, nil
+}
+
 func isUserServiceAccount(assetType, name string) bool {
 	return assetType == assetTypeServiceAccount && strings.HasSuffix(name, userServiceAccountEmailPattern)
 }
@@ -278,24 +301,76 @@ func scoreAsset(f *assetFinding) float32 {
 	if f == nil || f.Asset == nil {
 		return 0.0
 	}
+	// IAM
 	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
-		if f.IAMPolicy == nil || f.IAMPolicy.MainAnalysis == nil || f.IAMPolicy.MainAnalysis.AnalysisResults == nil {
-			return 0.0
-		}
-		if !f.HasServiceAccountKey {
-			return 0.1
-		}
-		for _, p := range f.IAMPolicy.MainAnalysis.AnalysisResults {
-			if p.IamBinding == nil {
-				continue
-			}
-			if p.IamBinding.Role == roleOwner || p.IamBinding.Role == roleEditor {
-				return 0.8 // the serviceAccount has Admin role.
-			}
-		}
-		return 0.1
+		return scoreAssetForIAM(f)
+	}
+	// Storage
+	if f.Asset.AssetType == assetTypeBucket {
+		return scoreAssetForStorage(f)
 	}
 	return 0.0
+}
+
+func scoreAssetForIAM(f *assetFinding) float32 {
+	if f.IAMPolicy == nil || f.IAMPolicy.MainAnalysis == nil || f.IAMPolicy.MainAnalysis.AnalysisResults == nil {
+		return 0.0
+	}
+	if !f.HasServiceAccountKey {
+		return 0.1
+	}
+	for _, p := range f.IAMPolicy.MainAnalysis.AnalysisResults {
+		if p.IamBinding == nil {
+			continue
+		}
+		if p.IamBinding.Role == roleOwner || p.IamBinding.Role == roleEditor {
+			return 0.8 // the serviceAccount has Admin role.
+		}
+	}
+	return 0.1
+}
+
+func scoreAssetForStorage(f *assetFinding) float32 {
+	if f.BucketPolicy == nil || f.BucketPolicy.InternalProto == nil {
+		return 0.0
+	}
+	var score float32 = 0.1
+	for _, b := range f.BucketPolicy.InternalProto.Bindings {
+		public := allowedPubliclyAccess(b.Members)
+		writable := writableRole(b.Role)
+		if public && writable {
+			score = 1.0 // `writable` means both READ and WRITE.
+			break
+		}
+		if public {
+			score = 0.7 // read only access
+		}
+	}
+	return score
+}
+
+const (
+	// https://cloud.google.com/storage/docs/access-control/lists#scopes
+	allUsers              string = "allUsers"
+	allAuthenticatedUsers string = "allAuthenticatedUsers"
+)
+
+func allowedPubliclyAccess(members []string) bool {
+	for _, m := range members {
+		if m == allUsers || m == allAuthenticatedUsers {
+			return true
+		}
+	}
+	return false
+}
+
+func writableRole(role string) bool {
+	// https://cloud.google.com/storage/docs/access-control/iam-roles
+	// Not supported custom roles.
+	if strings.HasSuffix(strings.ToLower(role), "reader") || strings.HasSuffix(strings.ToLower(role), "viewer") {
+		return false
+	}
+	return true
 }
 
 func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchResultIterator) (resource *assetpb.ResourceSearchResult, done bool, err error) {
