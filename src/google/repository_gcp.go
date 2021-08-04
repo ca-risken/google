@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/CyberAgent/mimosa-google/pkg/common"
@@ -8,7 +9,7 @@ import (
 	"github.com/vikyd/zero"
 )
 
-func (g *googleRepository) ListGoogleDataSource(googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error) {
+func (g *googleRepository) ListGoogleDataSource(ctx context.Context, googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error) {
 	query := `select * from google_data_source where 1=1`
 	var params []interface{}
 	if !zero.IsZeroVal(googleDataSourceID) {
@@ -20,7 +21,7 @@ func (g *googleRepository) ListGoogleDataSource(googleDataSourceID uint32, name 
 		params = append(params, name)
 	}
 	data := []common.GoogleDataSource{}
-	if err := g.SlaveDB.Raw(query, params...).Scan(&data).Error; err != nil {
+	if err := g.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -28,15 +29,15 @@ func (g *googleRepository) ListGoogleDataSource(googleDataSourceID uint32, name 
 
 const selectGetGoogleDataSource string = "select * from google_data_source where google_data_source_id=?"
 
-func (g *googleRepository) GetGoogleDataSource(googleDataSourceID uint32) (*common.GCP, error) {
+func (g *googleRepository) GetGoogleDataSource(ctx context.Context, googleDataSourceID uint32) (*common.GCP, error) {
 	data := common.GCP{}
-	if err := g.SlaveDB.Raw(selectGetGoogleDataSource, googleDataSourceID).First(&data).Error; err != nil {
+	if err := g.SlaveDB.WithContext(ctx).Raw(selectGetGoogleDataSource, googleDataSourceID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (g *googleRepository) ListGCP(projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error) {
+func (g *googleRepository) ListGCP(ctx context.Context, projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error) {
 	query := `select * from gcp where 1=1`
 	var params []interface{}
 	if !zero.IsZeroVal(projectID) {
@@ -52,7 +53,7 @@ func (g *googleRepository) ListGCP(projectID, gcpID uint32, gcpProjectID string)
 		params = append(params, gcpProjectID)
 	}
 	data := []common.GCP{}
-	if err := g.SlaveDB.Raw(query, params...).Scan(&data).Error; err != nil {
+	if err := g.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -60,9 +61,9 @@ func (g *googleRepository) ListGCP(projectID, gcpID uint32, gcpProjectID string)
 
 const selectGetGCP string = `select * from gcp where project_id=? and gcp_id=?`
 
-func (g *googleRepository) GetGCP(projectID, gcpID uint32) (*common.GCP, error) {
+func (g *googleRepository) GetGCP(ctx context.Context, projectID, gcpID uint32) (*common.GCP, error) {
 	data := common.GCP{}
-	if err := g.SlaveDB.Raw(selectGetGCP, projectID, gcpID).First(&data).Error; err != nil {
+	if err := g.SlaveDB.WithContext(ctx).Raw(selectGetGCP, projectID, gcpID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -86,8 +87,8 @@ ON DUPLICATE KEY UPDATE
   verification_code=VALUES(verification_code)
 `
 
-func (g *googleRepository) UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, error) {
-	if err := g.MasterDB.Exec(insertUpsertGCP,
+func (g *googleRepository) UpsertGCP(ctx context.Context, gcp *google.GCPForUpsert) (*common.GCP, error) {
+	if err := g.MasterDB.WithContext(ctx).Exec(insertUpsertGCP,
 		gcp.GcpId,
 		convertZeroValueToNull(gcp.Name),
 		gcp.ProjectId,
@@ -97,14 +98,14 @@ func (g *googleRepository) UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, err
 	).Error; err != nil {
 		return nil, err
 	}
-	return g.GetGCPByUniqueIndex(gcp.ProjectId, gcp.GcpProjectId)
+	return g.GetGCPByUniqueIndex(ctx, gcp.ProjectId, gcp.GcpProjectId)
 }
 
 const selectGetGCPByUniqueIndex string = `select * from gcp where project_id=? and gcp_project_id=?`
 
-func (g *googleRepository) GetGCPByUniqueIndex(projectID uint32, gcpProjectID string) (*common.GCP, error) {
+func (g *googleRepository) GetGCPByUniqueIndex(ctx context.Context, projectID uint32, gcpProjectID string) (*common.GCP, error) {
 	data := common.GCP{}
-	if err := g.MasterDB.Raw(selectGetGCPByUniqueIndex, projectID, gcpProjectID).First(&data).Error; err != nil {
+	if err := g.MasterDB.WithContext(ctx).Raw(selectGetGCPByUniqueIndex, projectID, gcpProjectID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -112,8 +113,8 @@ func (g *googleRepository) GetGCPByUniqueIndex(projectID uint32, gcpProjectID st
 
 const deleteGCP string = `delete from gcp where project_id=? and gcp_id=?`
 
-func (g *googleRepository) DeleteGCP(projectID, gcpID uint32) error {
-	if err := g.MasterDB.Exec(deleteGCP, projectID, gcpID).Error; err != nil {
+func (g *googleRepository) DeleteGCP(ctx context.Context, projectID, gcpID uint32) error {
+	if err := g.MasterDB.WithContext(ctx).Exec(deleteGCP, projectID, gcpID).Error; err != nil {
 		return err
 	}
 	return nil
@@ -135,7 +136,7 @@ type gcpDataSource struct {
 	GCPProjectID       string  // gcp.gcp_project_id
 }
 
-func (g *googleRepository) ListGCPDataSource(projectID, gcpID uint32) (*[]gcpDataSource, error) {
+func (g *googleRepository) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]gcpDataSource, error) {
 	query := `
 select
   gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
@@ -156,7 +157,7 @@ where
 		params = append(params, gcpID)
 	}
 	data := []gcpDataSource{}
-	if err := g.SlaveDB.Raw(query, params...).Scan(&data).Error; err != nil {
+	if err := g.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -173,9 +174,9 @@ where
 	gds.project_id=? and gds.gcp_id=? and gds.google_data_source_id=?
 `
 
-func (g *googleRepository) GetGCPDataSource(projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error) {
+func (g *googleRepository) GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error) {
 	data := gcpDataSource{}
-	if err := g.MasterDB.Raw(selectGetGCPDataSource, projectID, gcpID, googleDataSourceID).Scan(&data).Error; err != nil {
+	if err := g.MasterDB.WithContext(ctx).Raw(selectGetGCPDataSource, projectID, gcpID, googleDataSourceID).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -198,19 +199,19 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
-func (g *googleRepository) UpsertGCPDataSource(gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
+func (g *googleRepository) UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
 	// Check master table exists
-	if _, err := g.GetGoogleDataSource(gcpDataSource.GoogleDataSourceId); err != nil {
+	if _, err := g.GetGoogleDataSource(ctx, gcpDataSource.GoogleDataSourceId); err != nil {
 		appLogger.Errorf("Not exists google_data_source or DB error: google_data_source_id=%d", gcpDataSource.GoogleDataSourceId)
 		return nil, err
 	}
-	if _, err := g.GetGCP(gcpDataSource.ProjectId, gcpDataSource.GcpId); err != nil {
+	if _, err := g.GetGCP(ctx, gcpDataSource.ProjectId, gcpDataSource.GcpId); err != nil {
 		appLogger.Errorf("Not exists gcp or DB error: gcp_id=%d", gcpDataSource.GcpId)
 		return nil, err
 	}
 
 	// Upsert
-	if err := g.MasterDB.Exec(insertUpsertGCPDataSource,
+	if err := g.MasterDB.WithContext(ctx).Exec(insertUpsertGCPDataSource,
 		gcpDataSource.GcpId,
 		gcpDataSource.GoogleDataSourceId,
 		gcpDataSource.ProjectId,
@@ -220,13 +221,13 @@ func (g *googleRepository) UpsertGCPDataSource(gcpDataSource *google.GCPDataSour
 	).Error; err != nil {
 		return nil, err
 	}
-	return g.GetGCPDataSource(gcpDataSource.ProjectId, gcpDataSource.GcpId, gcpDataSource.GoogleDataSourceId)
+	return g.GetGCPDataSource(ctx, gcpDataSource.ProjectId, gcpDataSource.GcpId, gcpDataSource.GoogleDataSourceId)
 }
 
 const deleteGCPDataSource string = `delete from gcp_data_source where project_id=? and gcp_id=? and google_data_source_id=?`
 
-func (g *googleRepository) DeleteGCPDataSource(projectID, gcpID, googleDataSourceID uint32) error {
-	if err := g.MasterDB.Exec(deleteGCPDataSource, projectID, gcpID, googleDataSourceID).Error; err != nil {
+func (g *googleRepository) DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error {
+	if err := g.MasterDB.WithContext(ctx).Exec(deleteGCPDataSource, projectID, gcpID, googleDataSourceID).Error; err != nil {
 		return err
 	}
 	return nil

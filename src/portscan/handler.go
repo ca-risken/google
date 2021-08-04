@@ -11,6 +11,7 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-xray-sdk-go/xray"
 )
 
 type sqsHandler struct {
@@ -29,7 +30,7 @@ func newHandler() *sqsHandler {
 	}
 }
 
-func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
 	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
@@ -44,7 +45,6 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 	}
 
 	appLogger.Infof("start portscan, RequestID=%s", requestID)
-	ctx := context.Background()
 	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
@@ -57,7 +57,9 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 
 	// get target and scan target
 	appLogger.Infof("start exec scan, RequestID=%s", requestID)
-	err = s.scan(ctx, gcp.GcpProjectId, msg)
+	xctx, segment := xray.BeginSubsegment(ctx, "scanTargets")
+	err = s.scan(xctx, gcp.GcpProjectId, msg)
+	segment.Close(err)
 	if err != nil {
 		return s.updateScanStatusError(ctx, scanStatus, err.Error())
 	}
