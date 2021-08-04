@@ -1,33 +1,32 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
+	mimosasql "github.com/CyberAgent/mimosa-common/pkg/database/sql"
 	"github.com/CyberAgent/mimosa-google/pkg/common"
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/vikyd/zero"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
 )
 
 type googleRepoInterface interface {
 	// google_data_source
-	ListGoogleDataSource(googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error)
+	ListGoogleDataSource(ctx context.Context, googleDataSourceID uint32, name string) (*[]common.GoogleDataSource, error)
 
 	// gcp
-	ListGCP(projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error)
-	GetGCP(projectID, gcpID uint32) (*common.GCP, error)
-	UpsertGCP(gcp *google.GCPForUpsert) (*common.GCP, error)
-	DeleteGCP(projectID uint32, gcpID uint32) error
+	ListGCP(ctx context.Context, projectID, gcpID uint32, gcpProjectID string) (*[]common.GCP, error)
+	GetGCP(ctx context.Context, projectID, gcpID uint32) (*common.GCP, error)
+	UpsertGCP(ctx context.Context, gcp *google.GCPForUpsert) (*common.GCP, error)
+	DeleteGCP(ctx context.Context, projectID uint32, gcpID uint32) error
 
 	// gcp_data_source
-	ListGCPDataSource(projectID, gcpID uint32) (*[]gcpDataSource, error)
-	GetGCPDataSource(projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error)
-	UpsertGCPDataSource(gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error)
-	DeleteGCPDataSource(projectID, gcpID, googleDataSourceID uint32) error
+	ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]gcpDataSource, error)
+	GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error)
+	UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error)
+	DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error
 }
 
 type googleRepository struct {
@@ -74,13 +73,10 @@ func initDB(isMaster bool) *gorm.DB {
 
 	dsn := fmt.Sprintf("%s:%s@tcp([%s]:%d)/%s?charset=utf8mb4&interpolateParams=true&parseTime=true&loc=Local",
 		user, pass, host, conf.Port, conf.Schema)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{NamingStrategy: schema.NamingStrategy{SingularTable: true}})
+	db, err := mimosasql.Open(dsn, conf.LogMode)
 	if err != nil {
 		appLogger.Fatalf("Failed to open DB. isMaster: %t, err: %+v", isMaster, err)
 		return nil
-	}
-	if conf.LogMode {
-		db.Logger.LogMode(logger.Info)
 	}
 	appLogger.Infof("Connected to Database. isMaster: %t", isMaster)
 	return db

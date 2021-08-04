@@ -12,6 +12,7 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/api/iterator"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
@@ -32,7 +33,7 @@ func newHandler() *sqsHandler {
 	}
 }
 
-func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
 	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
@@ -47,7 +48,6 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 	}
 
 	appLogger.Infof("start SCC scan, RequestID=%s", requestID)
-	ctx := context.Background()
 	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
@@ -67,7 +67,9 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 		return s.updateScanStatusError(ctx, scanStatus, err.Error())
 	}
 	appLogger.Infof("start SCC ListFinding API, RequestID=%s", requestID)
-	it := s.sccClient.listFinding(ctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	xctx, segment := xray.BeginSubsegment(ctx, "listFinding")
+	it := s.sccClient.listFinding(xctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	segment.Close(nil)
 	appLogger.Infof("end SCC ListFinding API, RequestID=%s", requestID)
 
 	appLogger.Infof("start putFindings, RequestID=%s", requestID)

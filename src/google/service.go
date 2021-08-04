@@ -46,7 +46,7 @@ func (g *googleService) ListGoogleDataSource(ctx context.Context, req *google.Li
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := g.repository.ListGoogleDataSource(req.GoogleDataSourceId, req.Name)
+	list, err := g.repository.ListGoogleDataSource(ctx, req.GoogleDataSourceId, req.Name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGoogleDataSourceResponse{}, nil
@@ -81,7 +81,7 @@ func (g *googleService) ListGCP(ctx context.Context, req *google.ListGCPRequest)
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := g.repository.ListGCP(req.ProjectId, req.GcpId, req.GcpProjectId)
+	list, err := g.repository.ListGCP(ctx, req.ProjectId, req.GcpId, req.GcpProjectId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGCPResponse{}, nil
@@ -99,7 +99,7 @@ func (g *googleService) GetGCP(ctx context.Context, req *google.GetGCPRequest) (
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	data, err := g.repository.GetGCP(req.ProjectId, req.GcpId)
+	data, err := g.repository.GetGCP(ctx, req.ProjectId, req.GcpId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.GetGCPResponse{}, nil
@@ -113,7 +113,7 @@ func (g *googleService) PutGCP(ctx context.Context, req *google.PutGCPRequest) (
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := g.repository.UpsertGCP(req.Gcp)
+	registerd, err := g.repository.UpsertGCP(ctx, req.Gcp)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (g *googleService) DeleteGCP(ctx context.Context, req *google.DeleteGCPRequ
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := g.repository.DeleteGCP(req.ProjectId, req.GcpId)
+	err := g.repository.DeleteGCP(ctx, req.ProjectId, req.GcpId)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (g *googleService) ListGCPDataSource(ctx context.Context, req *google.ListG
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := g.repository.ListGCPDataSource(req.ProjectId, req.GcpId)
+	list, err := g.repository.ListGCPDataSource(ctx, req.ProjectId, req.GcpId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.ListGCPDataSourceResponse{}, nil
@@ -196,7 +196,7 @@ func (g *googleService) GetGCPDataSource(ctx context.Context, req *google.GetGCP
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
+	data, err := g.repository.GetGCPDataSource(ctx, req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.GetGCPDataSourceResponse{}, nil
@@ -210,14 +210,14 @@ func (g *googleService) AttachGCPDataSource(ctx context.Context, req *google.Att
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	gcp, err := g.repository.GetGCP(req.ProjectId, req.GcpDataSource.GcpId)
+	gcp, err := g.repository.GetGCP(ctx, req.ProjectId, req.GcpDataSource.GcpId)
 	if err != nil {
 		return nil, err
 	}
 	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
 		return nil, err
 	}
-	registerd, err := g.repository.UpsertGCPDataSource(req.GcpDataSource)
+	registerd, err := g.repository.UpsertGCPDataSource(ctx, req.GcpDataSource)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (g *googleService) DetachGCPDataSource(ctx context.Context, req *google.Det
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := g.repository.DeleteGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
+	err := g.repository.DeleteGCPDataSource(ctx, req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
 		return nil, err
 	}
@@ -246,14 +246,14 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	gcp, err := g.repository.GetGCP(req.ProjectId, req.GcpId)
+	gcp, err := g.repository.GetGCP(ctx, req.ProjectId, req.GcpId)
 	if err != nil {
 		return nil, err
 	}
 	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
 		return nil, err
 	}
-	data, err := g.repository.GetGCPDataSource(req.ProjectId, req.GcpId, req.GoogleDataSourceId)
+	data, err := g.repository.GetGCPDataSource(ctx, req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err != nil {
 		return nil, err
 	}
-	if _, err = g.repository.UpsertGCPDataSource(&google.GCPDataSourceForUpsert{
+	if _, err = g.repository.UpsertGCPDataSource(ctx, &google.GCPDataSourceForUpsert{
 		GcpId:              data.GCPID,
 		GoogleDataSourceId: data.GoogleDataSourceID,
 		ProjectId:          data.ProjectID,
@@ -294,7 +294,7 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 }
 
 func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*google.Empty, error) {
-	list, err := g.repository.ListGCPDataSource(0, 0)
+	list, err := g.repository.ListGCPDataSource(ctx, 0, 0)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.Empty{}, nil

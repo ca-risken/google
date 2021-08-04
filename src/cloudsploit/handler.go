@@ -13,6 +13,7 @@ import (
 	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-xray-sdk-go/xray"
 )
 
 type sqsHandler struct {
@@ -31,7 +32,7 @@ func newHandler() *sqsHandler {
 	}
 }
 
-func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
+func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
 	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
@@ -46,7 +47,6 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 	}
 
 	appLogger.Infof("start CloudSploit scan, RequestID=%s", requestID)
-	ctx := context.Background()
 	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
@@ -59,7 +59,9 @@ func (s *sqsHandler) HandleMessage(sqsMsg *sqs.Message) error {
 
 	// Get cloud sploit
 	appLogger.Infof("start Run cloudsploit, RequestID=%s", requestID)
-	result, err := s.cloudSploit.run(ctx, gcp.GcpProjectId)
+	xctx, segment := xray.BeginSubsegment(ctx, "runCloudSploit")
+	result, err := s.cloudSploit.run(xctx, gcp.GcpProjectId)
+	segment.Close(err)
 	appLogger.Infof("end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",

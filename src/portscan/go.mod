@@ -6,12 +6,14 @@ require (
 	cloud.google.com/go v0.86.0 // indirect
 	github.com/CyberAgent/mimosa-common/pkg/logging v0.0.0-20210707094034-b513f64f04b9
 	github.com/CyberAgent/mimosa-common/pkg/portscan v0.0.0-20210707094034-b513f64f04b9
+	github.com/CyberAgent/mimosa-common/pkg/xray v0.0.0-20210721063343-44cefe7f590e
 	github.com/CyberAgent/mimosa-core/proto/alert v0.0.0-20210707124600-11b1f052c30a
 	github.com/CyberAgent/mimosa-core/proto/finding v0.0.0-20210707124600-11b1f052c30a
 	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210706101439-3f65af6090bc
 	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210706101439-3f65af6090bc
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go v1.39.2
+	github.com/aws/aws-xray-sdk-go v1.6.0
 	github.com/gassara-kys/go-sqs-poller/worker/v4 v4.0.0-20210215110542-0be358599a2f
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
