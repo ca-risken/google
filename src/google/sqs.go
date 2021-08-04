@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -23,10 +24,10 @@ type sqsConfig struct {
 }
 
 type sqsAPI interface {
-	sendMsgForAsset(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
-	sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
-	sendMsgForSCC(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
-	sendMsgForPortscan(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForAsset(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForCloudSploit(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForSCC(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
+	sendMsgForPortscan(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error)
 }
 
 type sqsClient struct {
@@ -63,28 +64,28 @@ func newSQSClient() *sqsClient {
 	}
 }
 
-func (s *sqsClient) sendMsgForAsset(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
-	return s.sendMsgForGCP(s.assetQueueURL, msg)
+func (s *sqsClient) sendMsgForAsset(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(ctx, s.assetQueueURL, msg)
 }
 
-func (s *sqsClient) sendMsgForCloudSploit(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
-	return s.sendMsgForGCP(s.cloudSploitQueueURL, msg)
+func (s *sqsClient) sendMsgForCloudSploit(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(ctx, s.cloudSploitQueueURL, msg)
 }
 
-func (s *sqsClient) sendMsgForSCC(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
-	return s.sendMsgForGCP(s.sccQueueURL, msg)
+func (s *sqsClient) sendMsgForSCC(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(ctx, s.sccQueueURL, msg)
 }
 
-func (s *sqsClient) sendMsgForPortscan(msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
-	return s.sendMsgForGCP(s.portscanQueueURL, msg)
+func (s *sqsClient) sendMsgForPortscan(ctx context.Context, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+	return s.sendMsgForGCP(ctx, s.portscanQueueURL, msg)
 }
 
-func (s *sqsClient) sendMsgForGCP(queueURL string, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
+func (s *sqsClient) sendMsgForGCP(ctx context.Context, queueURL string, msg *common.GCPQueueMessage) (*sqs.SendMessageOutput, error) {
 	buf, err := json.Marshal(msg)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse message, err=%+v", err)
 	}
-	resp, err := s.svc.SendMessage(&sqs.SendMessageInput{
+	resp, err := s.svc.SendMessageWithContext(ctx, &sqs.SendMessageInput{
 		MessageBody:  aws.String(string(buf)),
 		QueueUrl:     aws.String(queueURL),
 		DelaySeconds: aws.Int64(1),
