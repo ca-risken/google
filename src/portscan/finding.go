@@ -13,7 +13,8 @@ import (
 )
 
 func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpProjectID string, nmapResult *portscan.NmapResult) error {
-	data, err := json.Marshal(map[string]portscan.NmapResult{"data": *nmapResult})
+	externalLink := makeURL(nmapResult.Target, nmapResult.Port)
+	data, err := json.Marshal(map[string]interface{}{"data": *nmapResult, "external_link": externalLink})
 	if err != nil {
 		return err
 	}
@@ -96,4 +97,15 @@ func (e *exclude) getDescription() string {
 		return fmt.Sprintf("Too many ports are exposed.target:%v protocol: %v, port %v-%v,firewall_rule: %v", e.Target, e.Protocol, e.FromPort, e.ToPort, e.FirewallRuleName)
 	}
 	return fmt.Sprintf("Too many ports are exposed.target:%v protocol: %v, port %v-%v", e.Target, e.Protocol, e.FromPort, e.ToPort)
+}
+
+func makeURL(target string, port int) string {
+	switch port {
+	case 443:
+		return fmt.Sprintf("https://%v", target)
+	case 80:
+		return fmt.Sprintf("http://%v", target)
+	default:
+		return fmt.Sprintf("http://%v:%v", target, port)
+	}
 }
