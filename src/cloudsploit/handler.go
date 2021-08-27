@@ -70,6 +70,17 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		return s.updateScanStatusError(ctx, scanStatus, errMsg)
 	}
 	appLogger.Infof("start put finding, RequestID=%s", requestID)
+
+	// Clear finding score
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: common.CloudSploitDataSource,
+		ProjectId:  msg.ProjectID,
+		Tag:        []string{gcp.GcpProjectId},
+	}); err != nil {
+		appLogger.Errorf("Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		return s.updateScanStatusError(ctx, scanStatus, err.Error())
+	}
+
 	for _, f := range *result {
 		// Put finding
 		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {

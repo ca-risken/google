@@ -88,6 +88,16 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("end get GCP DataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
 
+	// Clear finding score
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: common.AssetDataSource,
+		ProjectId:  msg.ProjectID,
+		Tag:        []string{gcp.GcpProjectId},
+	}); err != nil {
+		appLogger.Errorf("Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		return s.updateScanStatusError(ctx, scanStatus, err.Error())
+	}
+
 	// Get cloud asset
 	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
 	loopCounter := 0
