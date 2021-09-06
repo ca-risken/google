@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	portscan "github.com/CyberAgent/mimosa-common/pkg/portscan"
+	portscan "github.com/ca-risken/common/pkg/portscan"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/vikyd/zero"
 	compute "google.golang.org/api/compute/v1"

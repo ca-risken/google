@@ -101,19 +101,19 @@ go-mod-update:
 			github.com/CyberAgent/mimosa-google/...
 	cd src/asset \
 		&& go get -u \
-			github.com/CyberAgent/mimosa-core/... \
+			github.com/ca-risken/core/... \
 			github.com/CyberAgent/mimosa-google/...
 	cd src/cloudsploit \
 		&& go get -u \
-			github.com/CyberAgent/mimosa-core/... \
+			github.com/ca-risken/core/... \
 			github.com/CyberAgent/mimosa-google/...
 	cd src/scc \
 		&& go get -u \
-			github.com/CyberAgent/mimosa-core/... \
+			github.com/ca-risken/core/... \
 			github.com/CyberAgent/mimosa-google/...
 	cd src/portscan \
 		&& go get -u \
-			github.com/CyberAgent/mimosa-core/... \
+			github.com/ca-risken/core/... \
 			github.com/CyberAgent/mimosa-google/...
 
 FAKE:
