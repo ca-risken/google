@@ -4,13 +4,13 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
-	github.com/CyberAgent/mimosa-common/pkg/database v0.0.0-20210811114519-3370ca0f108e
-	github.com/CyberAgent/mimosa-common/pkg/xray v0.0.0-20210811114519-3370ca0f108e
 	github.com/CyberAgent/mimosa-google/pkg/common v0.0.0-20210812033045-03aa14bd39be
 	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210812033045-03aa14bd39be
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/aws/aws-sdk-go v1.40.31
 	github.com/aws/aws-xray-sdk-go v1.6.0
+	github.com/ca-risken/common/pkg/database v0.0.0-20210906122657-d2be54cc7181
+	github.com/ca-risken/common/pkg/xray v0.0.0-20210906122657-d2be54cc7181
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/googleapis/gax-go/v2 v2.1.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
