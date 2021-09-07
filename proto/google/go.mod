@@ -1,4 +1,4 @@
-module github.com/CyberAgent/mimosa-google/proto/google
+module github.com/ca-risken/google/proto/google
 
 go 1.16
 
