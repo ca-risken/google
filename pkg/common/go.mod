@@ -1,6 +1,6 @@
-module github.com/CyberAgent/mimosa-google/pkg/common
+module github.com/ca-risken/google/pkg/common
 
-go 1.15
+go 1.16
 
 require (
 	github.com/CyberAgent/mimosa-google/proto/google v0.0.0-20210122065611-243143749011
