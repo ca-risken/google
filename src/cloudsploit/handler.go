@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CyberAgent/mimosa-google/pkg/common"
-	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/google/proto/google"
 )
 
 type sqsHandler struct {

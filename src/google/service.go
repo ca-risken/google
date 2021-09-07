@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CyberAgent/mimosa-google/pkg/common"
-	"github.com/CyberAgent/mimosa-google/proto/google"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/google/proto/google"
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )

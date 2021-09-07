@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/CyberAgent/mimosa-google/pkg/common"
 	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/google/pkg/common"
 )
 
 func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpProjectID string, nmapResult *portscan.NmapResult) error {

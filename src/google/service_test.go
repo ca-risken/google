@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CyberAgent/mimosa-google/pkg/common"
-	"github.com/CyberAgent/mimosa-google/proto/google"
+	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/google/proto/google"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
 )
