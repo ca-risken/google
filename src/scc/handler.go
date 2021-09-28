@@ -65,10 +65,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			gcp.GcpOrganizationId, gcp.GcpProjectId)
 		appLogger.Errorf("Invalid parameters, project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-			appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-		}
-		return mimosasqs.WrapNonRetryable(err)
+		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 	appLogger.Infof("start SCC ListFinding API, RequestID=%s", requestID)
 	xctx, segment := xray.BeginSubsegment(ctx, "listFinding")
@@ -86,20 +83,14 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err != nil {
 			appLogger.Errorf("Failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-			}
-			return mimosasqs.WrapNonRetryable(err)
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		appLogger.Debugf("Got finding: %+v", f.Finding)
 		// Put finding
 		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-			}
-			return mimosasqs.WrapNonRetryable(err)
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		findingCnt++
 	}
@@ -119,6 +110,13 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	return nil
+}
+
+func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
+		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+	}
+	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
