@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
+	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
@@ -69,7 +70,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
 		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", sqsMsg, err)
-		return err
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	requestID, err := logging.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
@@ -83,7 +84,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		return err
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof("end get GCP DataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
@@ -95,7 +96,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
 		appLogger.Errorf("Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
-		return s.updateScanStatusError(ctx, scanStatus, err.Error())
+		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 
 	// Get cloud asset
@@ -113,7 +114,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err != nil {
 			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, assetCounter=%d, loopCounter=%d, RequestID=%s, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, assetCounter, loopCounter, requestID, err)
-			return s.updateScanStatusError(ctx, scanStatus, err.Error())
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		assetCounter++
 		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
@@ -122,14 +123,14 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err != nil {
 			appLogger.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			return s.updateScanStatusError(ctx, scanStatus, err.Error())
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		// Put finding
 		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
 		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			return s.updateScanStatusError(ctx, scanStatus, err.Error())
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		appLogger.Debugf("end putFinding, RequestID=%s", requestID)
 		// Control the number of API requests so that they are not exceeded.
@@ -140,14 +141,24 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	appLogger.Infof("start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
-		return err
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof("end update scan status, RequestID=%s", requestID)
 	appLogger.Infof("end google asset scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
 		return nil
 	}
-	return s.analyzeAlert(ctx, msg.ProjectID)
+	if err := s.analyzeAlert(ctx, msg.ProjectID); err != nil {
+		return mimosasqs.WrapNonRetryable(err)
+	}
+	return nil
+}
+
+func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
+		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+	}
+	return mimosasqs.WrapNonRetryable(err)
 }
 
 func getShortName(name string) string {
