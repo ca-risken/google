@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/logging"
+	portscan "github.com/ca-risken/common/pkg/portscan"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
@@ -94,13 +95,24 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 		return err
 	}
 	targets, excludeList := s.portscanClient.excludeTarget(targets)
+	var results []*portscan.NmapResult
 	for _, target := range targets {
-		results := scan(target)
-		for _, result := range results {
-			err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
-			if err != nil {
-				appLogger.Errorf("Failed put Finding err: %v", err)
-			}
+		results = append(results, scan(target)...)
+	}
+
+	// Clear finding score
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: common.PortscanDataSource,
+		ProjectId:  message.ProjectID,
+		Tag:        []string{gcpProjectId},
+	}); err != nil {
+		appLogger.Errorf("Failed to clear finding score. GCPProjectID: %v, error: %v", gcpProjectId, err)
+		return err
+	}
+	for _, result := range results {
+		err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
+		if err != nil {
+			appLogger.Errorf("Failed put Finding err: %v", err)
 		}
 	}
 	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, message)
