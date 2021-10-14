@@ -9,7 +9,7 @@ import (
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"cloud.google.com/go/storage"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
@@ -29,7 +29,7 @@ type assetClient struct {
 }
 
 type assetConfig struct {
-	GoogleCredentialPath string `required:"true" split_words:"true"`
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 }
 
 func newAssetClient() assetServiceClient {

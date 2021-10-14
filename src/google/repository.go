@@ -7,7 +7,7 @@ import (
 	mimosasql "github.com/ca-risken/common/pkg/database/sql"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
@@ -42,15 +42,15 @@ func newGoogleRepository() googleRepoInterface {
 }
 
 type dbConfig struct {
-	MasterHost     string `split_words:"true" required:"true"`
-	MasterUser     string `split_words:"true" required:"true"`
-	MasterPassword string `split_words:"true" required:"true"`
-	SlaveHost      string `split_words:"true"`
-	SlaveUser      string `split_words:"true"`
-	SlavePassword  string `split_words:"true"`
+	MasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
+	MasterUser     string `split_words:"true" default:"hoge"`
+	MasterPassword string `split_words:"true" default:"moge"`
+	SlaveHost      string `split_words:"true" default:"db.middleware.svc.cluster.local"`
+	SlaveUser      string `split_words:"true" default:"hoge"`
+	SlavePassword  string `split_words:"true" default:"moge"`
 
-	Schema  string `required:"true"`
-	Port    int    `required:"true"`
+	Schema  string `required:"true"    default:"mimosa"`
+	Port    int    `required:"true"    default:"3306"`
 	LogMode bool   `split_words:"true" default:"false"`
 }
 

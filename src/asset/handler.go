@@ -17,7 +17,7 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/iterator"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
@@ -34,9 +34,9 @@ type sqsHandler struct {
 }
 
 type assetConf struct {
-	WaitMilliSecPerRequest int `default:"500" split_words:"true"`
-	AssetAPIRetryNum       int `default:"3" split_words:"true"`
-	AssetAPIRetryWaitSec   int `default:"30" split_words:"true"`
+	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
+	AssetAPIRetryNum       int `split_words:"true" default:"3"`
+	AssetAPIRetryWaitSec   int `split_words:"true" default:"30"`
 }
 
 func newHandler() *sqsHandler {

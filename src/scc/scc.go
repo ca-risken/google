@@ -6,7 +6,7 @@ import (
 	"os"
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/option"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
@@ -20,7 +20,7 @@ type sccClient struct {
 }
 
 type sccConfig struct {
-	GoogleCredentialPath string `required:"true" split_words:"true"`
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 }
 
 func newSCCClient() sccServiceClient {

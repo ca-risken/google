@@ -14,9 +14,9 @@ require (
 	github.com/ca-risken/core/proto/finding v0.0.0-20210907025810-a42d886856fb
 	github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf
 	github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf
+	github.com/gassara-kys/envconfig v1.4.4
 	github.com/gassara-kys/go-sqs-poller/worker/v4 v4.0.0-20210215110542-0be358599a2f
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.13.5 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/objx v0.2.0 // indirect

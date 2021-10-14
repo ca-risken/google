@@ -11,9 +11,9 @@ require (
 	github.com/ca-risken/common/pkg/xray v0.0.0-20210906122657-d2be54cc7181
 	github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf
 	github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf
+	github.com/gassara-kys/envconfig v1.4.4
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.13.5 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
