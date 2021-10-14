@@ -10,17 +10,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 )
 
 type sqsConfig struct {
-	AWSRegion   string `envconfig:"aws_region" default:"ap-northeast-1"`
-	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://localhost:9324"`
+	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
+	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	AssetQueueURL       string `split_words:"true" required:"true"`
-	CloudSploitQueueURL string `split_words:"true" required:"true"`
-	SCCQueueURL         string `split_words:"true" required:"true"`
-	PortscanQueueURL    string `split_words:"true" required:"true"`
+	AssetQueueURL       string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
+	CloudSploitQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
+	SCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
+	PortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
 }
 
 type sqsAPI interface {

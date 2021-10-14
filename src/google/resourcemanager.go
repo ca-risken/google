@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/option"
 )
@@ -20,7 +20,7 @@ type resourceManagerClient struct {
 }
 
 type resourceManagerConfig struct {
-	GoogleCredentialPath string `required:"true" split_words:"true"`
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 }
 
 func newResourceManagerClient() resourceManagerServiceClient {

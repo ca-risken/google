@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 )
 
 type cloudSploitServiceClient interface {
@@ -28,7 +28,7 @@ type cloudSploitClient struct {
 }
 
 type cloudSploitConf struct {
-	CloudSploitCommand             string `required:"true" split_words:"true"`
+	CloudSploitCommand             string `required:"true" split_words:"true" default:"cloudsploit-scan"`
 	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
 }

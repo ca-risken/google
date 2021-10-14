@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	portscan "github.com/ca-risken/common/pkg/portscan"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/gassara-kys/envconfig"
 	"github.com/vikyd/zero"
 	compute "google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
@@ -27,8 +27,8 @@ type portscanClient struct {
 }
 
 type portscanConfig struct {
-	GoogleCredentialPath  string `required:"true" split_words:"true"`
-	ScanExcludePortNumber int    `default:"1000" split_words:"true"`
+	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
+	ScanExcludePortNumber int    `split_words:"true"                 default:"1000"`
 }
 
 func newPortscanClient() portscanServiceClient {
