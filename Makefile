@@ -5,6 +5,7 @@ IMAGE_PUSH_TARGETS = $(TARGETS:=.push-image)
 MANIFEST_CREATE_TARGETS = $(TARGETS:=.create-manifest)
 MANIFEST_PUSH_TARGETS = $(TARGETS:=.push-manifest)
 TEST_TARGETS = $(TARGETS:=.go-test)
+LINT_TARGETS = $(TARGETS:=.lint)
 BUILD_OPT=""
 IMAGE_TAG=latest
 MANIFEST_TAG=latest
@@ -115,5 +116,14 @@ go-mod-update:
 		&& go get -u \
 			github.com/ca-risken/core/... \
 			github.com/ca-risken/google/...
+
+.PHONY: lint proto-lint pkg-lint
+lint: $(LINT_TARGETS) proto-lint pkg-lint
+%.lint: FAKE
+	sh hack/golinter.sh src/$(*)
+proto-lint:
+	sh hack/golinter.sh proto/google
+pkg-lint:
+	sh hack/golinter.sh pkg/common
 
 FAKE:
