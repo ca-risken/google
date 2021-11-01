@@ -28,7 +28,7 @@ type cloudSploitClient struct {
 }
 
 type cloudSploitConf struct {
-	CloudSploitCommand             string `required:"true" split_words:"true" default:"cloudsploit-scan"`
+	CloudSploitCommand             string `required:"true" split_words:"true" default:"cloudsploitscan"`
 	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
 }
@@ -239,9 +239,12 @@ func (c *cloudSploitFinding) setTags() {
 // scoreMap (key: `{Categor}/{Plugin}`, value: score)
 var scoreMap = map[string]float32{
 	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
+	categorySQL + "/dbAutomatedBackups":                 0.6, // CloudSQL
 	categoryCompute + "/instanceLeastPrivilege":         0.6, // GCE
+	categoryCompute + "/connectSerialPortsDisabled":     0.6, // GCE
 	categoryStorage + "/bucketAllUsersPolicy":           0.6, // GCS
 	categoryKubernetes + "/loggingEnabled":              0.6, // GKE
+	categoryKubernetes + "/clusterLeastPrivilege":       0.6, // GKE
 	categoryIAM + "/corporateEmailsOnly":                0.8, // IAM
 	categoryIAM + "/serviceAccountAdmin":                0.6, // IAM
 	categoryIAM + "/serviceAccountUser":                 0.6, // IAM
