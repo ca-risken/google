@@ -20,7 +20,9 @@ FROM node:lts-alpine3.12
 RUN apk add --no-cache ca-certificates tzdata git \
   && mkdir -p /var/scan/ && cd /var/scan/ \
   && git clone https://github.com/aquasecurity/cloudsploit.git -b v2.0.0 --depth 1 \
-  && npm init --yes && npm install cloudsploit
+  && npm init --yes && npm install cloudsploit \
+  # Check `cloudsploitscan` file
+  && ls /var/scan/node_modules/.bin/cloudsploitscan
 COPY --from=builder /go/bin/env-injector /usr/local/bin/
 COPY --from=builder /go/bin/cloudsploit /usr/local/cloudsploit/bin/
 ENV PATH="$PATH:/var/scan/node_modules/.bin" \
@@ -39,7 +41,7 @@ ENV PATH="$PATH:/var/scan/node_modules/.bin" \
   FINDING_SVC_ADDR= \
   ALERT_SVC_ADDR= \
   GOOGLE_SVC_ADDR= \
-  CLOUD_SPLOIT_COMMAND="cloudsploit-scan" \
+  CLOUD_SPLOIT_COMMAND="cloudsploitscan" \
   GOOGLE_SERVICE_ACCOUNT_EMAIL= \
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY= \
   TZ=Asia/Tokyo
