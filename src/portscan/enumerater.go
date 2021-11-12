@@ -265,7 +265,7 @@ func scan(target *target) []*portscan.NmapResult {
 func splitPort(port string) (int, int, error) {
 	var fromPortStr string
 	var toPortStr string
-	if strings.Index(port, "-") < 0 {
+	if !strings.Contains(port, "-") {
 		fromPortStr = port
 		toPortStr = port
 	} else {

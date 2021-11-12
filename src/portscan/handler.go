@@ -165,12 +165,3 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 	})
 	return err
 }
-
-type excludeResult struct {
-	FromPort         int
-	ToPort           int
-	Protocol         string
-	Target           string
-	ResourceName     string
-	FirewallRuleName string
-}

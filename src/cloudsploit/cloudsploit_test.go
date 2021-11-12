@@ -10,7 +10,6 @@ import (
 
 var (
 	unixNano       int64  = 999999999
-	testProjectID  string = "test-project"
 	testConfigFile string = "/tmp/config.js"
 )
 
