@@ -101,6 +101,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	// Get cloud asset
 	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
+	var apiErrors []error
 	loopCounter := 0
 	assetCounter := 0
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
@@ -112,9 +113,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			break
 		}
 		if err != nil {
-			appLogger.Errorf("Failed to Coud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, assetCounter=%d, loopCounter=%d, RequestID=%s, err=%+v",
+			appLogger.Errorf("Failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, assetCounter=%d, loopCounter=%d, RequestID=%s, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, assetCounter, loopCounter, requestID, err)
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			apiErrors = append(apiErrors, err)
+			continue // continue for other scans
 		}
 		assetCounter++
 		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
@@ -123,7 +125,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err != nil {
 			appLogger.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			apiErrors = append(apiErrors, err)
+			continue // continue for other scans
 		}
 		// Put finding
 		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
@@ -139,11 +142,14 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("Got %d assets, RequestID=%s", assetCounter, requestID)
 	appLogger.Infof("end CloudAsset API, RequestID=%s", requestID)
 
-	appLogger.Infof("start update scan status, RequestID=%s", requestID)
+	// API errors handling
+	if len(apiErrors) > 0 {
+		return s.handleErrorWithUpdateStatus(ctx, scanStatus,
+			fmt.Errorf("Failed to call some APIs, errors=%d, example=%s", len(apiErrors), apiErrors[0].Error()))
+	}
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	appLogger.Infof("end update scan status, RequestID=%s", requestID)
 	appLogger.Infof("end google asset scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
 		return nil
