@@ -44,8 +44,9 @@ func newSCCClient() sccServiceClient {
 func (g *sccClient) listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
 	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
 	return g.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
-		Parent: fmt.Sprintf("organizations/%s/sources/-", gcpOrganizationID),
-		Filter: fmt.Sprintf("source_properties.ProjectId = \"%s\"", gcpProjectID),
+		// Parent: fmt.Sprintf("organizations/%s/sources/-", gcpOrganizationID),
+		// Filter: fmt.Sprintf("source_properties.ProjectId = \"%s\"", gcpProjectID),
+		Parent: fmt.Sprintf("projects/%s/sources/-", gcpProjectID),
 	})
 }
 

@@ -98,24 +98,24 @@ go-mod-tidy: proto
 .PHONY: go-mod-update
 go-mod-update:
 	cd src/google \
-		&& go get -u \
-			github.com/ca-risken/google/...
+		&& go get \
+			github.com/ca-risken/google/proto/...
 	cd src/asset \
-		&& go get -u \
-			github.com/ca-risken/core/... \
-			github.com/ca-risken/google/...
+		&& go get \
+			github.com/ca-risken/core/proto/... \
+			github.com/ca-risken/google/proto/...
 	cd src/cloudsploit \
-		&& go get -u \
-			github.com/ca-risken/core/... \
-			github.com/ca-risken/google/...
+		&& go get \
+			github.com/ca-risken/core/proto/... \
+			github.com/ca-risken/google/proto/...
 	cd src/scc \
-		&& go get -u \
-			github.com/ca-risken/core/... \
-			github.com/ca-risken/google/...
+		&& go get \
+			github.com/ca-risken/core/proto/... \
+			github.com/ca-risken/google/proto/...
 	cd src/portscan \
-		&& go get -u \
-			github.com/ca-risken/core/... \
-			github.com/ca-risken/google/...
+		&& go get \
+			github.com/ca-risken/core/proto/... \
+			github.com/ca-risken/google/proto/...
 
 .PHONY: lint proto-lint pkg-lint
 lint: $(LINT_TARGETS) proto-lint pkg-lint
