@@ -237,6 +237,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	if f.Asset.AssetType == assetTypeBucket {
 		s.tagFinding(ctx, "storage", resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
+	s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Asset.AssetType)
 	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -419,4 +420,23 @@ func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchRes
 		}
 	}
 	return nil, false, fmt.Errorf("Failed to call CloudAsset API (Retry %d times , But all failed), err=%+v", s.assetAPIRetryNum, err)
+}
+
+func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, assetType string) {
+	r := getRecommend(assetType)
+	if r.Risk == "" && r.Recommendation == "" {
+		appLogger.Warnf("Failed to get recommendation, Unknown type=%s", assetType)
+		return
+	}
+	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
+		ProjectId:      projectID,
+		FindingId:      findingID,
+		DataSource:     common.AssetDataSource,
+		Type:           assetType,
+		Risk:           r.Risk,
+		Recommendation: r.Recommendation,
+	}); err != nil {
+		appLogger.Errorf("Failed to TagFinding, finding_id=%d, asset_type=%s, error=%+v", findingID, assetType, err)
+	}
+	appLogger.Debugf("Success PutRecommend, finding_id=%d, reccomend=%+v", findingID, r)
 }
