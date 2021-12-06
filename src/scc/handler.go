@@ -49,14 +49,12 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	}
 
 	appLogger.Infof("start SCC scan, RequestID=%s", requestID)
-	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	appLogger.Infof("end getGCPDataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
 
 	// Get security command center
@@ -73,7 +71,6 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	segment.Close(nil)
 	appLogger.Infof("end SCC ListFinding API, RequestID=%s", requestID)
 
-	appLogger.Infof("start putFindings, RequestID=%s", requestID)
 	findingCnt := 0
 	for {
 		f, err := it.Next()
@@ -95,13 +92,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		findingCnt++
 	}
 	appLogger.Infof("Got %d findings, RequestID=%s", findingCnt, requestID)
-	appLogger.Infof("end putFindings, RequestID=%s", requestID)
 
-	appLogger.Infof("start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	appLogger.Infof("end update scan status, RequestID=%s", requestID)
 	appLogger.Infof("end SCC scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
 		return nil
@@ -161,6 +155,9 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
+	if f.Category != "" && f.SourceProperties["Explanation"] != nil && f.SourceProperties["Explanation"].GetStringValue() != "" {
+		s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Category, f.SourceProperties["Explanation"].GetStringValue())
+	}
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -205,4 +202,18 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 		ProjectId: projectID,
 	})
 	return err
+}
+
+func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, category, risk string) {
+	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
+		ProjectId:      projectID,
+		FindingId:      findingID,
+		DataSource:     common.SCCDataSource,
+		Type:           category,
+		Risk:           risk,
+		Recommendation: "Please see the finding JSON data in 'data.source_properties.Recommendation'",
+	}); err != nil {
+		appLogger.Errorf("Failed to TagFinding, finding_id=%d, category=%s, error=%+v", findingID, category, err)
+	}
+	appLogger.Debugf("Success PutRecommend, finding_id=%d, category=%s, risk=%s", findingID, category, risk)
 }

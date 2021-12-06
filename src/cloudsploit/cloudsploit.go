@@ -177,6 +177,7 @@ const (
 	categoryCLB               string = "CLB"
 	categoryCompute           string = "Compute"
 	categoryCryptographicKeys string = "Cryptographic Keys"
+	categoryDNS               string = "DNS"
 	categoryIAM               string = "IAM"
 	categoryKubernetes        string = "Kubernetes"
 	categoryLogging           string = "Logging"
@@ -192,85 +193,10 @@ const (
 	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
 )
 
-// pluginTagMap (key: `{Categor}/{Plugin}`, value: tag)
-var pluginTagMap = map[string][]string{
-	categoryCLB + "/clbHttpsOnly":                  {"hippa", "pci"},       // CLB
-	categoryCLB + "/clbNoInstances":                {"cost"},               // CLB
-	categoryCompute + "/autoscaleEnabled":          {"reliability"},        // GCE
-	categoryCompute + "/csekEncryptionEnabled":     {"hippa", "pci"},       // GCE
-	categoryCompute + "/instanceLeastPrivilege":    {"pci"},                // GCE
-	categoryCompute + "/instanceMaxCount":          {"reliability"},        // GCE
-	categoryCompute + "/instancesMultiAz":          {"reliability"},        // GCE
-	categoryCompute + "/osLoginEnabled":            {"pci"},                // GCE
-	categoryCryptographicKeys + "/keyRotation":     {"hipaa", "pci"},       // KMS
-	categoryIAM + "/serviceAccountKeyRotation":     {"hipaa", "pci"},       // IAM
-	categoryIAM + "/serviceLimits":                 {"reliability"},        // IAM
-	categoryKubernetes + "/autoNodeRepairEnabled":  {"reliability"},        // GKE
-	categoryKubernetes + "/loggingEnabled":         {"hipaa"},              // GKE
-	categoryLogging + "/auditConfigurationLogging": {"hipaa", "pci"},       // Logging
-	categoryLogging + "/customRoleLogging":         {"hipaa"},              // Logging
-	categoryLogging + "/projectOwnershipLogging":   {"hipaa", "pci"},       // Logging
-	categoryLogging + "/sqlConfigurationLogging":   {"hipaa"},              // Logging
-	categoryLogging + "/storagePermissionsLogging": {"hipaa", "pci"},       // Logging
-	categoryLogging + "/vpcFirewallRuleLogging":    {"hipaa"},              // Logging
-	categoryLogging + "/vpcNetworkLogging":         {"hipaa", "pci"},       // Logging
-	categoryLogging + "/vpcNetworkRouteLogging":    {"hipaa"},              // Logging
-	categorySQL + "/dbAutomatedBackups":            {"reliability"},        // CloudSQL
-	categorySQL + "/dbMultiAz":                     {"reliability"},        // CloudSQL
-	categorySQL + "/dbPubliclyAccessible":          {"hipaa", "pci"},       // CloudSQL
-	categorySQL + "/dbRestorable":                  {"pci", "reliability"}, // CloudSQL
-	categorySQL + "/dbSSLEnabled":                  {"hipaa", "pci"},       // CloudSQL
-	categoryStorage + "/bucketLogging":             {"hipaa"},              // GCS
-	categoryStorage + "/bucketVersioning":          {"reliability"},        // GCS
-	categoryVPCNetwork + "/defaultVpcInUse":        {"pci"},                // VPC
-	categoryVPCNetwork + "/excessiveFirewallRules": {"pci"},                // VPC
-	categoryVPCNetwork + "/flowLogsEnabled":        {"hipaa", "pci"},       // VPC
-	categoryVPCNetwork + "/multipleSubnets":        {"reliability"},        // VPC
-	categoryVPCNetwork + "/openAllPorts":           {"hipaa", "pci"},       // VPC
-	categoryVPCNetwork + "/privateAccessEnabled":   {"pci"},                // VPC
-}
-
 func (c *cloudSploitFinding) setTags() {
-	if tags, ok := pluginTagMap[c.Category+"/"+c.Plugin]; ok {
-		c.Tags = tags
+	if p, ok := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]; ok {
+		c.Tags = p.Tag
 	}
-}
-
-// scoreMap (key: `{Categor}/{Plugin}`, value: score)
-var scoreMap = map[string]float32{
-	categorySQL + "/dbPubliclyAccessible":               0.8, // CloudSQL
-	categorySQL + "/dbAutomatedBackups":                 0.6, // CloudSQL
-	categoryCompute + "/instanceLeastPrivilege":         0.6, // GCE
-	categoryCompute + "/connectSerialPortsDisabled":     0.6, // GCE
-	categoryStorage + "/bucketAllUsersPolicy":           0.6, // GCS
-	categoryKubernetes + "/loggingEnabled":              0.6, // GKE
-	categoryKubernetes + "/clusterLeastPrivilege":       0.6, // GKE
-	categoryIAM + "/corporateEmailsOnly":                0.8, // IAM
-	categoryIAM + "/serviceAccountAdmin":                0.6, // IAM
-	categoryIAM + "/serviceAccountUser":                 0.6, // IAM
-	categoryVPCNetwork + "/openAllPorts":                0.8, // VPC
-	categoryVPCNetwork + "/openCIFS":                    0.8, // VPC
-	categoryVPCNetwork + "/openDNS":                     0.8, // VPC
-	categoryVPCNetwork + "/openDocker":                  0.8, // VPC
-	categoryVPCNetwork + "/openFTP":                     0.8, // VPC
-	categoryVPCNetwork + "/openHadoopNameNode":          0.8, // VPC
-	categoryVPCNetwork + "/openHadoopNameNodeWebUI":     0.8, // VPC
-	categoryVPCNetwork + "/openKibana":                  0.8, // VPC
-	categoryVPCNetwork + "/openMySQL":                   0.8, // VPC
-	categoryVPCNetwork + "/openNetBIOS":                 0.8, // VPC
-	categoryVPCNetwork + "/openOracle":                  0.8, // VPC
-	categoryVPCNetwork + "/openOracleAutoDataWarehouse": 0.8, // VPC
-	categoryVPCNetwork + "/openPostgreSQL":              0.8, // VPC
-	categoryVPCNetwork + "/openRDP":                     0.8, // VPC
-	categoryVPCNetwork + "/openRPC":                     0.8, // VPC
-	categoryVPCNetwork + "/openSMBoTCP":                 0.8, // VPC
-	categoryVPCNetwork + "/openSMTP":                    0.8, // VPC
-	categoryVPCNetwork + "/openSQLServer":               0.8, // VPC
-	categoryVPCNetwork + "/openSSH":                     0.6, // VPC
-	categoryVPCNetwork + "/openSalt":                    0.8, // VPC
-	categoryVPCNetwork + "/openTelnet":                  0.8, // VPC
-	categoryVPCNetwork + "/openVNCClient":               0.8, // VPC
-	categoryVPCNetwork + "/openVNCServer":               0.8, // VPC
 }
 
 func (c *cloudSploitFinding) getScore() float32 {
@@ -283,9 +209,14 @@ func (c *cloudSploitFinding) getScore() float32 {
 		return 0.3
 	default:
 		// FAIL
-		if score, ok := scoreMap[c.Category+"/"+c.Plugin]; ok {
-			return score
+		if plugin, ok := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]; ok {
+			return plugin.Score
 		}
 		return 0.3
 	}
+}
+
+func (c *cloudSploitFinding) getRecommend() *recommend {
+	p := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]
+	return &p.Recommend
 }

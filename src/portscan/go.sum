@@ -83,9 +83,13 @@ github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1 h1:SjbAA
 github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1/go.mod h1:1QELprYp9UidwqzB1253qA00l3umMen4njJMFRNq5Po=
 github.com/ca-risken/core/proto/alert v0.0.0-20210907025810-a42d886856fb h1:iFuxqs9LHwiy5+49yMnZHkdSyfxHlB5q5FchvLt5RYY=
 github.com/ca-risken/core/proto/alert v0.0.0-20210907025810-a42d886856fb/go.mod h1:BYVAXJlXATb39k2UHRWbnTzl+hunqKY8GxxtBynK1K0=
+github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86 h1:EP8JZS/SdVSZbzQpcIxNEg8XNJmyet7p2KFgpHQiTdQ=
+github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86/go.mod h1:BYVAXJlXATb39k2UHRWbnTzl+hunqKY8GxxtBynK1K0=
 github.com/ca-risken/core/proto/finding v0.0.0-20210906115102-3cabd5f9511a/go.mod h1:TZ3SqTbxvOpl6GF4FEY4XEiIGkss4FCNyYp2M4j1j60=
 github.com/ca-risken/core/proto/finding v0.0.0-20210907025810-a42d886856fb h1:0txK2pZRr8XC7vx8uYxuvXPHzJjRyWgtgcSUI8Phgy8=
 github.com/ca-risken/core/proto/finding v0.0.0-20210907025810-a42d886856fb/go.mod h1:TZ3SqTbxvOpl6GF4FEY4XEiIGkss4FCNyYp2M4j1j60=
+github.com/ca-risken/core/proto/finding v0.0.0-20211202081113-c4c0e9d1af86 h1:xsvX4tQg3TMCnJar1woPniRjJIq16Lic5iV2XDgS42k=
+github.com/ca-risken/core/proto/finding v0.0.0-20211202081113-c4c0e9d1af86/go.mod h1:TZ3SqTbxvOpl6GF4FEY4XEiIGkss4FCNyYp2M4j1j60=
 github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf h1:WuXib1Gn738TPoeGkpDSgtfXQPN5HFk2CSMYoUrJRHQ=
 github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf/go.mod h1:7xWV2dnWvs4xxzlYQ4un8VjyythnFgFdkoAEei/AeOA=
 github.com/ca-risken/google/proto/google v0.0.0-20210907053516-2d3cbdd86320/go.mod h1:/fC4mr7tpa6h4DzudDdDQnXst/ETw/rDj2jwj+SIP2M=

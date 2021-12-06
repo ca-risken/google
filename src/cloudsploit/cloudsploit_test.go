@@ -276,3 +276,46 @@ func TestSetTags(t *testing.T) {
 		})
 	}
 }
+
+func TestGetRecommend(t *testing.T) {
+	cases := []struct {
+		name  string
+		input *cloudSploitFinding
+		want  *recommend
+	}{
+		{
+			name: "Exists",
+			input: &cloudSploitFinding{
+				Category: categoryCLB,
+				Plugin:   "clbCDNEnabled",
+			},
+			want: &recommend{
+				Risk: `CLB CDN Enabled
+			- Ensures that Cloud CDN is enabled on all load balancers
+			- Cloud CDN increases speed and reliability as well as lowers server costs.
+			- Enabling CDN on load balancers creates a highly available system and is part of GCP best practices.`,
+				Recommendation: `Enable Cloud CDN on all load balancers from the network services console.
+			- https://cloud.google.com/cdn/docs/quickstart`,
+			},
+		},
+		{
+			name: "Unknown",
+			input: &cloudSploitFinding{
+				Category: "Unknown",
+				Plugin:   "Unknown",
+			},
+			want: &recommend{
+				Risk:           "",
+				Recommendation: "",
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := c.input.getRecommend()
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data: want=%v, got=%v", c.want, got)
+			}
+		})
+	}
+}

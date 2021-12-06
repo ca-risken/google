@@ -181,6 +181,8 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	for _, t := range f.Tags {
 		s.tagFinding(ctx, t, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
+	// Recommend
+	s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f)
 	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
@@ -234,4 +236,24 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 		ProjectId: projectID,
 	})
 	return err
+}
+
+func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, f *cloudSploitFinding) {
+	categoryPlugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
+	r := f.getRecommend()
+	if r.Risk == "" && r.Recommendation == "" {
+		appLogger.Warnf("Failed to get recommendation, Unknown plugin=%s", categoryPlugin)
+		return
+	}
+	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
+		ProjectId:      projectID,
+		FindingId:      findingID,
+		DataSource:     common.CloudSploitDataSource,
+		Type:           categoryPlugin,
+		Risk:           r.Risk,
+		Recommendation: r.Recommendation,
+	}); err != nil {
+		appLogger.Errorf("Failed to TagFinding, finding_id=%d, plugin=%s, error=%+v", findingID, categoryPlugin, err)
+	}
+	appLogger.Debugf("Success PutRecommend, finding_id=%d, reccomend=%+v", findingID, r)
 }
