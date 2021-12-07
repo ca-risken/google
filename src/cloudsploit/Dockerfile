@@ -18,15 +18,13 @@ RUN git clone https://github.com/gassara-kys/env-injector.git -b ${ENV_INJECTOR_
 
 FROM node:lts-alpine3.12
 RUN apk add --no-cache ca-certificates tzdata git \
-  && mkdir -p /var/scan/ && cd /var/scan/ \
-  && git clone https://github.com/aquasecurity/cloudsploit.git -b v2.0.0 --depth 1 \
-  && npm init --yes && npm install cloudsploit \
-  # Check `cloudsploitscan` file
-  && ls /var/scan/node_modules/.bin/cloudsploitscan
+  && cd /opt  \
+  && git clone https://github.com/aquasecurity/cloudsploit.git -b v2.0.0 --depth 1 && cd cloudsploit \
+  && yarn install  \
+  && chmod +x index.js
 COPY --from=builder /go/bin/env-injector /usr/local/bin/
 COPY --from=builder /go/bin/cloudsploit /usr/local/cloudsploit/bin/
-ENV PATH="$PATH:/var/scan/node_modules/.bin" \
-  DEBUG= \
+ENV DEBUG= \
   AWS_REGION= \
   AWS_ACCESS_KEY_ID= \
   AWS_SECRET_ACCESS_KEY= \
@@ -41,7 +39,7 @@ ENV PATH="$PATH:/var/scan/node_modules/.bin" \
   FINDING_SVC_ADDR= \
   ALERT_SVC_ADDR= \
   GOOGLE_SVC_ADDR= \
-  CLOUD_SPLOIT_COMMAND="cloudsploitscan" \
+  CLOUD_SPLOIT_COMMAND="/opt/cloudsploit/index.js" \
   GOOGLE_SERVICE_ACCOUNT_EMAIL= \
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY= \
   TZ=Asia/Tokyo

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -28,7 +29,7 @@ type cloudSploitClient struct {
 }
 
 type cloudSploitConf struct {
-	CloudSploitCommand             string `required:"true" split_words:"true" default:"cloudsploitscan"`
+	CloudSploitCommand             string `required:"true" split_words:"true" default:"/opt/cloudsploit/index.js"`
 	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
 }
@@ -125,33 +126,37 @@ const (
 )
 
 func (g *cloudSploitClient) execCloudSploit(gcpProjectID string, unixNano int64, configJs string) (*[]cloudSploitFinding, string, error) {
-	resultJSON, err := os.Create(fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano))
+	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
+	resultJSON, err := os.Create(filepath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("Failed to create result file, path:%s", filepath)
 	}
 	defer resultJSON.Close()
-	out, err := exec.Command(g.cloudSploitCommand,
+	cmd := exec.Command(
+		g.cloudSploitCommand,
 		"--config", configJs,
-		"--json", resultJSON.Name(),
-		"--console", "text",
-		// "--ignore-ok",
-	).Output()
-	appLogger.Debug(string(out))
+		"--json", filepath,
+		"--console", "none",
+	)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err = cmd.Run()
 	if err != nil {
-		appLogger.Error(string(out))
-		return nil, "", err
+		return nil, "", fmt.Errorf("Failed exec cloudsploit. error: %+v, detail: %s", err, stderr.String())
 	}
 
 	buf, err := ioutil.ReadAll(resultJSON)
 	if err != nil {
 		return nil, "", err
 	}
+	appLogger.Debugf("Result file Length: %d", len(buf))
+
 	var findings []cloudSploitFinding
 	if len(buf) == 0 {
-		return &findings, resultJSON.Name(), nil // empty
+		return &findings, filepath, nil // empty
 	}
 	if err := json.Unmarshal(buf, &findings); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("Failed parse result JSON. file: %s, error: %+v", filepath, err)
 	}
 	for idx := range findings {
 		if strings.ToUpper(findings[idx].Resource) == resourceNotApplicable {
@@ -159,7 +164,7 @@ func (g *cloudSploitClient) execCloudSploit(gcpProjectID string, unixNano int64,
 		}
 		findings[idx].generateDataSourceID()
 	}
-	return &findings, resultJSON.Name(), nil
+	return &findings, filepath, nil
 }
 
 func (g *cloudSploitClient) removeTempFiles(configFilePath, resutlFilePath string) error {
