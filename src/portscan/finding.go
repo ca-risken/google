@@ -10,6 +10,7 @@ import (
 	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
+	"github.com/vikyd/zero"
 )
 
 func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpProjectID string, nmapResult *portscan.NmapResult) error {
@@ -21,7 +22,7 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	findings := nmapResult.GetFindings(projectID, common.PortscanDataSource, string(data))
 	tags := nmapResult.GetTags()
 	tags = append(tags, gcpProjectID)
-	err = s.putFindings(ctx, findings, tags)
+	err = s.putFindings(ctx, findings, tags, categoryNmap)
 	if err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		}
 		findings = append(findings, finding)
 	}
-	err := s.putFindings(ctx, findings, []string{gcpProjectID})
+	err := s.putFindings(ctx, findings, []string{gcpProjectID}, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 	return nil
 }
 
-func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string) error {
+func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
 	for _, f := range findings {
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
 		if err != nil {
@@ -66,6 +67,40 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 		for _, additionalTag := range additionalTags {
 			s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, additionalTag)
 		}
+		if err = s.putRecommend(ctx, res.Finding.ProjectId, res.Finding.FindingId, recommendCategory, res.Finding.ResourceName); err != nil {
+			appLogger.Errorf("Failed to put recommend project_id=%d, finding_id=%d, category=%s, err=%+v",
+				res.Finding.ProjectId, res.Finding.FindingId, recommendCategory, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, recommendCategory, resourceName string) error {
+	resourceType := getResourceType(resourceName)
+	if zero.IsZeroVal(resourceType) {
+		appLogger.Warnf("Failed to get resource type, Unknown category,resource_name=%s", fmt.Sprintf("%v", resourceType))
+		return nil
+	}
+	recommendType := getRecommendType(recommendCategory, resourceType)
+	if zero.IsZeroVal(recommendType) {
+		appLogger.Warnf("Failed to get recommendation type, Unknown category,resource_type=%s", fmt.Sprintf("%v:%v", recommendCategory, resourceType))
+		return nil
+	}
+	r := getRecommend(recommendType)
+	if r.Risk == "" && r.Recommendation == "" {
+		appLogger.Warnf("Failed to get recommendation, Unknown reccomendType,service=%s", fmt.Sprintf("%v", recommendType))
+		return nil
+	}
+	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
+		ProjectId:      projectID,
+		FindingId:      findingID,
+		DataSource:     common.PortscanDataSource,
+		Type:           recommendType,
+		Risk:           r.Risk,
+		Recommendation: r.Recommendation,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
