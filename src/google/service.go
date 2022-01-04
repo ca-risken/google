@@ -293,8 +293,8 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	return &google.Empty{}, nil
 }
 
-func (g *googleService) InvokeScanAll(ctx context.Context, _ *google.Empty) (*google.Empty, error) {
-	list, err := g.repository.ListGCPDataSource(ctx, 0, 0)
+func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeScanAllRequest) (*google.Empty, error) {
+	list, err := g.repository.ListGCPDataSourceByDataSourceID(ctx, req.GoogleDataSourceId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &google.Empty{}, nil

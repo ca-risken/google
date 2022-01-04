@@ -232,3 +232,23 @@ func (g *googleRepository) DeleteGCPDataSource(ctx context.Context, projectID, g
 	}
 	return nil
 }
+
+func (g *googleRepository) ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]gcpDataSource, error) {
+	query := `
+select
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
+from
+  gcp_data_source gds
+  inner join google_data_source google using(google_data_source_id)
+  inner join gcp using(gcp_id, project_id)`
+	var params []interface{}
+	if !zero.IsZeroVal(googleDataSourceID) {
+		query += " where google_data_source_id = ?"
+		params = append(params, googleDataSourceID)
+	}
+	data := []gcpDataSource{}
+	if err := g.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}

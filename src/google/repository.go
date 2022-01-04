@@ -27,6 +27,7 @@ type googleRepoInterface interface {
 	GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error)
 	UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error)
 	DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error
+	ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]gcpDataSource, error)
 }
 
 type googleRepository struct {
