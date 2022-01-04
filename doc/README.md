@@ -22,6 +22,7 @@
     - [GetGCPDataSourceResponse](#google.google.GetGCPDataSourceResponse)
     - [GetGCPRequest](#google.google.GetGCPRequest)
     - [GetGCPResponse](#google.google.GetGCPResponse)
+    - [InvokeScanAllRequest](#google.google.InvokeScanAllRequest)
     - [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest)
     - [ListGCPDataSourceRequest](#google.google.ListGCPDataSourceRequest)
     - [ListGCPDataSourceResponse](#google.google.ListGCPDataSourceResponse)
@@ -322,6 +323,21 @@ Status
 
 
 
+<a name="google.google.InvokeScanAllRequest"></a>
+
+### InvokeScanAllRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| google_data_source_id | [uint32](#uint32) |  |  |
+
+
+
+
+
+
 <a name="google.google.InvokeScanGCPRequest"></a>
 
 ### InvokeScanGCPRequest
@@ -333,6 +349,7 @@ Status
 | project_id | [uint32](#uint32) |  |  |
 | gcp_id | [uint32](#uint32) |  |  |
 | google_data_source_id | [uint32](#uint32) |  |  |
+| scan_only | [bool](#bool) |  |  |
 
 
 
@@ -489,7 +506,7 @@ Status
 | InvokeScanGCP | [InvokeScanGCPRequest](#google.google.InvokeScanGCPRequest) | [Empty](#google.google.Empty) | Scan
 
 For ondeamnd |
-| InvokeScanAll | [Empty](#google.google.Empty) | [Empty](#google.google.Empty) | For scheduled |
+| InvokeScanAll | [InvokeScanAllRequest](#google.google.InvokeScanAllRequest) | [Empty](#google.google.Empty) | For scheduled |
 
  
 
