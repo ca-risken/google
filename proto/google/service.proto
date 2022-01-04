@@ -27,7 +27,7 @@ service GoogleService {
 
   // Scan
   rpc InvokeScanGCP(InvokeScanGCPRequest) returns (Empty); // For ondeamnd
-  rpc InvokeScanAll(Empty) returns (Empty);                // For scheduled
+  rpc InvokeScanAll(InvokeScanAllRequest) returns (Empty); // For scheduled
 }
 
 message ListGoogleDataSourceRequest {
@@ -102,3 +102,5 @@ message InvokeScanGCPRequest {
   uint32 google_data_source_id = 3;
   bool scan_only = 4;
 }
+
+message InvokeScanAllRequest { uint32 google_data_source_id = 1; }
