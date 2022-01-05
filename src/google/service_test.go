@@ -553,6 +553,10 @@ func (m *mockGoogleRepository) DeleteGCPDataSource(ctx context.Context, projectI
 	args := m.Called()
 	return args.Error(0)
 }
+func (m *mockGoogleRepository) ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]gcpDataSource, error) {
+	args := m.Called()
+	return args.Get(0).(*[]gcpDataSource), args.Error(1)
+}
 
 type mockResourceManager struct {
 	mock.Mock
