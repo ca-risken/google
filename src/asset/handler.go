@@ -201,7 +201,12 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			appLogger.Errorf("Failed to put resource project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
 			return err
 		}
-		appLogger.Debugf("Success to PutResource, resource_id=%d", resp.Resource.ResourceId)
+		s.tagResource(ctx, common.TagGoogle, resp.Resource.ResourceId, projectID)
+		s.tagResource(ctx, common.TagGCP, resp.Resource.ResourceId, projectID)
+		s.tagResource(ctx, gcpProjectID, resp.Resource.ResourceId, projectID)
+		for _, t := range getAssetTags(f.Asset.AssetType, f.Asset.Name) {
+			s.tagResource(ctx, t, resp.Resource.ResourceId, projectID)
+		}
 		return nil
 	}
 
@@ -228,30 +233,47 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return err
 	}
 	// PutFindingTag
+	s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagAssetInventory, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
-	if isUserServiceAccount(f.Asset.AssetType, f.Asset.Name) {
-		s.tagFinding(ctx, common.TagServiceAccount, resp.Finding.FindingId, resp.Finding.ProjectId)
-	}
-	if f.Asset.AssetType == assetTypeBucket {
-		s.tagFinding(ctx, "storage", resp.Finding.FindingId, resp.Finding.ProjectId)
+	for _, t := range getAssetTags(f.Asset.AssetType, f.Asset.Name) {
+		s.tagFinding(ctx, t, resp.Finding.FindingId, resp.Finding.ProjectId)
 	}
 	s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Asset.AssetType)
 	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
+func getAssetTags(assetType, assetName string) []string {
+	tags := []string{common.GetServiceName(assetName)}
+	if isUserServiceAccount(assetType, assetName) {
+		tags = append(tags, common.TagServiceAccount)
+	}
+	return tags
+}
+
 func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) {
-	_, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
+	if _, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
 		ProjectId: projectID,
 		Tag: &finding.FindingTagForUpsert{
 			FindingId: findingID,
 			ProjectId: projectID,
 			Tag:       tag,
-		}})
-	if err != nil {
+		}}); err != nil {
 		appLogger.Errorf("Failed to TagFinding, finding_id=%d, tag=%s, error=%+v", findingID, tag, err)
+	}
+}
+
+func (s *sqsHandler) tagResource(ctx context.Context, tag string, resourceID uint64, projectID uint32) {
+	if _, err := s.findingClient.TagResource(ctx, &finding.TagResourceRequest{
+		ProjectId: projectID,
+		Tag: &finding.ResourceTagForUpsert{
+			ResourceId: resourceID,
+			ProjectId:  projectID,
+			Tag:        tag,
+		}}); err != nil {
+		appLogger.Errorf("Failed to TagResource, resource_id=%d, tag=%s, error=%+v", resourceID, tag, err)
 	}
 }
 

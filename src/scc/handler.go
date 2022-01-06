@@ -152,9 +152,11 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return err
 	}
 	// PutFindingTag
+	s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
+	s.tagFinding(ctx, common.GetServiceName(f.ResourceName), resp.Finding.FindingId, resp.Finding.ProjectId)
 	if f.Category != "" && f.SourceProperties["Explanation"] != nil && f.SourceProperties["Explanation"].GetStringValue() != "" {
 		s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Category, f.SourceProperties["Explanation"].GetStringValue())
 	}
