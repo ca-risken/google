@@ -39,6 +39,10 @@ github.com/ca-risken/core/proto/finding v0.0.0-20211202081113-c4c0e9d1af86 h1:xs
 github.com/ca-risken/core/proto/finding v0.0.0-20211202081113-c4c0e9d1af86/go.mod h1:TZ3SqTbxvOpl6GF4FEY4XEiIGkss4FCNyYp2M4j1j60=
 github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf h1:WuXib1Gn738TPoeGkpDSgtfXQPN5HFk2CSMYoUrJRHQ=
 github.com/ca-risken/google/pkg/common v0.0.0-20210907055015-a746c2b3b5cf/go.mod h1:7xWV2dnWvs4xxzlYQ4un8VjyythnFgFdkoAEei/AeOA=
+github.com/ca-risken/google/pkg/common v0.0.0-20220106053450-d137532fd0cf h1:bbx4iwmpNjm5IhOLZtVFMFSatP4u4tfdiIqXryav+9A=
+github.com/ca-risken/google/pkg/common v0.0.0-20220106053450-d137532fd0cf/go.mod h1:7xWV2dnWvs4xxzlYQ4un8VjyythnFgFdkoAEei/AeOA=
+github.com/ca-risken/google/pkg/common v0.0.0-20220106084245-d6fa7174f282 h1:s/Z5XkfabdQzyKYjv1Mxw33O5+dSwfkCer/dj76lGrE=
+github.com/ca-risken/google/pkg/common v0.0.0-20220106084245-d6fa7174f282/go.mod h1:7xWV2dnWvs4xxzlYQ4un8VjyythnFgFdkoAEei/AeOA=
 github.com/ca-risken/google/proto/google v0.0.0-20210907053516-2d3cbdd86320/go.mod h1:/fC4mr7tpa6h4DzudDdDQnXst/ETw/rDj2jwj+SIP2M=
 github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf h1:5khnmOBYNJCgpQo8x0B17V8MlHL626m5zZecJIUtOvM=
 github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf/go.mod h1:/fC4mr7tpa6h4DzudDdDQnXst/ETw/rDj2jwj+SIP2M=

@@ -145,7 +145,10 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			appLogger.Errorf("Failed to put reousrce project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 			return err
 		}
-		appLogger.Debugf("Success to PutResource, resource_id=%d", resp.Resource.ResourceId)
+		s.tagResource(ctx, common.TagGoogle, resp.Resource.ResourceId, projectID)
+		s.tagResource(ctx, common.TagGCP, resp.Resource.ResourceId, projectID)
+		s.tagResource(ctx, gcpProjectID, resp.Resource.ResourceId, projectID)
+		s.tagResource(ctx, strings.ToLower(f.Category), resp.Resource.ResourceId, projectID)
 		return nil
 	}
 
@@ -173,6 +176,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return err
 	}
 	// PutFindingTag
+	s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, common.TagCloudSploit, resp.Finding.FindingId, resp.Finding.ProjectId)
 	s.tagFinding(ctx, strings.ToLower(f.Category), resp.Finding.FindingId, resp.Finding.ProjectId)
@@ -197,15 +201,26 @@ func getShortName(name string) string {
 }
 
 func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) {
-	_, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
+	if _, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
 		ProjectId: projectID,
 		Tag: &finding.FindingTagForUpsert{
 			FindingId: findingID,
 			ProjectId: projectID,
 			Tag:       tag,
-		}})
-	if err != nil {
+		}}); err != nil {
 		appLogger.Errorf("Failed to TagFinding, finding_id=%d, tag=%s, error=%+v", findingID, tag, err)
+	}
+}
+
+func (s *sqsHandler) tagResource(ctx context.Context, tag string, resourceID uint64, projectID uint32) {
+	if _, err := s.findingClient.TagResource(ctx, &finding.TagResourceRequest{
+		ProjectId: projectID,
+		Tag: &finding.ResourceTagForUpsert{
+			ResourceId: resourceID,
+			ProjectId:  projectID,
+			Tag:        tag,
+		}}); err != nil {
+		appLogger.Errorf("Failed to TagResource, resource_id=%d, tag=%s, error=%+v", resourceID, tag, err)
 	}
 }
 

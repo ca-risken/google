@@ -62,6 +62,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 		if err != nil {
 			return err
 		}
+		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGoogle)
 		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGCP)
 		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagPortscan)
 		for _, additionalTag := range additionalTags {
