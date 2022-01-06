@@ -18,3 +18,12 @@ func GetShortResourceName(gcpProjectID, fullResourceName string) string {
 func getResourceName(gcpProjectID, serviceName, resourceName string) string {
 	return gcpProjectID + "/" + serviceName + "/" + resourceName
 }
+
+// GetServiceName return service name from `fullResourceName`. (Resource name format: https://cloud.google.com/asset-inventory/docs/resource-name-format)
+func GetServiceName(fullResourceName string) string {
+	array := strings.Split(fullResourceName, "/")
+	if len(array) < 2 {
+		return UnknownService
+	}
+	return array[len(array)-2]
+}
