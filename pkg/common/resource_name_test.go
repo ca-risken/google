@@ -20,7 +20,7 @@ func TestGetShortResourceName(t *testing.T) {
 		{
 			name:  "OK",
 			input: "//iam.googleapis.com/projects/my-project/service/some-asset",
-			want:  "my-project/service/some-asset",
+			want:  "my-project/iam/some-asset",
 		},
 		{
 			name:  "Unknown service",
@@ -47,7 +47,12 @@ func TestGetServiceName(t *testing.T) {
 		{
 			name:  "OK",
 			input: "//iam.googleapis.com/projects/my-project/service/some-asset",
-			want:  "service",
+			want:  "iam",
+		},
+		{
+			name:  "OK",
+			input: "//storage.googleapis.com/some-bucket",
+			want:  "storage",
 		},
 		{
 			name:  "Unknown service",
