@@ -37,3 +37,35 @@ func TestGetShortResourceName(t *testing.T) {
 		})
 	}
 }
+
+func TestGetServiceName(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "OK",
+			input: "//iam.googleapis.com/projects/my-project/service/some-asset",
+			want:  "service",
+		},
+		{
+			name:  "Unknown service",
+			input: "some-asset",
+			want:  "unknown",
+		},
+		{
+			name:  "Blank",
+			input: "",
+			want:  "unknown",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := GetServiceName(c.input)
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
