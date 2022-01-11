@@ -62,11 +62,19 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 		if err != nil {
 			return err
 		}
-		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGoogle)
-		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGCP)
-		s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagPortscan)
+		if err := s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGoogle); err != nil {
+			return err
+		}
+		if err := s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagGCP); err != nil {
+			return err
+		}
+		if err := s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, common.TagPortscan); err != nil {
+			return err
+		}
 		for _, additionalTag := range additionalTags {
-			s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, additionalTag)
+			if err := s.tagFinding(ctx, res.Finding.ProjectId, res.Finding.FindingId, additionalTag); err != nil {
+				return err
+			}
 		}
 		if err = s.putRecommend(ctx, res.Finding.ProjectId, res.Finding.FindingId, recommendCategory, res.Finding.ResourceName); err != nil {
 			appLogger.Errorf("Failed to put recommend project_id=%d, finding_id=%d, category=%s, err=%+v",
@@ -106,17 +114,17 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 	return nil
 }
 
-func (s *sqsHandler) tagFinding(ctx context.Context, projectID uint32, findingID uint64, tag string) {
-	_, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
+func (s *sqsHandler) tagFinding(ctx context.Context, projectID uint32, findingID uint64, tag string) error {
+	if _, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
 		ProjectId: projectID,
 		Tag: &finding.FindingTagForUpsert{
 			FindingId: findingID,
 			ProjectId: projectID,
 			Tag:       tag,
-		}})
-	if err != nil {
-		appLogger.Errorf("Failed to TagFinding. error: %v", err)
+		}}); err != nil {
+		return fmt.Errorf("Failed to TagFinding. error: %v", err)
 	}
+	return nil
 }
 
 func (e *exclude) getDataSourceID() string {
