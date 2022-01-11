@@ -152,29 +152,41 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return err
 	}
 	// PutFindingTag
-	s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId)
-	s.tagFinding(ctx, common.GetServiceName(f.ResourceName), resp.Finding.FindingId, resp.Finding.ProjectId)
+	if err := s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
+		return err
+	}
+	if err := s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
+		return err
+	}
+	if err := s.tagFinding(ctx, common.TagSCC, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
+		return err
+	}
+	if err := s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
+		return err
+	}
+	if err := s.tagFinding(ctx, common.GetServiceName(f.ResourceName), resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
+		return err
+	}
 	if f.Category != "" && f.SourceProperties["Explanation"] != nil && f.SourceProperties["Explanation"].GetStringValue() != "" {
-		s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Category, f.SourceProperties["Explanation"].GetStringValue())
+		if err := s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Category, f.SourceProperties["Explanation"].GetStringValue()); err != nil {
+			return err
+		}
 	}
 	appLogger.Infof("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
-func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) {
-	_, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
+func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) error {
+	if _, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
 		ProjectId: projectID,
 		Tag: &finding.FindingTagForUpsert{
 			FindingId: findingID,
 			ProjectId: projectID,
 			Tag:       tag,
-		}})
-	if err != nil {
-		appLogger.Errorf("Failed to TagFinding, finding_id=%d, tag=%s, error=%+v", findingID, tag, err)
+		}}); err != nil {
+		return fmt.Errorf("Failed to TagFinding, finding_id=%d, tag=%s, error=%+v", findingID, tag, err)
 	}
+	return nil
 }
 
 func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
@@ -206,7 +218,7 @@ func (s *sqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 	return err
 }
 
-func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, category, risk string) {
+func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, category, risk string) error {
 	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
 		ProjectId:      projectID,
 		FindingId:      findingID,
@@ -215,7 +227,8 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 		Risk:           risk,
 		Recommendation: "Please see the finding JSON data in 'data.source_properties.Recommendation'",
 	}); err != nil {
-		appLogger.Errorf("Failed to TagFinding, finding_id=%d, category=%s, error=%+v", findingID, category, err)
+		return fmt.Errorf("Failed to TagFinding, finding_id=%d, category=%s, error=%+v", findingID, category, err)
 	}
 	appLogger.Debugf("Success PutRecommend, finding_id=%d, category=%s, risk=%s", findingID, category, risk)
+	return nil
 }
