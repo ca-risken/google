@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
 	"github.com/vikyd/zero"
@@ -18,6 +19,7 @@ type googleService struct {
 	repository      googleRepoInterface
 	sqs             sqsAPI
 	resourceManager resourceManagerServiceClient
+	projectClient   project.ProjectServiceClient
 }
 
 func newGoogleService() google.GoogleServiceServer {
@@ -25,6 +27,7 @@ func newGoogleService() google.GoogleServiceServer {
 		repository:      newGoogleRepository(),
 		sqs:             newSQSClient(),
 		resourceManager: newResourceManagerClient(),
+		projectClient:   newProjectClient(),
 	}
 }
 
@@ -302,6 +305,14 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 		return nil, err
 	}
 	for _, gcp := range *list {
+		if resp, err := g.projectClient.IsActive(ctx, &project.IsActiveRequest{ProjectId: gcp.ProjectID}); err != nil {
+			appLogger.Errorf("Failed to project.IsActive API, err=%+v", err)
+			continue
+		} else if !resp.Active {
+			appLogger.Infof("Skip deactive project, project_id=%d", gcp.ProjectID)
+			continue
+		}
+
 		if _, err := g.InvokeScanGCP(ctx, &google.InvokeScanGCPRequest{
 			GcpId:              gcp.GCPID,
 			ProjectId:          gcp.ProjectID,
