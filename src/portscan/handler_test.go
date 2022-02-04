@@ -104,6 +104,11 @@ func TestGtFullResourceName(t *testing.T) {
 			input: "https://www.googleapis.com/compute/v1/projects/PROJECT_ID/regions/REGION/forwardingRules/FORWARDING_RULE",
 			want:  "//compute.googleapis.com/projects/PROJECT_ID/regions/REGION/forwardingRules/FORWARDING_RULE",
 		},
+		{
+			name:  "incomplete format",
+			input: "imcomplete format",
+			want:  "imcomplete format",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

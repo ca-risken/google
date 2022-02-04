@@ -339,7 +339,6 @@ func (p *portscanClient) excludeTarget(targets []*target) ([]*target, []*exclude
 }
 
 func getFullResourceName(selfLink string) string {
-	appLogger.Infof("selflink: %v", selfLink)
 	array := strings.Split(strings.Replace(selfLink, "//", "", 1), "/")
 	if len(array) < 4 {
 		appLogger.Warnf("Failed to Get Full Resource Name. selfLink: %v", selfLink)
