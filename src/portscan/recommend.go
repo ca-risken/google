@@ -5,6 +5,7 @@ import "strings"
 const (
 	categoryNmap               = "Nmap"
 	categoryManyOpen           = "ManyOpen"
+	categoryFirewallRule       = "Firewall"
 	resourceTypeFirewall       = "Firewall"
 	resourceTypeFowardingRule  = "ForwardingRule"
 	typeFirewallRule           = "Firewall"
@@ -19,7 +20,7 @@ type recommend struct {
 }
 
 func getResourceType(resourceName string) string {
-	if strings.Contains(resourceName, "instances") {
+	if strings.Contains(resourceName, "instances") || strings.Contains(resourceName, "firewalls") {
 		return resourceTypeFirewall
 	} else if strings.Contains(resourceName, "ForwardingRule") {
 		return resourceTypeFowardingRule
@@ -29,7 +30,7 @@ func getResourceType(resourceName string) string {
 
 func getRecommendType(category, resourceType string) string {
 	switch category {
-	case categoryNmap:
+	case categoryNmap, categoryFirewallRule:
 		switch resourceType {
 		case resourceTypeFowardingRule:
 			return typeForwardingRule

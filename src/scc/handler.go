@@ -141,7 +141,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			Description:      fmt.Sprintf("Security Command Center: %s", f.Category),
 			DataSource:       common.SCCDataSource,
 			DataSourceId:     f.Name,
-			ResourceName:     common.GetShortResourceName(gcpProjectID, f.ResourceName),
+			ResourceName:     f.ResourceName,
 			ProjectId:        projectID,
 			OriginalScore:    scoreSCC(f),
 			OriginalMaxScore: 1.0,

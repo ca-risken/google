@@ -82,3 +82,40 @@ func TestSplitPort(t *testing.T) {
 		})
 	}
 }
+
+func TestGtFullResourceName(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "get firewall resource name",
+			input: "https://www.googleapis.com/compute/v1/projects/PROJECT_ID/global/firewalls/FIREWALL",
+			want:  "//compute.googleapis.com/projects/PROJECT_ID/global/firewalls/FIREWALL",
+		},
+		{
+			name:  "get instance resource name",
+			input: "https://compute.googleapis.com/compute/v1/projects/PROJECT_ID/zones/ZONE/instances/INSTANCE",
+			want:  "//compute.googleapis.com/projects/PROJECT_ID/zones/ZONE/instances/INSTANCE",
+		},
+		{
+			name:  "get forwarding rule resource name",
+			input: "https://www.googleapis.com/compute/v1/projects/PROJECT_ID/regions/REGION/forwardingRules/FORWARDING_RULE",
+			want:  "//compute.googleapis.com/projects/PROJECT_ID/regions/REGION/forwardingRules/FORWARDING_RULE",
+		},
+		{
+			name:  "incomplete format",
+			input: "imcomplete format",
+			want:  "imcomplete format",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := getFullResourceName(c.input)
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}

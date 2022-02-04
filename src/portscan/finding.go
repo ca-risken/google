@@ -39,7 +39,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		finding := &finding.FindingForUpsert{
 			Description:      e.getDescription(),
 			DataSource:       common.PortscanDataSource,
-			DataSourceId:     e.getDataSourceID(),
+			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:%v:%v", e.Target, e.Protocol, e.ResourceName)),
 			ResourceName:     e.ResourceName,
 			ProjectId:        message.ProjectID,
 			OriginalScore:    6.0,
@@ -49,6 +49,38 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		findings = append(findings, finding)
 	}
 	err := s.putFindings(ctx, findings, []string{gcpProjectID}, categoryManyOpen)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *sqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProjectID string, relFirewallResourceMap map[string]*relFirewallResource, message *common.GCPQueueMessage) error {
+	var findings []*finding.FindingForUpsert
+	for resourceName, r := range relFirewallResourceMap {
+		data, err := json.Marshal(r)
+		if err != nil {
+			return err
+		}
+		score := float32(1.0)
+		if r.IsPublic {
+			score = 3.0
+		}
+		findings = append(findings, &finding.FindingForUpsert{
+			Description:      getFirewallRuleDescription(resourceName, r.IsPublic),
+			DataSource:       common.PortscanDataSource,
+			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:portscan_firewall:%v", gcpProjectID, resourceName)),
+			ResourceName:     resourceName,
+			ProjectId:        message.ProjectID,
+			OriginalScore:    score,
+			OriginalMaxScore: 10.0,
+			Data:             string(data),
+		})
+	}
+	tags := []string{gcpProjectID, "compute", "firewall"}
+
+	err := s.putFindings(ctx, findings, tags, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -88,7 +120,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, recommendCategory, resourceName string) error {
 	resourceType := getResourceType(resourceName)
 	if zero.IsZeroVal(resourceType) {
-		appLogger.Warnf("Failed to get resource type, Unknown category,resource_name=%s", fmt.Sprintf("%v", resourceType))
+		appLogger.Warnf("Failed to get resource type, Unknown category,resource_name=%s", fmt.Sprintf("%v", resourceName))
 		return nil
 	}
 	recommendType := getRecommendType(recommendCategory, resourceType)
@@ -127,8 +159,7 @@ func (s *sqsHandler) tagFinding(ctx context.Context, projectID uint32, findingID
 	return nil
 }
 
-func (e *exclude) getDataSourceID() string {
-	input := fmt.Sprintf("%v:%v:%v", e.Target, e.Protocol, e.ResourceName)
+func generateDataSourceID(input string) string {
 	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:])
 }
@@ -138,6 +169,10 @@ func (e *exclude) getDescription() string {
 		return fmt.Sprintf("Too many ports are exposed.target:%v protocol: %v, port %v-%v,firewall_rule: %v", e.Target, e.Protocol, e.FromPort, e.ToPort, e.FirewallRuleName)
 	}
 	return fmt.Sprintf("Too many ports are exposed.target:%v protocol: %v, port %v-%v", e.Target, e.Protocol, e.FromPort, e.ToPort)
+}
+
+func getFirewallRuleDescription(firewallResource string, isPublic bool) string {
+	return fmt.Sprintf("firewall rule was found. resource name: %v, Public: %v", firewallResource, isPublic)
 }
 
 func makeURL(target string, port int) string {

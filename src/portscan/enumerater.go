@@ -16,7 +16,7 @@ import (
 
 type portscanServiceClient interface {
 	//	listAppEngine(ctx context.Context, gcpProjectID string) *appengine.InstanceIterator
-	listTarget(ctx context.Context, gcpProjectID string) ([]*target, error)
+	listTarget(ctx context.Context, gcpProjectID string) ([]*target, map[string]*relFirewallResource, error)
 	excludeTarget(targets []*target) ([]*target, []*exclude)
 }
 
@@ -64,24 +64,24 @@ func newPortscanClient() portscanServiceClient {
 //	})
 //}
 
-func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([]*target, error) {
+func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([]*target, map[string]*relFirewallResource, error) {
 	var ret []*target
-	infFirewalls, err := listTargetFirewall(p.compute, gcpProjectID)
+	infFirewalls, relFirewallResource, err := listTargetFirewall(p.compute, gcpProjectID)
 	if err != nil {
 		appLogger.Errorf("Failed to describe firewall service: %+v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	infComputes, err := listTargetCompute(p.compute, gcpProjectID)
 	if err != nil {
 		appLogger.Errorf("Failed to describe compute service: %+v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	infForwardings, err := listTargetForwardingRule(p.compute, gcpProjectID)
 	if err != nil {
 		appLogger.Errorf("Failed to describe compute service: %+v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, firewall := range infFirewalls {
@@ -91,11 +91,11 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 					for _, port := range targetPort.Ports {
 						fromPort, toPort, err := splitPort(port)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 						ret = append(ret, &target{
-							ResourceName:     fmt.Sprintf("%v/%v/%v", gcpProjectID, "instances", infCompute.ID),
-							FirewallRuleName: firewall.Name,
+							ResourceName:     infCompute.ResourceName,
+							FirewallRuleName: firewall.ResourceName,
 							FromPort:         fromPort,
 							ToPort:           toPort,
 							Protocol:         targetPort.Protocol,
@@ -108,13 +108,15 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 		}
 	}
 
+	addRelFirewllResources(relFirewallResource, infComputes)
+
 	for _, forwarding := range infForwardings {
 		fromPort, toPort, err := splitPort(forwarding.PortRange)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		ret = append(ret, &target{
-			ResourceName: forwarding.Name,
+			ResourceName: forwarding.ResourceName,
 			FromPort:     fromPort,
 			ToPort:       toPort,
 			Target:       forwarding.IPAddress,
@@ -122,18 +124,23 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 			Type:         "ForwardingRule",
 		})
 	}
-	return ret, nil
+	return ret, relFirewallResource, nil
 }
 
-func listTargetFirewall(com *compute.Service, gcpProjectID string) ([]*infoFirewall, error) {
+func listTargetFirewall(com *compute.Service, gcpProjectID string) ([]*infoFirewall, map[string]*relFirewallResource, error) {
 	firewalls := compute.NewFirewallsService(com)
 	var ret []*infoFirewall
+	relFirewallResources := map[string]*relFirewallResource{}
 	f, err := firewalls.List(gcpProjectID).Do()
 	if err != nil {
 		appLogger.Errorf("Failed to list firewall rules: %+v", err)
-		return nil, err
+		return nil, nil, err
 	}
 	for _, fItem := range f.Items {
+		relFirewallResources[getFullResourceName(fItem.SelfLink)] = &relFirewallResource{
+			Firewall: fItem,
+			IsPublic: hasFullOpenRange(fItem.SourceRanges),
+		}
 		if fItem.Direction != "INGRESS" || fItem.Disabled || !hasFullOpenRange(fItem.SourceRanges) {
 			continue
 		}
@@ -160,13 +167,14 @@ func listTargetFirewall(com *compute.Service, gcpProjectID string) ([]*infoFirew
 			continue
 		}
 		ret = append(ret, &infoFirewall{
-			Ports:      ports,
-			Name:       fItem.Name,
-			Network:    fItem.Network,
-			TargetTags: fItem.TargetTags,
+			Ports:        ports,
+			Name:         fItem.Name,
+			Network:      fItem.Network,
+			ResourceName: getFullResourceName(fItem.SelfLink),
+			TargetTags:   fItem.TargetTags,
 		})
 	}
-	return ret, nil
+	return ret, relFirewallResources, nil
 }
 
 func listTargetCompute(com *compute.Service, gcpProjectID string) ([]*infoCompute, error) {
@@ -177,13 +185,14 @@ func listTargetCompute(com *compute.Service, gcpProjectID string) ([]*infoComput
 		return nil, err
 	}
 	var ret []*infoCompute
-	//	appLogger.Infof("instances: %v", i)
 	for _, itemPerZone := range i.Items {
 		for _, instance := range itemPerZone.Instances {
 			for _, networkInterface := range instance.NetworkInterfaces {
 				for _, accessConfig := range networkInterface.AccessConfigs {
 					ret = append(ret, &infoCompute{
 						NatIP:                accessConfig.NatIP,
+						Name:                 instance.Name,
+						ResourceName:         getFullResourceName(instance.SelfLink),
 						ID:                   strconv.FormatUint(instance.Id, 10),
 						Network:              networkInterface.Network,
 						NetworkInterfaceName: networkInterface.Name,
@@ -210,12 +219,13 @@ func listTargetForwardingRule(com *compute.Service, gcpProjectID string) ([]*inf
 				continue
 			}
 			ret = append(ret, &infoForwardingRule{
-				IPAddress:  fr.IPAddress,
-				PortRange:  fr.PortRange,
-				Network:    fr.Network,
-				Name:       fmt.Sprintf("%v/%v/%v", gcpProjectID, "ForwardingRule", fr.Name),
-				IpVersion:  fr.IpVersion,
-				IPProtocol: fr.IPProtocol,
+				IPAddress:    fr.IPAddress,
+				PortRange:    fr.PortRange,
+				Network:      fr.Network,
+				Name:         fmt.Sprintf("%v/%v/%v", gcpProjectID, "ForwardingRule", fr.Name),
+				ResourceName: getFullResourceName(fr.SelfLink),
+				IpVersion:    fr.IpVersion,
+				IPProtocol:   fr.IPProtocol,
 			})
 		}
 	}
@@ -237,6 +247,27 @@ func matchFirewallCompute(firewall *infoFirewall, instance *infoCompute) bool {
 		}
 	}
 	return false
+}
+
+func addRelFirewllResources(relFirewallResources map[string]*relFirewallResource, computes []*infoCompute) {
+	for resourceName, r := range relFirewallResources {
+		for _, c := range computes {
+			if r.Firewall.Network != c.Network {
+				continue
+			}
+			if zero.IsZeroVal(r.Firewall.TargetTags) {
+				relFirewallResources[resourceName].ReferenceResources = append(relFirewallResources[resourceName].ReferenceResources, c.ResourceName)
+			} else {
+				for _, instanceTag := range c.Tags {
+					for _, firewallTag := range r.Firewall.TargetTags {
+						if instanceTag == firewallTag {
+							relFirewallResources[resourceName].ReferenceResources = append(relFirewallResources[resourceName].ReferenceResources, c.ResourceName)
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func hasFullOpenRange(ranges []string) bool {
@@ -307,6 +338,19 @@ func (p *portscanClient) excludeTarget(targets []*target) ([]*target, []*exclude
 	return scanTarget, excludeList
 }
 
+func getFullResourceName(selfLink string) string {
+	array := strings.Split(strings.Replace(selfLink, "//", "", 1), "/")
+	if len(array) < 4 {
+		appLogger.Warnf("Failed to Get Full Resource Name. selfLink: %v", selfLink)
+		return selfLink
+	}
+	apiService := fmt.Sprintf("%v.googleapis.com", array[1])
+	resource := strings.Join(array[3:], "/")
+	appLogger.Infof("FullResourceName: %v", fmt.Sprintf("//%v/%v", apiService, resource))
+	return fmt.Sprintf("//%v/%v", apiService, resource)
+
+}
+
 type target struct {
 	Target           string
 	FromPort         int
@@ -326,31 +370,41 @@ type exclude struct {
 	FirewallRuleName string
 }
 
+type relFirewallResource struct {
+	Firewall           *compute.Firewall `json:"firewall"`
+	ReferenceResources []string          `json:"resources"`
+	IsPublic           bool              `json:"is_public"`
+}
+
 type targetPort struct {
 	Protocol string
 	Ports    []string
 }
 
 type infoFirewall struct {
-	Ports      []targetPort
-	Name       string
-	Network    string
-	TargetTags []string
+	Ports        []targetPort
+	Name         string
+	Network      string
+	ResourceName string
+	TargetTags   []string
 }
 
 type infoCompute struct {
 	ID                   string
+	Name                 string
 	Network              string
 	NatIP                string
 	NetworkInterfaceName string
 	Tags                 []string
+	ResourceName         string
 }
 
 type infoForwardingRule struct {
-	IPAddress  string
-	Name       string
-	PortRange  string
-	IpVersion  string
-	Network    string
-	IPProtocol string
+	IPAddress    string
+	Name         string
+	ResourceName string
+	PortRange    string
+	IpVersion    string
+	Network      string
+	IPProtocol   string
 }
