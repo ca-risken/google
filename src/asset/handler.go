@@ -194,7 +194,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
 			Resource: &finding.ResourceForUpsert{
-				ResourceName: common.GetShortResourceName(gcpProjectID, f.Asset.Name),
+				ResourceName: f.Asset.Name,
 				ProjectId:    projectID,
 			},
 		})
@@ -230,7 +230,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			Description:      fmt.Sprintf("GCP Cloud Asset: %s", f.Asset.DisplayName),
 			DataSource:       common.AssetDataSource,
 			DataSourceId:     f.Asset.Name,
-			ResourceName:     common.GetShortResourceName(gcpProjectID, f.Asset.Name),
+			ResourceName:     f.Asset.Name,
 			ProjectId:        projectID,
 			OriginalScore:    score,
 			OriginalMaxScore: 1.0,

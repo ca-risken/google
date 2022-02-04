@@ -91,7 +91,7 @@ func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus
 }
 
 func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage) error {
-	targets, err := s.portscanClient.listTarget(ctx, gcpProjectId)
+	targets, relFirewallResourceMap, err := s.portscanClient.listTarget(ctx, gcpProjectId)
 	if err != nil {
 		return err
 	}
@@ -112,6 +112,12 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 	}
 	for _, result := range results {
 		err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
+		if err != nil {
+			appLogger.Errorf("Failed put Finding err: %v", err)
+		}
+	}
+	if relFirewallResourceMap != nil {
+		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, message)
 		if err != nil {
 			appLogger.Errorf("Failed put Finding err: %v", err)
 		}
