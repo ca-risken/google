@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	portscan "github.com/ca-risken/common/pkg/portscan"
+	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/gassara-kys/envconfig"
 	"github.com/vikyd/zero"
-	compute "google.golang.org/api/compute/v1"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 )
 
