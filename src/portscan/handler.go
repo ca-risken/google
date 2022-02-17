@@ -23,15 +23,6 @@ type sqsHandler struct {
 	portscanClient portscanServiceClient
 }
 
-func newHandler() *sqsHandler {
-	return &sqsHandler{
-		findingClient:  newFindingClient(),
-		alertClient:    newAlertClient(),
-		googleClient:   newGoogleClient(),
-		portscanClient: newPortscanClient(),
-	}
-}
-
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
 	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
