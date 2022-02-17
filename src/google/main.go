@@ -14,13 +14,41 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-type codeConfig struct {
+type AppConfig struct {
 	Port    string `default:"11001"`
 	EnvName string `default:"local" split_words:"true"`
+
+	// sqs
+	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
+	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
+
+	AssetQueueURL       string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
+	CloudSploitQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
+	SCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
+	PortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
+
+	// repository
+	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
+	DBMasterUser     string `split_words:"true" default:"hoge"`
+	DBMasterPassword string `split_words:"true" default:"moge"`
+	DBSlaveHost      string `split_words:"true" default:"db.middleware.svc.cluster.local"`
+	DBSlaveUser      string `split_words:"true" default:"hoge"`
+	DBSlavePassword  string `split_words:"true" default:"moge"`
+
+	DBSchema        string `required:"true"    default:"mimosa"`
+	DBPort          int    `required:"true"    default:"3306"`
+	DBLogMode       bool   `split_words:"true" default:"false"`
+	DBMaxConnection int    `split_words:"true" default:"10"`
+
+	// grpc
+	ProjectSvcAddr string `required:"true" split_words:"true" default:"project.core.svc.cluster.local:8003"`
+
+	// resourceManager
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 }
 
 func main() {
-	var conf codeConfig
+	var conf AppConfig
 	err := envconfig.Process("", &conf)
 	if err != nil {
 		appLogger.Fatal(err.Error())
@@ -35,16 +63,41 @@ func main() {
 		appLogger.Fatal(err)
 	}
 
+	service := &googleService{}
+	dbConf := &DBConfig{
+		MasterHost:     conf.DBMasterHost,
+		MasterUser:     conf.DBMasterUser,
+		MasterPassword: conf.DBMasterPassword,
+		SlaveHost:      conf.DBSlaveHost,
+		SlaveUser:      conf.DBSlaveUser,
+		SlavePassword:  conf.DBSlavePassword,
+		Schema:         conf.DBSchema,
+		Port:           conf.DBPort,
+		LogMode:        conf.DBLogMode,
+		MaxConnection:  conf.DBMaxConnection,
+	}
+	service.repository = newGoogleRepository(dbConf)
+	sqsConf := &SQSConfig{
+		AWSRegion:           conf.AWSRegion,
+		SQSEndpoint:         conf.SQSEndpoint,
+		AssetQueueURL:       conf.AssetQueueURL,
+		CloudSploitQueueURL: conf.CloudSploitQueueURL,
+		SCCQueueURL:         conf.SCCQueueURL,
+		PortscanQueueURL:    conf.PortscanQueueURL,
+	}
+	service.sqs = newSQSClient(sqsConf)
+	service.resourceManager = newResourceManagerClient(conf.GoogleCredentialPath)
+	service.projectClient = newProjectClient(conf.ProjectSvcAddr)
+
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			grpcmiddleware.ChainUnaryServer(
 				mimosarpc.LoggingUnaryServerInterceptor(appLogger),
 				xray.UnaryServerInterceptor(),
 				mimosaxray.AnnotateEnvTracingUnaryServerInterceptor(conf.EnvName))))
-	googleServer := newGoogleService()
-	google.RegisterGoogleServiceServer(server, googleServer)
-
+	google.RegisterGoogleServiceServer(server, service)
 	reflection.Register(server) // enable reflection API
+
 	appLogger.Infof("Starting gRPC server at :%s", conf.Port)
 	if err := server.Serve(l); err != nil {
 		appLogger.Fatalf("Failed to gRPC serve: %v", err)
