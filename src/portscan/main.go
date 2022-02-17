@@ -51,7 +51,7 @@ func main() {
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
 
-	sqsConf := &sqsConfig{
+	sqsConf := &SQSConfig{
 		Debug:              conf.Debug,
 		AWSRegion:          conf.AWSRegion,
 		SQSEndpoint:        conf.SQSEndpoint,
