@@ -13,8 +13,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/gassara-kys/envconfig"
 )
 
 type cloudSploitServiceClient interface {
@@ -28,23 +26,12 @@ type cloudSploitClient struct {
 	googleServiceAccountPrivateKey string
 }
 
-type cloudSploitConf struct {
-	CloudSploitCommand             string `required:"true" split_words:"true" default:"/opt/cloudsploit/index.js"`
-	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
-	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
-}
-
-func newCloudSploitClient() cloudSploitServiceClient {
-	var conf cloudSploitConf
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatalf("Could not read confg. err: %+v", err)
-	}
+func newCloudSploitClient(command, googleServiceAccountEmail, googleServiceAccountPrivateKey string) cloudSploitServiceClient {
 	return &cloudSploitClient{
-		cloudSploitCommand:             conf.CloudSploitCommand,
+		cloudSploitCommand:             command,
 		cloudSploitConfigTemplate:      template.Must(template.New("CloudSploitConfig").Parse(templateConfigJs)),
-		googleServiceAccountEmail:      conf.GoogleServiceAccountEmail,
-		googleServiceAccountPrivateKey: conf.GoogleServiceAccountPrivateKey,
+		googleServiceAccountEmail:      googleServiceAccountEmail,
+		googleServiceAccountPrivateKey: googleServiceAccountPrivateKey,
 	}
 }
 
