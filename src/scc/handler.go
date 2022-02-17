@@ -25,15 +25,6 @@ type sqsHandler struct {
 	sccClient     sccServiceClient
 }
 
-func newHandler() *sqsHandler {
-	return &sqsHandler{
-		findingClient: newFindingClient(),
-		alertClient:   newAlertClient(),
-		googleClient:  newGoogleClient(),
-		sccClient:     newSCCClient(),
-	}
-}
-
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
 	msgBody := aws.StringValue(sqsMsg.Body)
 	appLogger.Infof("got message: %s", msgBody)
