@@ -59,7 +59,7 @@ func main() {
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
 
-	sqsConf := &sqsConfig{
+	sqsConf := &SQSConfig{
 		Debug:              conf.Debug,
 		AWSRegion:          conf.AWSRegion,
 		SQSEndpoint:        conf.SQSEndpoint,

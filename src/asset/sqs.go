@@ -9,7 +9,7 @@ import (
 	"github.com/vikyd/zero"
 )
 
-type sqsConfig struct {
+type SQSConfig struct {
 	Debug string
 
 	AWSRegion   string
@@ -21,7 +21,7 @@ type sqsConfig struct {
 	WaitTimeSecond     int64
 }
 
-func newSQSConsumer(conf *sqsConfig) *worker.Worker {
+func newSQSConsumer(conf *SQSConfig) *worker.Worker {
 	if conf.Debug == "true" {
 		appLogger.Level(logging.DebugLevel)
 	}
