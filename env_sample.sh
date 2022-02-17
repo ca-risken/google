@@ -31,7 +31,7 @@ export PORTSCAN_QUEUE_NAME="google-portscan"
 export PORTSCAN_QUEUE_URL="http://sqs:9324/queue/google-portscan"
 export GOOGLE_CREDENTIAL_PATH="/path/to/your-credential-file"
 export GOOGLE_SERVICE_ACCOUNT_JSON='{"key": "your credential json here..." }'
-export GOOGLE_SERVICE_ACCOUNT_EMAIL="risken@ca-security-hub.iam.gserviceaccount.com"
+export GOOGLE_SERVICE_ACCOUNT_EMAIL="dummy@dummy.iam.gserviceaccount.com"
 export GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="your private key here..."
 
 # aws
