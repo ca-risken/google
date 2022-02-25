@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/option"
 )
@@ -19,25 +18,16 @@ type resourceManagerClient struct {
 	svc *cloudresourcemanager.Service
 }
 
-type resourceManagerConfig struct {
-	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
-}
-
-func newResourceManagerClient() resourceManagerServiceClient {
-	var conf resourceManagerConfig
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatalf("Could not read confg. err: %+v", err)
-	}
+func newResourceManagerClient(credentialPath string) resourceManagerServiceClient {
 	ctx := context.Background()
-	svc, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	svc, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf("Failed to create new Cloud Resource Manager service: %+v", err)
 	}
 
 	// Remove credential file for Security
-	if err := os.Remove(conf.GoogleCredentialPath); err != nil {
-		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", conf.GoogleCredentialPath, err)
+	if err := os.Remove(credentialPath); err != nil {
+		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &resourceManagerClient{
 		svc: svc,

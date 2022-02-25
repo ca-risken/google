@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	unixNano       int64  = 999999999
-	testConfigFile string = "/tmp/config.js"
+	unixNano       int64 = 999999999
+	testConfigFile       = "/tmp/config.js"
 )
 
 func TestGenerateConfig(t *testing.T) {

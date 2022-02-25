@@ -10,17 +10,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/gassara-kys/envconfig"
 )
 
-type sqsConfig struct {
-	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
-	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
+type SQSConfig struct {
+	AWSRegion   string
+	SQSEndpoint string
 
-	AssetQueueURL       string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
-	CloudSploitQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
-	SCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
-	PortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
+	AssetQueueURL       string
+	CloudSploitQueueURL string
+	SCCQueueURL         string
+	PortscanQueueURL    string
 }
 
 type sqsAPI interface {
@@ -38,12 +37,7 @@ type sqsClient struct {
 	portscanQueueURL    string
 }
 
-func newSQSClient() *sqsClient {
-	var conf sqsConfig
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatal(err.Error())
-	}
+func newSQSClient(conf *SQSConfig) *sqsClient {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})

@@ -22,15 +22,6 @@ type googleService struct {
 	projectClient   project.ProjectServiceClient
 }
 
-func newGoogleService() google.GoogleServiceServer {
-	return &googleService{
-		repository:      newGoogleRepository(),
-		sqs:             newSQSClient(),
-		resourceManager: newResourceManagerClient(),
-		projectClient:   newProjectClient(),
-	}
-}
-
 func convertGoogleDataSource(data *common.GoogleDataSource) *google.GoogleDataSource {
 	if data == nil {
 		return &google.GoogleDataSource{}

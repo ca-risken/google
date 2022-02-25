@@ -7,10 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	portscan "github.com/ca-risken/common/pkg/portscan"
-	"github.com/gassara-kys/envconfig"
+	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/vikyd/zero"
-	compute "google.golang.org/api/compute/v1"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 )
 
@@ -26,35 +25,25 @@ type portscanClient struct {
 	ScanExcludePortNumber int
 }
 
-type portscanConfig struct {
-	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
-	ScanExcludePortNumber int    `split_words:"true"                 default:"1000"`
-}
-
-func newPortscanClient() portscanServiceClient {
-	var conf portscanConfig
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatalf("Could not read config. err: %+v", err)
-	}
+func newPortscanClient(credentialPath string, scanExcludePortNumber int) portscanServiceClient {
 	ctx := context.Background()
 	//	ae, err := appengine.NewClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
 	//	if err != nil {
 	//		appLogger.Fatalf("Failed to authenticate for AppEngine API client: %+v", err)
 	//	}
-	compute, err := compute.NewService(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	compute, err := compute.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf("Failed to authenticate for Compute service: %+v", err)
 	}
 
 	// Remove credential file for Security
-	if err := os.Remove(conf.GoogleCredentialPath); err != nil {
-		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", conf.GoogleCredentialPath, err)
+	if err := os.Remove(credentialPath); err != nil {
+		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &portscanClient{
 		//		appEngine: ae,
 		compute:               compute,
-		ScanExcludePortNumber: conf.ScanExcludePortNumber,
+		ScanExcludePortNumber: scanExcludePortNumber,
 	}
 }
 

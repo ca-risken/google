@@ -17,7 +17,6 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/iterator"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
@@ -31,30 +30,6 @@ type sqsHandler struct {
 	waitMilliSecPerRequest int
 	assetAPIRetryNum       int
 	assetAPIRetryWaitSec   int
-}
-
-type assetConf struct {
-	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
-	AssetAPIRetryNum       int `split_words:"true" default:"3"`
-	AssetAPIRetryWaitSec   int `split_words:"true" default:"30"`
-}
-
-func newHandler() *sqsHandler {
-	var conf assetConf
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatal(err.Error())
-	}
-	appLogger.Infof("Created SQS handler, assetConf=%+v", conf)
-	return &sqsHandler{
-		findingClient:          newFindingClient(),
-		alertClient:            newAlertClient(),
-		googleClient:           newGoogleClient(),
-		assetClient:            newAssetClient(),
-		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
-		assetAPIRetryNum:       conf.AssetAPIRetryNum,
-		assetAPIRetryWaitSec:   conf.AssetAPIRetryWaitSec,
-	}
 }
 
 type assetFinding struct {

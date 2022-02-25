@@ -9,7 +9,6 @@ import (
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"cloud.google.com/go/storage"
-	"github.com/gassara-kys/envconfig"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
@@ -28,32 +27,23 @@ type assetClient struct {
 	gcs   *storage.Client
 }
 
-type assetConfig struct {
-	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
-}
-
-func newAssetClient() assetServiceClient {
-	var conf assetConfig
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatalf("Could not read confg. err: %+v", err)
-	}
+func newAssetClient(credentialPath string) assetServiceClient {
 	ctx := context.Background()
-	as, err := asset.NewClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf("Failed to authenticate for Google Asset API client: %+v", err)
 	}
-	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf("Failed to authenticate for Google IAM Admin API client: %+v", err)
 	}
-	st, err := storage.NewClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
+	st, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf("Failed to authenticate for Google Cloud Storage client: %+v", err)
 	}
 	// Remove credential file for Security
-	if err := os.Remove(conf.GoogleCredentialPath); err != nil {
-		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", conf.GoogleCredentialPath, err)
+	if err := os.Remove(credentialPath); err != nil {
+		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &assetClient{
 		asset: as,
