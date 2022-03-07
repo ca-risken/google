@@ -2,15 +2,28 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	mimosaxray "github.com/ca-risken/common/pkg/xray"
 	"github.com/gassara-kys/envconfig"
 )
 
+const (
+	nameSpace   = "google"
+	serviceName = "asset"
+)
+
+func getFullServiceName() string {
+	return fmt.Sprintf("%s.%s", nameSpace, serviceName)
+}
+
 type AppConfig struct {
-	EnvName string `default:"local" split_words:"true"`
+	EnvName         string   `default:"local" split_words:"true"`
+	ProfileExporter string   `split_words:"true" default:"nop"`
+	ProfileTypes    []string `split_words:"true"`
 
 	// asset
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
@@ -48,6 +61,26 @@ func main() {
 		appLogger.Fatal(err.Error())
 	}
 
+	pTypes, err := profiler.ConvertProfileTypeFrom(conf.ProfileTypes)
+	if err != nil {
+		appLogger.Fatal(err.Error())
+	}
+	pExporter, err := profiler.ConvertExporterTypeFrom(conf.ProfileExporter)
+	if err != nil {
+		appLogger.Fatal(err.Error())
+	}
+	pc := profiler.Config{
+		ServiceName:  getFullServiceName(),
+		EnvName:      conf.EnvName,
+		ProfileTypes: pTypes,
+		ExporterType: pExporter,
+	}
+	err = pc.Start()
+	if err != nil {
+		appLogger.Fatal(err.Error())
+	}
+	defer pc.Stop()
+
 	appLogger.Info("Start")
 	handler := &sqsHandler{
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
@@ -75,5 +108,5 @@ func main() {
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosaxray.MessageTracingHandler(conf.EnvName, "google.asset", handler)))))
+					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(), handler)))))
 }

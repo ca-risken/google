@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.6.0
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220113015330-0e8462d52b5b
 	github.com/ca-risken/common/pkg/portscan v0.0.0-20211118071101-9855266b50a1
+	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220113015330-0e8462d52b5b
 	github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1
 	github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86
@@ -22,6 +23,9 @@ require (
 
 require (
 	cloud.google.com/go v0.94.1 // indirect
+	github.com/DataDog/datadog-go/v5 v5.0.2 // indirect
+	github.com/DataDog/gostackparse v0.5.0 // indirect
+	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Ullaakut/nmap v2.0.2+incompatible // indirect
 	github.com/Ullaakut/nmap/v2 v2.2.0 // indirect
 	github.com/andybalholm/brotli v1.0.3 // indirect
@@ -30,6 +34,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -47,4 +52,5 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.36.0 // indirect
 )

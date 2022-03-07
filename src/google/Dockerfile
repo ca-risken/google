@@ -13,6 +13,8 @@ FROM public.ecr.aws/risken/base/risken-base:v0.0.1
 COPY --from=builder /go/bin/google /usr/local/google/bin/
 ADD docker-entrypoint.sh /usr/local/bin
 ENV PORT= \
+    PROFILE_EXPORTER= \
+    PROFILE_TYPES= \
     DB_MASTER_HOST= \
     DB_MASTER_USER= \
     DB_MASTER_PASSWORD= \
