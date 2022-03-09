@@ -14,6 +14,8 @@ RUN apk add --no-cache nmap nmap-scripts
 COPY --from=builder /go/bin/portscan /usr/local/portscan/bin/
 ADD docker-entrypoint.sh /usr/local/bin
 ENV DEBUG= \
+    PROFILE_EXPORTER= \
+    PROFILE_TYPES= \
     AWS_REGION= \
     AWS_ACCESS_KEY_ID= \
     AWS_SECRET_ACCESS_KEY= \
