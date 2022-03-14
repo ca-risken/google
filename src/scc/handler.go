@@ -235,7 +235,7 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID uint32, err error) 
 	}
 	if err == nil {
 		// Scan succeeded
-		if putErr := s.putScanFinding(ctx, &sacnFinding{
+		if putErr := s.putScanFinding(ctx, &scanFinding{
 			ProjectID: projectID,
 			Status:    "OK",
 		}); putErr != nil {
@@ -246,7 +246,7 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID uint32, err error) 
 	}
 
 	// Scan failed
-	if putErr := s.putScanFinding(ctx, &sacnFinding{
+	if putErr := s.putScanFinding(ctx, &scanFinding{
 		ProjectID:    projectID,
 		Status:       "Error",
 		ErrorMessage: err.Error(),
@@ -257,13 +257,13 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID uint32, err error) 
 	return mimosasqs.WrapNonRetryable(err)
 }
 
-type sacnFinding struct {
+type scanFinding struct {
 	ProjectID    uint32 `json:"project_id,omitempty"`
 	Status       string `json:"status,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
-func (s *sqsHandler) putScanFinding(ctx context.Context, sf *sacnFinding) error {
+func (s *sqsHandler) putScanFinding(ctx context.Context, sf *scanFinding) error {
 	if sf == nil || zero.IsZeroVal(sf.ProjectID) {
 		return nil // nop
 	}
