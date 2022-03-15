@@ -32,7 +32,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
 		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msgBody, err)
-		return s.finalize(ctx, 0, err)
+		return s.finalize(ctx, nil, err)
 	}
 	requestID, err := appLogger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		return s.finalize(ctx, msg.ProjectID, err)
+		return s.finalize(ctx, &msg.ProjectID, err)
 	}
 	scanStatus := common.InitScanStatus(gcp)
 
@@ -58,7 +58,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 			appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
 		}
-		return s.finalize(ctx, msg.ProjectID, err)
+		return s.finalize(ctx, &msg.ProjectID, err)
 	}
 	appLogger.Infof("start SCC ListFinding API, RequestID=%s", requestID)
 	xctx, segment := xray.BeginSubsegment(ctx, "listFinding")
@@ -78,7 +78,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
 			}
-			return s.finalize(ctx, msg.ProjectID, err)
+			return s.finalize(ctx, &msg.ProjectID, err)
 		}
 		appLogger.Debugf("Got finding: %+v", f.Finding)
 		// Put finding
@@ -88,24 +88,24 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
 			}
-			return s.finalize(ctx, msg.ProjectID, err)
+			return s.finalize(ctx, &msg.ProjectID, err)
 		}
 		findingCnt++
 	}
 	appLogger.Infof("Got %d findings, RequestID=%s", findingCnt, requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
-		return s.finalize(ctx, msg.ProjectID, err)
+		return s.finalize(ctx, &msg.ProjectID, err)
 	}
 	appLogger.Infof("end SCC scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
-		return s.finalize(ctx, msg.ProjectID, nil)
+		return s.finalize(ctx, &msg.ProjectID, nil)
 	}
 	if err := s.analyzeAlert(ctx, msg.ProjectID); err != nil {
 		appLogger.Notifyf(logging.ErrorLevel, "Failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
-		return s.finalize(ctx, msg.ProjectID, err)
+		return s.finalize(ctx, &msg.ProjectID, err)
 	}
-	return s.finalize(ctx, msg.ProjectID, nil)
+	return s.finalize(ctx, &msg.ProjectID, nil)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
@@ -229,14 +229,14 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 }
 
 // finalize function summarizes the termination process
-func (s *sqsHandler) finalize(ctx context.Context, projectID uint32, err error) error {
-	if err != nil && zero.IsZeroVal(projectID) {
+func (s *sqsHandler) finalize(ctx context.Context, projectID *uint32, err error) error {
+	if err != nil && projectID == nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	if err == nil {
 		// Scan succeeded
 		if putErr := s.putScanFinding(ctx, &scanFinding{
-			ProjectID: projectID,
+			ProjectID: *projectID,
 			Status:    "OK",
 		}); putErr != nil {
 			appLogger.Errorf("Failed to putScanFinding(scan succeeded), err=%+v", putErr)
@@ -247,7 +247,7 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID uint32, err error) 
 
 	// Scan failed
 	if putErr := s.putScanFinding(ctx, &scanFinding{
-		ProjectID:    projectID,
+		ProjectID:    *projectID,
 		Status:       "Error",
 		ErrorMessage: err.Error(),
 	}); putErr != nil {
