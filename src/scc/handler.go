@@ -231,6 +231,7 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 // finalize function summarizes the termination process
 func (s *sqsHandler) finalize(ctx context.Context, projectID *uint32, err error) error {
 	if err != nil && projectID == nil {
+		appLogger.Notifyf(logging.ErrorLevel, "Failed to scan (unknown project), err: %+v", err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	if err == nil {
@@ -239,7 +240,7 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID *uint32, err error)
 			ProjectID: *projectID,
 			Status:    "OK",
 		}); putErr != nil {
-			appLogger.Errorf("Failed to putScanFinding(scan succeeded), err=%+v", putErr)
+			appLogger.Notifyf(logging.ErrorLevel, "Failed to putScanFinding (scan succeeded), project_id: %d, err: %+v", *projectID, putErr)
 			return mimosasqs.WrapNonRetryable(putErr)
 		}
 		return nil
@@ -251,7 +252,7 @@ func (s *sqsHandler) finalize(ctx context.Context, projectID *uint32, err error)
 		Status:       "Error",
 		ErrorMessage: err.Error(),
 	}); putErr != nil {
-		appLogger.Errorf("Failed to putScanFinding(scan failed), err=%+v", putErr)
+		appLogger.Notifyf(logging.ErrorLevel, "Failed to putScanFinding (scan failed), project_id: %d, err: %+v", *projectID, putErr)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	return mimosasqs.WrapNonRetryable(err)
