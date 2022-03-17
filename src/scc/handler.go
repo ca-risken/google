@@ -14,7 +14,6 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"github.com/vikyd/zero"
 	"google.golang.org/api/iterator"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
@@ -32,7 +31,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
 		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msgBody, err)
-		return s.finalize(ctx, nil, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	requestID, err := appLogger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
@@ -45,7 +44,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	if err != nil {
 		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		return s.finalize(ctx, &msg.ProjectID, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	scanStatus := common.InitScanStatus(gcp)
 
@@ -55,10 +54,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			gcp.GcpOrganizationId, gcp.GcpProjectId)
 		appLogger.Errorf("Invalid parameters, project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-			appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-		}
-		return s.finalize(ctx, &msg.ProjectID, err)
+		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 	appLogger.Infof("start SCC ListFinding API, RequestID=%s", requestID)
 	xctx, segment := xray.BeginSubsegment(ctx, "listFinding")
@@ -75,37 +71,38 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err != nil {
 			appLogger.Errorf("Failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-			}
-			return s.finalize(ctx, &msg.ProjectID, err)
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		appLogger.Debugf("Got finding: %+v", f.Finding)
 		// Put finding
 		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding); err != nil {
 			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-				appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
-			}
-			return s.finalize(ctx, &msg.ProjectID, err)
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		findingCnt++
 	}
 	appLogger.Infof("Got %d findings, RequestID=%s", findingCnt, requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
-		return s.finalize(ctx, &msg.ProjectID, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof("end SCC scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
-		return s.finalize(ctx, &msg.ProjectID, nil)
+		return nil
 	}
 	if err := s.analyzeAlert(ctx, msg.ProjectID); err != nil {
 		appLogger.Notifyf(logging.ErrorLevel, "Failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
-		return s.finalize(ctx, &msg.ProjectID, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
-	return s.finalize(ctx, &msg.ProjectID, nil)
+	return nil
+}
+
+func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
+		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+	}
+	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
@@ -225,90 +222,5 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 		return fmt.Errorf("Failed to TagFinding, finding_id=%d, category=%s, error=%+v", findingID, category, err)
 	}
 	appLogger.Debugf("Success PutRecommend, finding_id=%d, category=%s, risk=%s", findingID, category, risk)
-	return nil
-}
-
-// finalize function summarizes the termination process
-func (s *sqsHandler) finalize(ctx context.Context, projectID *uint32, err error) error {
-	if err != nil && projectID == nil {
-		appLogger.Notifyf(logging.ErrorLevel, "Failed to scan (unknown project), err: %+v", err)
-		return mimosasqs.WrapNonRetryable(err)
-	}
-	if err == nil {
-		// Scan succeeded
-		if putErr := s.putScanFinding(ctx, &scanFinding{
-			ProjectID: *projectID,
-			Status:    "OK",
-		}); putErr != nil {
-			appLogger.Notifyf(logging.ErrorLevel, "Failed to putScanFinding (scan succeeded), project_id: %d, err: %+v", *projectID, putErr)
-			return mimosasqs.WrapNonRetryable(putErr)
-		}
-		return nil
-	}
-
-	// Scan failed
-	if putErr := s.putScanFinding(ctx, &scanFinding{
-		ProjectID:    *projectID,
-		Status:       "Error",
-		ErrorMessage: err.Error(),
-	}); putErr != nil {
-		appLogger.Notifyf(logging.ErrorLevel, "Failed to putScanFinding (scan failed), project_id: %d, err: %+v", *projectID, putErr)
-		return mimosasqs.WrapNonRetryable(err)
-	}
-	return mimosasqs.WrapNonRetryable(err)
-}
-
-type scanFinding struct {
-	ProjectID    uint32 `json:"project_id,omitempty"`
-	Status       string `json:"status,omitempty"`
-	ErrorMessage string `json:"error_message,omitempty"`
-}
-
-func (s *sqsHandler) putScanFinding(ctx context.Context, sf *scanFinding) error {
-	if sf == nil || zero.IsZeroVal(sf.ProjectID) {
-		return nil // nop
-	}
-	score := float32(0.0)
-	desc := fmt.Sprintf("Successfully scanned %s", common.SCCDataSource)
-	if sf.ErrorMessage != "" {
-		desc = fmt.Sprintf("Failed to scan %s", common.SCCDataSource)
-		score = 0.8
-	}
-
-	buf, err := json.Marshal(sf)
-	if err != nil {
-		return err
-	}
-	// PutFinding
-	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
-		Finding: &finding.FindingForUpsert{
-			Description:      desc,
-			DataSource:       "RISKEN",
-			DataSourceId:     fmt.Sprintf("%s-scan-status", common.SCCDataSource),
-			ResourceName:     common.SCCDataSource,
-			ProjectId:        sf.ProjectID,
-			OriginalScore:    score,
-			OriginalMaxScore: 1.0,
-			Data:             string(buf),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
-		ProjectId:  sf.ProjectID,
-		FindingId:  resp.Finding.FindingId,
-		DataSource: "RISKEN",
-		Type:       fmt.Sprintf("ScanError/%s", common.SCCDataSource),
-		Risk:       fmt.Sprintf("Failed to scan %s, So you are not gathering the latest security threat information.", common.SCCDataSource),
-		Recommendation: `Please review the following items and rescan,
-		- Ensure the error message of the DataSource.
-		- Ensure the access rights you set for the DataSource and the reachability of the network.
-		- Refer to the documentation to make sure you have not omitted any of the steps you have set up.
-		- https://docs.security-hub.jp/google/overview_gcp/
-		- If this does not resolve the problem, or if you suspect that the problem is server-side, please contact the system administrators.`,
-	}); err != nil {
-		return fmt.Errorf("Failed to put scan finding recommned, finding_id=%d, error=%+v", resp.Finding.FindingId, err)
-	}
 	return nil
 }
