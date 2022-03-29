@@ -76,32 +76,27 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	// Get cloud asset
 	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
-	var apiErrors []error
-	loopCounter := 0
 	assetCounter := 0
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
-		loopCounter++
 		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
 		resource, done, err := s.listAssetIterationCallWithRetry(it)
 		if done {
 			break
 		}
 		if err != nil {
-			appLogger.Errorf("Failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, assetCounter=%d, loopCounter=%d, RequestID=%s, err=%+v",
-				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, assetCounter, loopCounter, requestID, err)
-			apiErrors = append(apiErrors, err)
-			continue // continue for other scans
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus,
+				fmt.Errorf("Failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, RequestID=%s, err=%+v",
+					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, requestID, err))
 		}
 		assetCounter++
 		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
 
 		f, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, resource)
 		if err != nil {
-			appLogger.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			apiErrors = append(apiErrors, err)
-			continue // continue for other scans
+			return s.handleErrorWithUpdateStatus(ctx, scanStatus,
+				fmt.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err))
 		}
 		// Put finding
 		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
@@ -117,11 +112,6 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("Got %d assets, RequestID=%s", assetCounter, requestID)
 	appLogger.Infof("end CloudAsset API, RequestID=%s", requestID)
 
-	// API errors handling
-	if len(apiErrors) > 0 {
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus,
-			fmt.Errorf("Failed to call some APIs, errors=%d, example=%s", len(apiErrors), apiErrors[0].Error()))
-	}
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}

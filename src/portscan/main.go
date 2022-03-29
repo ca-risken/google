@@ -83,6 +83,7 @@ func main() {
 	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	f := mimosasqs.NewFinalizer(conf.FindingSvcAddr)
 
 	sqsConf := &SQSConfig{
 		Debug:              conf.Debug,
@@ -100,5 +101,6 @@ func main() {
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(), handler)))))
+					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(),
+						f.FinalizeHandler(&dataSourceRecommend{}, handler))))))
 }

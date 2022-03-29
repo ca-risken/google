@@ -91,6 +91,7 @@ func main() {
 		conf.CloudSploitCommand,
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey)
+	f := mimosasqs.NewFinalizer(conf.FindingSvcAddr)
 
 	appLogger.Info("Start")
 	sqsConf := &SQSConfig{
@@ -110,5 +111,6 @@ func main() {
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(), handler)))))
+					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(),
+						f.FinalizeHandler(&dataSourceRecommend{}, handler))))))
 }
