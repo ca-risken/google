@@ -8,12 +8,14 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	mimosaxray "github.com/ca-risken/common/pkg/xray"
+	"github.com/ca-risken/google/pkg/common"
 	"github.com/gassara-kys/envconfig"
 )
 
 const (
 	nameSpace   = "google"
 	serviceName = "scc"
+	settingURL  = "https://docs.security-hub.jp/google/overview_gcp/"
 )
 
 func getFullServiceName() string {
@@ -82,7 +84,10 @@ func main() {
 	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.sccClient = newSCCClient(conf.GoogleCredentialPath)
-	f := mimosasqs.NewFinalizer(conf.FindingSvcAddr)
+	f, err := mimosasqs.NewFinalizer(common.SCCDataSource, settingURL, conf.FindingSvcAddr, nil)
+	if err != nil {
+		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
+	}
 
 	sqsConf := &SQSConfig{
 		Debug:              conf.Debug,
@@ -102,5 +107,5 @@ func main() {
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
 					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(),
-						f.FinalizeHandler(&dataSourceRecommend{}, handler))))))
+						f.FinalizeHandler(handler))))))
 }
