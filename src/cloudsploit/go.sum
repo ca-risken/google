@@ -49,6 +49,8 @@ github.com/ca-risken/common/pkg/sqs v0.0.0-20220113015330-0e8462d52b5b h1:i3DKXw
 github.com/ca-risken/common/pkg/sqs v0.0.0-20220113015330-0e8462d52b5b/go.mod h1:TX6Wn+5I32GuOrEzO41b9VbQOxERSbI05Q0JHHdud3o=
 github.com/ca-risken/common/pkg/sqs v0.0.0-20220317031738-3faf7bc4b867 h1:8dKOjD41I36QFL2kGOMA3SC69AhPDOtHUvQs8izSx08=
 github.com/ca-risken/common/pkg/sqs v0.0.0-20220317031738-3faf7bc4b867/go.mod h1:bQKQC0i/Aa4NZqvyQNNrX/slAdSLxSJmvzBzn68gOvk=
+github.com/ca-risken/common/pkg/sqs v0.0.0-20220401085449-41d2b86b5769 h1:mCT/6Fw7kZLAmsbXBHODtuT8B8K2dkoeJ5/R1+oeSZQ=
+github.com/ca-risken/common/pkg/sqs v0.0.0-20220401085449-41d2b86b5769/go.mod h1:bQKQC0i/Aa4NZqvyQNNrX/slAdSLxSJmvzBzn68gOvk=
 github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1 h1:SjbAAb2H9yZu4Ecs9aL2tNdgifTzYTSxY4qjXFubnYI=
 github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1/go.mod h1:1QELprYp9UidwqzB1253qA00l3umMen4njJMFRNq5Po=
 github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86 h1:EP8JZS/SdVSZbzQpcIxNEg8XNJmyet7p2KFgpHQiTdQ=

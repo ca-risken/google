@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.6.0
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220113015330-0e8462d52b5b
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
-	github.com/ca-risken/common/pkg/sqs v0.0.0-20220317031738-3faf7bc4b867
+	github.com/ca-risken/common/pkg/sqs v0.0.0-20220401085449-41d2b86b5769
 	github.com/ca-risken/common/pkg/xray v0.0.0-20211118071101-9855266b50a1
 	github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86
 	github.com/ca-risken/core/proto/finding v0.0.0-20220309052852-c058b4e5cb84

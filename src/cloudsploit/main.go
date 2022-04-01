@@ -8,12 +8,14 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	mimosaxray "github.com/ca-risken/common/pkg/xray"
+	"github.com/ca-risken/google/pkg/common"
 	"github.com/gassara-kys/envconfig"
 )
 
 const (
 	nameSpace   = "google"
 	serviceName = "cloudsploit"
+	settingURL  = "https://docs.security-hub.jp/google/overview_gcp/"
 )
 
 func getFullServiceName() string {
@@ -91,7 +93,10 @@ func main() {
 		conf.CloudSploitCommand,
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey)
-	f := mimosasqs.NewFinalizer(conf.FindingSvcAddr)
+	f, err := mimosasqs.NewFinalizer(common.CloudSploitDataSource, settingURL, conf.FindingSvcAddr, nil)
+	if err != nil {
+		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
+	}
 
 	appLogger.Info("Start")
 	sqsConf := &SQSConfig{
@@ -112,5 +117,5 @@ func main() {
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
 					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(),
-						f.FinalizeHandler(&dataSourceRecommend{}, handler))))))
+						f.FinalizeHandler(handler))))))
 }
