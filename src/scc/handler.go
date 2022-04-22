@@ -62,10 +62,18 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	segment.Close(nil)
 	appLogger.Infof("end SCC ListFinding API, RequestID=%s", requestID)
 
+	appLogger.Infof("start put findings, RequestID=%s", requestID)
 	findingBatchParam := []*finding.FindingBatchForUpsert{}
-	for {
+	for i := 0; ; i++ {
 		f, err := it.Next()
 		if err == iterator.Done {
+			if len(findingBatchParam) > 0 {
+				req := &finding.PutFindingBatchRequest{ProjectId: msg.ProjectID, Finding: findingBatchParam}
+				if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
+					return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+				}
+			}
+			appLogger.Infof("end put findings(%d succeeded), RequestID=%s", i, requestID)
 			break
 		}
 		if err != nil {
@@ -78,15 +86,15 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 		findingBatchParam = append(findingBatchParam, data)
-	}
 
-	appLogger.Infof("start put findings, RequestID=%s", requestID)
-	if len(findingBatchParam) > 0 {
-		if err := s.putFindingBatch(ctx, msg.ProjectID, findingBatchParam); err != nil {
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		if len(findingBatchParam) == finding.PutFindingBatchMaxLength {
+			req := &finding.PutFindingBatchRequest{ProjectId: msg.ProjectID, Finding: findingBatchParam}
+			if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
+				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			}
+			findingBatchParam = []*finding.FindingBatchForUpsert{}
 		}
 	}
-	appLogger.Infof("end put findings(%d succeeded), RequestID=%s", len(findingBatchParam), requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
@@ -157,23 +165,6 @@ func (s *sqsHandler) generateFindingData(projectID uint32, gcpProjectID string, 
 		}
 	}
 	return findingData, nil
-}
-
-func (s *sqsHandler) putFindingBatch(ctx context.Context, projectID uint32, params []*finding.FindingBatchForUpsert) error {
-	appLogger.Infof("Putting findings(%d)...", len(params))
-	for idx := 0; idx < len(params); idx = idx + finding.PutFindingBatchMaxLength {
-		lastIdx := idx + finding.PutFindingBatchMaxLength
-		if lastIdx > len(params) {
-			lastIdx = len(params)
-		}
-		// request per API limits
-		appLogger.Debugf("Call PutFindingBatch API, (%d ~ %d / %d)", idx+1, lastIdx, len(params))
-		req := &finding.PutFindingBatchRequest{ProjectId: projectID, Finding: params[idx:lastIdx]}
-		if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
