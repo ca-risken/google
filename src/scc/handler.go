@@ -14,7 +14,6 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"google.golang.org/api/iterator"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
 
@@ -63,38 +62,36 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("end SCC ListFinding API, RequestID=%s", requestID)
 
 	appLogger.Infof("start put findings, RequestID=%s", requestID)
-	findingBatchParam := []*finding.FindingBatchForUpsert{}
-	for i := 0; ; i++ {
-		f, err := it.Next()
-		if err == iterator.Done {
-			if len(findingBatchParam) > 0 {
-				req := &finding.PutFindingBatchRequest{ProjectId: msg.ProjectID, Finding: findingBatchParam}
-				if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
-					return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
-				}
-			}
-			appLogger.Infof("end put findings(%d succeeded), RequestID=%s", i, requestID)
-			break
-		}
+	nextPageToken := ""
+	counter := 0
+	for {
+		findings, token, err := it.InternalFetch(finding.PutFindingBatchMaxLength, nextPageToken)
 		if err != nil {
 			appLogger.Errorf("Failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
-		data, err := s.generateFindingData(msg.ProjectID, gcp.GcpProjectId, f.Finding)
-		if err != nil {
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		findingBatchParam := []*finding.FindingBatchForUpsert{}
+		for _, f := range findings {
+			data, err := s.generateFindingData(msg.ProjectID, gcp.GcpProjectId, f.Finding)
+			if err != nil {
+				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			}
+			findingBatchParam = append(findingBatchParam, data)
 		}
-		findingBatchParam = append(findingBatchParam, data)
-
-		if len(findingBatchParam) == finding.PutFindingBatchMaxLength {
+		if len(findingBatchParam) > 0 {
 			req := &finding.PutFindingBatchRequest{ProjectId: msg.ProjectID, Finding: findingBatchParam}
 			if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
 				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 			}
-			findingBatchParam = []*finding.FindingBatchForUpsert{}
 		}
+		counter = counter + len(findingBatchParam)
+		if token == "" {
+			break
+		}
+		nextPageToken = token
 	}
+	appLogger.Infof("end put findings(%d succeeded), RequestID=%s", counter, requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
