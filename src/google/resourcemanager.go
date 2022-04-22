@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/option"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type resourceManagerServiceClient interface {
@@ -44,9 +44,9 @@ func (r *resourceManagerClient) verifyCode(ctx context.Context, gcpProjectID, ve
 		return true, nil
 	}
 	// https://cloud.google.com/resource-manager/reference/rest/v1/projects/get
-	_, segment := xray.BeginSubsegment(ctx, "GetProject")
-	resp, err := r.svc.Projects.Get(gcpProjectID).Context(ctx).Do()
-	segment.Close(err)
+	cspan, cctx := tracer.StartSpanFromContext(ctx, "GetProject")
+	resp, err := r.svc.Projects.Get(gcpProjectID).Context(cctx).Do()
+	cspan.Finish(tracer.WithError(err))
 	if err != nil {
 		appLogger.Warnf("Failed to ResourceManager.Projects.Get API, err=%+v", err)
 		return false, fmt.Errorf("Failed to ResourceManager.Projects.Get API, err=%+v", err)
