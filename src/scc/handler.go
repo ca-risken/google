@@ -64,7 +64,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	appLogger.Infof("start put findings, RequestID=%s", requestID)
 	findingBatchParam := []*finding.FindingBatchForUpsert{}
-	for {
+	for i := 0; ; i++ {
 		f, err := it.Next()
 		if err == iterator.Done {
 			if len(findingBatchParam) > 0 {
@@ -73,6 +73,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 					return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 				}
 			}
+			appLogger.Infof("end put findings(%d succeeded), RequestID=%s", i, requestID)
 			break
 		}
 		if err != nil {
@@ -94,7 +95,6 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			findingBatchParam = []*finding.FindingBatchForUpsert{}
 		}
 	}
-	appLogger.Infof("end put findings(%d succeeded), RequestID=%s", len(findingBatchParam), requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
