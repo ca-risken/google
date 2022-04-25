@@ -9,13 +9,13 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type sqsHandler struct {
@@ -52,9 +52,9 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	// Get cloud sploit
 	appLogger.Infof("start Run cloudsploit, RequestID=%s", requestID)
-	xctx, segment := xray.BeginSubsegment(ctx, "runCloudSploit")
-	result, err := s.cloudSploit.run(xctx, gcp.GcpProjectId)
-	segment.Close(err)
+	tspan, tctx := tracer.StartSpanFromContext(ctx, "runCloudSploit")
+	result, err := s.cloudSploit.run(tctx, gcp.GcpProjectId)
+	tspan.Finish(tracer.WithError(err))
 	appLogger.Infof("end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
