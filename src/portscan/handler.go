@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -14,13 +15,16 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 type sqsHandler struct {
-	findingClient  finding.FindingServiceClient
-	alertClient    alert.AlertServiceClient
-	googleClient   google.GoogleServiceClient
-	portscanClient portscanServiceClient
+	findingClient   finding.FindingServiceClient
+	alertClient     alert.AlertServiceClient
+	googleClient    google.GoogleServiceClient
+	portscanClient  portscanServiceClient
+	scanConcurrency int64
 }
 
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
@@ -51,7 +55,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	// get target and scan target
 	appLogger.Infof("start exec scan, RequestID=%s", requestID)
 	xctx, segment := xray.BeginSubsegment(ctx, "scanTargets")
-	err = s.scan(xctx, gcp.GcpProjectId, msg)
+	err = s.scan(xctx, gcp.GcpProjectId, msg, s.scanConcurrency)
 	segment.Close(err)
 	if err != nil {
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
@@ -81,15 +85,43 @@ func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus
 	return mimosasqs.WrapNonRetryable(err)
 }
 
-func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage) error {
+func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage, scanConcurrency int64) error {
 	targets, relFirewallResourceMap, err := s.portscanClient.listTarget(ctx, gcpProjectId)
 	if err != nil {
 		return err
 	}
 	targets, excludeList := s.portscanClient.excludeTarget(targets)
-	var results []*portscan.NmapResult
-	for _, target := range targets {
-		results = append(results, scan(target)...)
+	eg, errGroupCtx := errgroup.WithContext(ctx)
+	mutex := &sync.Mutex{}
+	sem := semaphore.NewWeighted(scanConcurrency)
+	var nmapResults []*portscan.NmapResult
+	for _, t := range targets {
+		if err := sem.Acquire(ctx, 1); err != nil {
+			appLogger.Errorf("failed to acquire semaphore: %v", err)
+			return err
+		}
+		t := t
+		eg.Go(func() error {
+			defer sem.Release(1)
+			select {
+			case <-errGroupCtx.Done():
+				appLogger.Debugf("scan cancel. target: %v", t.Target)
+				return nil
+			default:
+				results, err := scan(t)
+				if err != nil {
+					return err
+				}
+				mutex.Lock()
+				nmapResults = append(nmapResults, results...)
+				mutex.Unlock()
+				return nil
+			}
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		appLogger.Errorf("failed to exec portscan: %v", err)
+		return err
 	}
 
 	// Clear finding score
@@ -101,7 +133,7 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 		appLogger.Errorf("Failed to clear finding score. GCPProjectID: %v, error: %v", gcpProjectId, err)
 		return err
 	}
-	for _, result := range results {
+	for _, result := range nmapResults {
 		err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
 		if err != nil {
 			appLogger.Errorf("Failed put Finding err: %v", err)

@@ -46,6 +46,7 @@ type AppConfig struct {
 	// portscan
 	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 	ScanExcludePortNumber int    `split_words:"true"                 default:"1000"`
+	ScanConcurrency       int64  `split_words:"true" default:"5"`
 }
 
 func main() {
@@ -85,6 +86,7 @@ func main() {
 	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	handler.scanConcurrency = conf.ScanConcurrency
 	f, err := mimosasqs.NewFinalizer(common.PortscanDataSource, settingURL, conf.FindingSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
