@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/common/pkg/portscan"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
@@ -15,6 +14,7 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -54,9 +54,9 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 	// get target and scan target
 	appLogger.Infof("start exec scan, RequestID=%s", requestID)
-	xctx, segment := xray.BeginSubsegment(ctx, "scanTargets")
-	err = s.scan(xctx, gcp.GcpProjectId, msg, s.scanConcurrency)
-	segment.Close(err)
+	tspan, tctx := tracer.StartSpanFromContext(ctx, "scanTargets")
+	err = s.scan(tctx, gcp.GcpProjectId, msg, s.scanConcurrency)
+	tspan.Finish(tracer.WithError(err))
 	if err != nil {
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
