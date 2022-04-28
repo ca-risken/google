@@ -268,18 +268,18 @@ func hasFullOpenRange(ranges []string) bool {
 	return false
 }
 
-func scan(target *target) []*portscan.NmapResult {
+func scan(target *target) ([]*portscan.NmapResult, error) {
 	results, err := portscan.Scan(target.Target, target.Protocol, target.FromPort, target.ToPort)
 	if err != nil {
-		appLogger.Warnf("Error occured when scanning. err: %v", err)
-		return nil
+		appLogger.Errorf("Error occured when scanning. err: %v", err)
+		return nil, err
 	}
 	var ret []*portscan.NmapResult
 	for _, result := range results {
 		result.ResourceName = target.ResourceName
 		ret = append(ret, result)
 	}
-	return ret
+	return ret, nil
 }
 
 func splitPort(port string) (int, int, error) {
