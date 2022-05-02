@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
@@ -226,47 +227,13 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		findings = append(findings, f)
 	}
 	// put
-	if err := s.putResourceBatch(ctx, projectID, resources); err != nil {
+	if err := grpc_client.PutResourceBatch(ctx, s.findingClient, projectID, resources); err != nil {
 		return err
 	}
-	if err := s.putFindingBatch(ctx, projectID, findings); err != nil {
+	if err := grpc_client.PutFindingBatch(ctx, s.findingClient, projectID, findings); err != nil {
 		return err
 	}
 	appLogger.Infof("putFindings(%d) succeeded", len(assets))
-	return nil
-}
-
-func (s *sqsHandler) putFindingBatch(ctx context.Context, projectID uint32, params []*finding.FindingBatchForUpsert) error {
-	appLogger.Infof("Putting findings(%d)...", len(params))
-	for idx := 0; idx < len(params); idx = idx + finding.PutFindingBatchMaxLength {
-		lastIdx := idx + finding.PutFindingBatchMaxLength
-		if lastIdx > len(params) {
-			lastIdx = len(params)
-		}
-		// request per API limits
-		appLogger.Debugf("Call PutFindingBatch API, (%d ~ %d / %d)", idx+1, lastIdx, len(params))
-		req := &finding.PutFindingBatchRequest{ProjectId: projectID, Finding: params[idx:lastIdx]}
-		if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *sqsHandler) putResourceBatch(ctx context.Context, projectID uint32, params []*finding.ResourceBatchForUpsert) error {
-	appLogger.Infof("Putting resources(%d)...", len(params))
-	for idx := 0; idx < len(params); idx = idx + finding.PutResourceBatchMaxLength {
-		lastIdx := idx + finding.PutResourceBatchMaxLength
-		if lastIdx > len(params) {
-			lastIdx = len(params)
-		}
-		// request per API limits
-		appLogger.Debugf("Call PutResourceBatch API, (%d ~ %d / %d)", idx+1, lastIdx, len(params))
-		req := &finding.PutResourceBatchRequest{ProjectId: projectID, Resource: params[idx:lastIdx]}
-		if _, err := s.findingClient.PutResourceBatch(ctx, req); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

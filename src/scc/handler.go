@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
@@ -80,9 +81,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 			findingBatchParam = append(findingBatchParam, data)
 		}
 		if len(findingBatchParam) > 0 {
-			req := &finding.PutFindingBatchRequest{ProjectId: msg.ProjectID, Finding: findingBatchParam}
-			if _, err := s.findingClient.PutFindingBatch(ctx, req); err != nil {
-				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			if err := grpc_client.PutFindingBatch(ctx, s.findingClient, msg.ProjectID, findingBatchParam); err != nil {
+				return err
 			}
 		}
 		counter = counter + len(findingBatchParam)
