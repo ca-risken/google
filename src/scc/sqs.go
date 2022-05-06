@@ -30,7 +30,7 @@ func newSQSConsumer(conf *SQSConfig) *worker.Worker {
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		appLogger.Fatalf("Failed to create a new session, %v", err)
+		appLogger.Fatalf("failed to create a new session, %v", err)
 	}
 	if !zero.IsZeroVal(&conf.SQSEndpoint) {
 		sqsClient = sqs.New(sess, &aws.Config{

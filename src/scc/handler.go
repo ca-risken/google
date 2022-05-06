@@ -30,19 +30,19 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", msgBody, err)
+		appLogger.Errorf("invalid message: msg=%+v, err=%+v", msgBody, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	requestID, err := appLogger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
-		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
+		appLogger.Warnf("failed to generate requestID: err=%+v", err)
 		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
 	appLogger.Infof("start SCC scan, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
-		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+		appLogger.Errorf("failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
@@ -68,7 +68,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	for {
 		findings, token, err := it.InternalFetch(finding.PutFindingBatchMaxLength, nextPageToken)
 		if err != nil {
-			appLogger.Errorf("Failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+			appLogger.Errorf("failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
@@ -101,7 +101,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		return nil
 	}
 	if err := s.analyzeAlert(ctx, msg.ProjectID); err != nil {
-		appLogger.Notifyf(logging.ErrorLevel, "Failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
+		appLogger.Notifyf(logging.ErrorLevel, "failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	return nil
@@ -109,7 +109,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+		appLogger.Warnf("failed to update scan status error: err=%+v", updateErr)
 	}
 	return mimosasqs.WrapNonRetryable(err)
 }
@@ -124,7 +124,7 @@ func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 		return nil, err
 	}
 	if data == nil || data.GcpDataSource == nil {
-		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
+		return nil, fmt.Errorf("no gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
 	}
 	return data.GcpDataSource, nil
 }
@@ -132,7 +132,7 @@ func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 func (s *sqsHandler) generateFindingData(projectID uint32, gcpProjectID string, f *sccpb.Finding) (*finding.FindingBatchForUpsert, error) {
 	buf, err := json.Marshal(f)
 	if err != nil {
-		appLogger.Errorf("Failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
+		appLogger.Errorf("failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
 		return nil, err
 	}
 	findingData := &finding.FindingBatchForUpsert{
@@ -182,7 +182,7 @@ func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.Attac
 	if err != nil {
 		return err
 	}
-	appLogger.Infof("Success to update GCP DataSource status, response=%+v", resp)
+	appLogger.Infof("success to update GCP DataSource status, response=%+v", resp)
 	return nil
 }
 
