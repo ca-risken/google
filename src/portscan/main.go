@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
-	mimosaxray "github.com/ca-risken/common/pkg/xray"
+	"github.com/ca-risken/common/pkg/tracer"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/gassara-kys/envconfig"
 )
@@ -26,6 +25,7 @@ type AppConfig struct {
 	EnvName         string   `default:"local" split_words:"true"`
 	ProfileExporter string   `split_words:"true" default:"nop"`
 	ProfileTypes    []string `split_words:"true"`
+	TraceDebug      bool     `split_words:"true" default:"false"`
 
 	// sqs
 	Debug string `default:"false"`
@@ -46,15 +46,12 @@ type AppConfig struct {
 	// portscan
 	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 	ScanExcludePortNumber int    `split_words:"true"                 default:"1000"`
+	ScanConcurrency       int64  `split_words:"true" default:"5"`
 }
 
 func main() {
 	var conf AppConfig
 	err := envconfig.Process("", &conf)
-	if err != nil {
-		appLogger.Fatal(err.Error())
-	}
-	err = mimosaxray.InitXRay(xray.Config{})
 	if err != nil {
 		appLogger.Fatal(err.Error())
 	}
@@ -79,12 +76,21 @@ func main() {
 	}
 	defer pc.Stop()
 
+	tc := &tracer.Config{
+		ServiceName: getFullServiceName(),
+		Environment: conf.EnvName,
+		Debug:       conf.TraceDebug,
+	}
+	tracer.Start(tc)
+	defer tracer.Stop()
+
 	appLogger.Info("Start")
 	handler := &sqsHandler{}
 	handler.findingClient = newFindingClient(conf.FindingSvcAddr)
 	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	handler.scanConcurrency = conf.ScanConcurrency
 	f, err := mimosasqs.NewFinalizer(common.PortscanDataSource, settingURL, conf.FindingSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
@@ -106,6 +112,6 @@ func main() {
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosaxray.MessageTracingHandler(conf.EnvName, getFullServiceName(),
+					mimosasqs.TracingHandler(getFullServiceName(),
 						f.FinalizeHandler(handler))))))
 }

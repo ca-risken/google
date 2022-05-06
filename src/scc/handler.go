@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
@@ -16,6 +15,7 @@ import (
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type sqsHandler struct {
@@ -57,9 +57,9 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 	appLogger.Infof("start SCC ListFinding API, RequestID=%s", requestID)
-	xctx, segment := xray.BeginSubsegment(ctx, "listFinding")
-	it := s.sccClient.listFinding(xctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
-	segment.Close(nil)
+	tspan, tctx := tracer.StartSpanFromContext(ctx, "listFinding")
+	it := s.sccClient.listFinding(tctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	tspan.Finish()
 	appLogger.Infof("end SCC ListFinding API, RequestID=%s", requestID)
 
 	appLogger.Infof("start put findings, RequestID=%s", requestID)
