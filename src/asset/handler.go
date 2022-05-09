@@ -11,13 +11,13 @@ import (
 	"cloud.google.com/go/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"google.golang.org/api/iterator"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
@@ -44,12 +44,12 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", sqsMsg, err)
+		appLogger.Errorf("invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	requestID, err := appLogger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
-		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
+		appLogger.Warnf("failed to generate requestID: err=%+v", err)
 		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
@@ -57,7 +57,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 	appLogger.Infof("start get GCP DataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
-		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+		appLogger.Errorf("failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
@@ -70,46 +70,52 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		ProjectId:  msg.ProjectID,
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
-		appLogger.Errorf("Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		appLogger.Errorf("failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 
 	// Get cloud asset
 	appLogger.Infof("start CloudAsset API, RequestID=%s", requestID)
 	assetCounter := 0
+	nextPageToken := ""
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
-		appLogger.Debugf("start next CloudAsset API, RequestID=%s", requestID)
-		resource, done, err := s.listAssetIterationCallWithRetry(it)
-		if done {
-			break
-		}
+		resources, token, err := s.listAssetIterationCallWithRetry(it, nextPageToken)
 		if err != nil {
 			return s.handleErrorWithUpdateStatus(ctx, scanStatus,
-				fmt.Errorf("Failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, RequestID=%s, err=%+v",
+				fmt.Errorf("failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, RequestID=%s, err=%+v",
 					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, requestID, err))
 		}
-		assetCounter++
-		appLogger.Debugf("end next CloudAsset API, RequestID=%s", requestID)
 
-		f, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, resource)
-		if err != nil {
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus,
-				fmt.Errorf("Failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err))
+		assets := []*assetFinding{}
+		for _, r := range resources {
+			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r)
+			if err != nil {
+				return s.handleErrorWithUpdateStatus(ctx, scanStatus,
+					fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+						msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err))
+			}
+			assets = append(assets, a)
 		}
+
 		// Put finding
-		appLogger.Debugf("start putFinding, RequestID=%s", requestID)
-		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f); err != nil {
-			appLogger.Errorf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		if len(assets) > 0 {
+			if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, assets); err != nil {
+				appLogger.Errorf("failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
+				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			}
 		}
-		appLogger.Debugf("end putFinding, RequestID=%s", requestID)
+		assetCounter = assetCounter + len(assets)
+		nextPageToken = token
+		if token == "" {
+			break
+		}
+
 		// Control the number of API requests so that they are not exceeded.
 		time.Sleep(time.Duration(s.waitMilliSecPerRequest) * time.Millisecond)
 	}
-	appLogger.Infof("Got %d assets, RequestID=%s", assetCounter, requestID)
+	appLogger.Infof("got %d assets, RequestID=%s", assetCounter, requestID)
 	appLogger.Infof("end CloudAsset API, RequestID=%s", requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
@@ -128,7 +134,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+		appLogger.Warnf("failed to update scan status error: err=%+v", updateErr)
 	}
 	return mimosasqs.WrapNonRetryable(err)
 }
@@ -148,86 +154,86 @@ func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 		return nil, err
 	}
 	if data == nil || data.GcpDataSource == nil {
-		return nil, fmt.Errorf("No gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
+		return nil, fmt.Errorf("no gcp data, project_id=%d, gcp_id=%d, google_data_source_id=%d", projectID, gcpID, googleDataSourceID)
 	}
 	return data.GcpDataSource, nil
 }
 
-func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *assetFinding) error {
-	score := scoreAsset(f)
-	if score == 0.0 {
-		// PutResource
-		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
-			Resource: &finding.ResourceForUpsert{
-				ResourceName: f.Asset.Name,
-				ProjectId:    projectID,
-			},
-		})
+func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, assets []*assetFinding) error {
+	resources := []*finding.ResourceBatchForUpsert{}
+	findings := []*finding.FindingBatchForUpsert{}
+	for _, a := range assets {
+		score := scoreAsset(a)
+		if score == 0.0 {
+			// Resource
+			r := &finding.ResourceBatchForUpsert{
+				Resource: &finding.ResourceForUpsert{
+					ResourceName: a.Asset.Name,
+					ProjectId:    projectID,
+				},
+			}
+			tags := []*finding.ResourceTagForBatch{
+				{Tag: common.TagGoogle},
+				{Tag: common.TagGCP},
+				{Tag: gcpProjectID},
+			}
+			for _, t := range getAssetTags(a.Asset.AssetType, a.Asset.Name) {
+				tags = append(tags, &finding.ResourceTagForBatch{Tag: t})
+			}
+			r.Tag = tags
+			resources = append(resources, r)
+			continue
+		}
+
+		// Finding
+		buf, err := json.Marshal(a)
 		if err != nil {
-			appLogger.Errorf("Failed to put resource project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+			appLogger.Errorf("failed to marshal user data, project_id=%d, assetName=%s, err=%+v", projectID, a.Asset.Name, err)
 			return err
 		}
-		if err := s.tagResource(ctx, common.TagGoogle, resp.Resource.ResourceId, projectID); err != nil {
-			return err
+		f := &finding.FindingBatchForUpsert{
+			Finding: &finding.FindingForUpsert{
+				Description:      fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName),
+				DataSource:       common.AssetDataSource,
+				DataSourceId:     a.Asset.Name,
+				ResourceName:     a.Asset.Name,
+				ProjectId:        projectID,
+				OriginalScore:    score,
+				OriginalMaxScore: 1.0,
+				Data:             string(buf),
+			},
 		}
-		if err := s.tagResource(ctx, common.TagGCP, resp.Resource.ResourceId, projectID); err != nil {
-			return err
+		tags := []*finding.FindingTagForBatch{
+			{Tag: common.TagGoogle},
+			{Tag: common.TagGCP},
+			{Tag: common.TagAssetInventory},
+			{Tag: gcpProjectID},
 		}
-		if err := s.tagResource(ctx, gcpProjectID, resp.Resource.ResourceId, projectID); err != nil {
-			return err
+		for _, t := range getAssetTags(a.Asset.AssetType, a.Asset.Name) {
+			tags = append(tags, &finding.FindingTagForBatch{Tag: t})
 		}
-		for _, t := range getAssetTags(f.Asset.AssetType, f.Asset.Name) {
-			if err := s.tagResource(ctx, t, resp.Resource.ResourceId, projectID); err != nil {
-				return err
+		f.Tag = tags
+
+		r := getRecommend(a.Asset.AssetType)
+		if r.Risk == "" && r.Recommendation == "" {
+			appLogger.Warnf("failed to get recommendation, Unknown type=%s", a.Asset.AssetType)
+		} else {
+			f.Recommend = &finding.RecommendForBatch{
+				Type:           a.Asset.AssetType,
+				Risk:           r.Risk,
+				Recommendation: r.Recommendation,
 			}
 		}
-		return nil
+		findings = append(findings, f)
 	}
-
-	buf, err := json.Marshal(f)
-	if err != nil {
-		appLogger.Errorf("Failed to marshal user data, project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+	// put
+	if err := grpc_client.PutResourceBatch(ctx, s.findingClient, projectID, resources); err != nil {
 		return err
 	}
-	// PutFinding
-	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
-		Finding: &finding.FindingForUpsert{
-			Description:      fmt.Sprintf("GCP Cloud Asset: %s", f.Asset.DisplayName),
-			DataSource:       common.AssetDataSource,
-			DataSourceId:     f.Asset.Name,
-			ResourceName:     f.Asset.Name,
-			ProjectId:        projectID,
-			OriginalScore:    score,
-			OriginalMaxScore: 1.0,
-			Data:             string(buf),
-		},
-	})
-	if err != nil {
-		appLogger.Errorf("Failed to put finding project_id=%d, assetName=%s, err=%+v", projectID, f.Asset.Name, err)
+	if err := grpc_client.PutFindingBatch(ctx, s.findingClient, projectID, findings); err != nil {
 		return err
 	}
-	// PutFindingTag
-	if err := s.tagFinding(ctx, common.TagGoogle, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
-		return err
-	}
-	if err := s.tagFinding(ctx, common.TagGCP, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
-		return err
-	}
-	if err := s.tagFinding(ctx, common.TagAssetInventory, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
-		return err
-	}
-	if err := s.tagFinding(ctx, gcpProjectID, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
-		return err
-	}
-	for _, t := range getAssetTags(f.Asset.AssetType, f.Asset.Name) {
-		if err := s.tagFinding(ctx, t, resp.Finding.FindingId, resp.Finding.ProjectId); err != nil {
-			return err
-		}
-	}
-	if err := s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f.Asset.AssetType); err != nil {
-		return err
-	}
-	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Infof("putFindings(%d) succeeded", len(assets))
 	return nil
 }
 
@@ -237,32 +243,6 @@ func getAssetTags(assetType, assetName string) []string {
 		tags = append(tags, common.TagServiceAccount)
 	}
 	return tags
-}
-
-func (s *sqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) error {
-	if _, err := s.findingClient.TagFinding(ctx, &finding.TagFindingRequest{
-		ProjectId: projectID,
-		Tag: &finding.FindingTagForUpsert{
-			FindingId: findingID,
-			ProjectId: projectID,
-			Tag:       tag,
-		}}); err != nil {
-		return fmt.Errorf("Failed to TagFinding, finding_id=%d, tag=%s, error=%+v", findingID, tag, err)
-	}
-	return nil
-}
-
-func (s *sqsHandler) tagResource(ctx context.Context, tag string, resourceID uint64, projectID uint32) error {
-	if _, err := s.findingClient.TagResource(ctx, &finding.TagResourceRequest{
-		ProjectId: projectID,
-		Tag: &finding.ResourceTagForUpsert{
-			ResourceId: resourceID,
-			ProjectId:  projectID,
-			Tag:        tag,
-		}}); err != nil {
-		return fmt.Errorf("Failed to TagResource, resource_id=%d, tag=%s, error=%+v", resourceID, tag, err)
-	}
-	return nil
 }
 
 func (s *sqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
@@ -283,7 +263,7 @@ func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.Attac
 	if err != nil {
 		return err
 	}
-	appLogger.Infof("Success to update GCP DataSource status, response=%+v", resp)
+	appLogger.Infof("success to update GCP DataSource status, response=%+v", resp)
 	return nil
 }
 
@@ -303,7 +283,6 @@ const (
 )
 
 func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID string, r *assetpb.ResourceSearchResult) (*assetFinding, error) {
-	appLogger.Debugf("Resource details: %+v", r)
 	f := assetFinding{Asset: r}
 	var err error
 	// IAM
@@ -386,6 +365,7 @@ func scoreAssetForStorage(f *assetFinding) float32 {
 }
 
 const (
+	assetPageSize = 200
 	// https://cloud.google.com/storage/docs/access-control/lists#scopes
 	allUsers              string = "allUsers"
 	allAuthenticatedUsers string = "allAuthenticatedUsers"
@@ -409,45 +389,26 @@ func writableRole(role string) bool {
 	return true
 }
 
-func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchResultIterator) (resource *assetpb.ResourceSearchResult, done bool, err error) {
+func (s *sqsHandler) listAssetIterationCallWithRetry(it *asset.ResourceSearchResultIterator, pageToken string) (resource []*assetpb.ResourceSearchResult, nextPageToken string, err error) {
 	for i := 0; i <= s.assetAPIRetryNum; i++ {
 		if i > 0 {
 			time.Sleep(time.Duration(s.assetAPIRetryWaitSec+i) * time.Second)
 		}
-		resource, err = it.Next() // Call API
-		if err == iterator.Done {
-			return resource, true, nil
-		}
-		if err == nil {
-			return resource, false, nil
-		}
-		// https://cloud.google.com/apis/design/errors#retrying_errors
-		// > For 429 RESOURCE_EXHAUSTED errors, the client may retry at the higher level with minimum 30s delay.
-		// > Such retries are only useful for long running background jobs.
-		if i < s.assetAPIRetryNum {
-			appLogger.Warnf("Failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, API Result=%+v, err=%+v",
-				s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, resource, err)
-		}
-	}
-	return nil, false, fmt.Errorf("Failed to call CloudAsset API (Retry %d times , But all failed), err=%+v", s.assetAPIRetryNum, err)
-}
 
-func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, assetType string) error {
-	r := getRecommend(assetType)
-	if r.Risk == "" && r.Recommendation == "" {
-		appLogger.Warnf("Failed to get recommendation, Unknown type=%s", assetType)
-		return nil
+		// API Call
+		resources, token, err := it.InternalFetch(assetPageSize, pageToken)
+		if err != nil {
+			// Retry
+			// https://cloud.google.com/apis/design/errors#retrying_errors
+			// > For 429 RESOURCE_EXHAUSTED errors, the client may retry at the higher level with minimum 30s delay.
+			// > Such retries are only useful for long running background jobs.
+			if i < s.assetAPIRetryNum {
+				appLogger.Warnf("failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, API Result=%+v, err=%+v",
+					s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, resource, err)
+			}
+			continue
+		}
+		return resources, token, nil
 	}
-	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
-		ProjectId:      projectID,
-		FindingId:      findingID,
-		DataSource:     common.AssetDataSource,
-		Type:           assetType,
-		Risk:           r.Risk,
-		Recommendation: r.Recommendation,
-	}); err != nil {
-		return fmt.Errorf("Failed to TagFinding, finding_id=%d, asset_type=%s, error=%+v", findingID, assetType, err)
-	}
-	appLogger.Debugf("Success PutRecommend, finding_id=%d, reccomend=%+v", findingID, r)
-	return nil
+	return nil, "", fmt.Errorf("Failed to call Asset API, err=%+v", err)
 }

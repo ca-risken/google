@@ -82,7 +82,7 @@ func main() {
 	tracer.Start(tc)
 	defer tracer.Stop()
 
-	appLogger.Info("Start")
+	appLogger.Info("start")
 	handler := &sqsHandler{}
 	handler.findingClient = newFindingClient(conf.FindingSvcAddr)
 	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
@@ -90,7 +90,7 @@ func main() {
 	handler.sccClient = newSCCClient(conf.GoogleCredentialPath)
 	f, err := mimosasqs.NewFinalizer(common.SCCDataSource, settingURL, conf.FindingSvcAddr, nil)
 	if err != nil {
-		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
+		appLogger.Fatalf("failed to create Finalizer, err=%+v", err)
 	}
 
 	sqsConf := &SQSConfig{
@@ -104,7 +104,7 @@ func main() {
 	}
 	consumer := newSQSConsumer(sqsConf)
 
-	appLogger.Info("Start the SQS consumer server for GCP Security Command Center...")
+	appLogger.Info("start the SQS consumer server for GCP Security Command Center...")
 	ctx := context.Background()
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(

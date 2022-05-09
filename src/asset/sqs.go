@@ -30,7 +30,7 @@ func newSQSConsumer(conf *SQSConfig) *worker.Worker {
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		appLogger.Fatalf("Failed to create a new session, %v", err)
+		appLogger.Fatalf("failed to create a new session, %v", err)
 	}
 	if !zero.IsZeroVal(&conf.SQSEndpoint) {
 		sqsClient = sqs.New(sess, &aws.Config{
@@ -42,7 +42,7 @@ func newSQSConsumer(conf *SQSConfig) *worker.Worker {
 			Region: &conf.AWSRegion,
 		})
 	}
-	appLogger.Infof("Created SQS client, sqsConfig=%+v", conf)
+	appLogger.Infof("created SQS client, sqsConfig=%+v", conf)
 	return &worker.Worker{
 		Config: &worker.Config{
 			QueueName:          conf.AssetQueueName,

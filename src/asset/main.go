@@ -112,7 +112,7 @@ func main() {
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(sqsConf)
-	appLogger.Info("Start the SQS consumer server for GCP Cloud Asset Inventory...")
+	appLogger.Info("start the SQS consumer server for GCP Cloud Asset Inventory...")
 	ctx := context.Background()
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(

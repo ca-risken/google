@@ -7,12 +7,13 @@ require (
 	cloud.google.com/go/asset v0.1.0
 	cloud.google.com/go/storage v1.16.1
 	github.com/aws/aws-sdk-go v1.42.22
+	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220502113147-30e51b8fe763
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220113015330-0e8462d52b5b
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220426050416-a654045b9fa5
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20220425094653-eace2e0a3d4a
 	github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86
-	github.com/ca-risken/core/proto/finding v0.0.0-20220309052852-c058b4e5cb84
+	github.com/ca-risken/core/proto/finding v0.0.0-20220420065103-ec7428a46fe5
 	github.com/ca-risken/google/pkg/common v0.0.0-20220106084245-d6fa7174f282
 	github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf
 	github.com/gassara-kys/envconfig v1.4.4
@@ -53,11 +54,11 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.38.0 // indirect
 )
