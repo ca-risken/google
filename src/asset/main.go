@@ -31,9 +31,8 @@ type AppConfig struct {
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 
 	// grpc
-	FindingSvcAddr string `required:"true" split_words:"true" default:"finding.core.svc.cluster.local:8001"`
-	AlertSvcAddr   string `required:"true" split_words:"true" default:"alert.core.svc.cluster.local:8004"`
-	GoogleSvcAddr  string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
 
 	// sqs
 	Debug string `default:"false"`
@@ -93,11 +92,11 @@ func main() {
 		assetAPIRetryNum:       conf.AssetAPIRetryNum,
 		assetAPIRetryWaitSec:   conf.AssetAPIRetryWaitSec,
 	}
-	handler.findingClient = newFindingClient(conf.FindingSvcAddr)
-	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
+	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
+	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
-	f, err := mimosasqs.NewFinalizer(common.AssetDataSource, settingURL, conf.FindingSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(common.AssetDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
 	}

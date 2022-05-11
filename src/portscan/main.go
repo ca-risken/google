@@ -39,9 +39,8 @@ type AppConfig struct {
 	WaitTimeSecond     int64  `split_words:"true" default:"20"`
 
 	// grpc
-	FindingSvcAddr string `required:"true" split_words:"true" default:"finding.core.svc.cluster.local:8001"`
-	AlertSvcAddr   string `required:"true" split_words:"true" default:"alert.core.svc.cluster.local:8004"`
-	GoogleSvcAddr  string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
 
 	// portscan
 	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
@@ -86,12 +85,12 @@ func main() {
 
 	appLogger.Info("Start")
 	handler := &sqsHandler{}
-	handler.findingClient = newFindingClient(conf.FindingSvcAddr)
-	handler.alertClient = newAlertClient(conf.AlertSvcAddr)
+	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
+	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
 	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
 	handler.scanConcurrency = conf.ScanConcurrency
-	f, err := mimosasqs.NewFinalizer(common.PortscanDataSource, settingURL, conf.FindingSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(common.PortscanDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
 	}

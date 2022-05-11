@@ -54,7 +54,7 @@ type AppConfig struct {
 	DBMaxConnection int    `split_words:"true" default:"10"`
 
 	// grpc
-	ProjectSvcAddr string `required:"true" split_words:"true" default:"project.core.svc.cluster.local:8003"`
+	CoreSvcAddr string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
 
 	// resourceManager
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
@@ -124,7 +124,7 @@ func main() {
 	}
 	service.sqs = newSQSClient(sqsConf)
 	service.resourceManager = newResourceManagerClient(conf.GoogleCredentialPath)
-	service.projectClient = newProjectClient(conf.ProjectSvcAddr)
+	service.projectClient = newProjectClient(conf.CoreSvcAddr)
 
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
