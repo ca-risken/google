@@ -39,7 +39,7 @@ type serviceConfig struct {
 	WaitTimeSecond     int64  `split_words:"true" default:"20"`
 
 	// grpc
-	CoreSvcAddr   string `required:"true" split_words:"true" default:"finding.core.svc.cluster.local:8080"`
+	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
 	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
 
 	// scc
