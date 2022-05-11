@@ -298,7 +298,7 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 	for _, gcp := range *list {
 		if resp, err := g.projectClient.IsActive(ctx, &project.IsActiveRequest{ProjectId: gcp.ProjectID}); err != nil {
 			appLogger.Errorf("Failed to project.IsActive API, err=%+v", err)
-			continue
+			return nil, err
 		} else if !resp.Active {
 			appLogger.Infof("Skip deactive project, project_id=%d", gcp.ProjectID)
 			continue
@@ -310,9 +310,10 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 			GoogleDataSourceId: gcp.GoogleDataSourceID,
 			ScanOnly:           true,
 		}); err != nil {
-			// エラーログはいて握りつぶす（すべてのスキャナ登録しきる）
 			appLogger.Errorf("InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
+			return nil, err
 		}
+		// TODO delete jitter
 		time.Sleep(time.Millisecond * 100) // jitter
 	}
 	return &google.Empty{}, nil
