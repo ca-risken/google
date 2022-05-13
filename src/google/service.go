@@ -118,8 +118,16 @@ func (g *googleService) DeleteGCP(ctx context.Context, req *google.DeleteGCPRequ
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := g.repository.DeleteGCP(ctx, req.ProjectId, req.GcpId)
-	if err != nil {
+	list, err := g.repository.ListGoogleDataSource(ctx, 0, "")
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	for _, ds := range *list {
+		if err := g.repository.DeleteGCPDataSource(ctx, req.ProjectId, req.GcpId, ds.GoogleDataSourceID); err != nil {
+			return nil, err
+		}
+	}
+	if err := g.repository.DeleteGCP(ctx, req.ProjectId, req.GcpId); err != nil {
 		return nil, err
 	}
 	return &google.Empty{}, nil
