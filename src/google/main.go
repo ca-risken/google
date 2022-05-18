@@ -131,8 +131,8 @@ func main() {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			grpcmiddleware.ChainUnaryServer(
-				mimosarpc.LoggingUnaryServerInterceptor(appLogger),
-				grpctrace.UnaryServerInterceptor())))
+				grpctrace.UnaryServerInterceptor(),
+				mimosarpc.LoggingUnaryServerInterceptor(appLogger))))
 	google.RegisterGoogleServiceServer(server, service)
 	reflection.Register(server) // enable reflection API
 
