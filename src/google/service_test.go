@@ -282,6 +282,8 @@ func TestDeleteGCP(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			mockDB.On("ListGCPDataSource").Return(&[]gcpDataSource{{GoogleDataSourceID: 1}}, nil)
+			mockDB.On("DeleteGCPDataSource").Return(nil)
 			mockDB.On("DeleteGCP").Return(c.mockError).Once()
 			_, err := svc.DeleteGCP(ctx, c.input)
 			if !c.wantErr && err != nil {
