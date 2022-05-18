@@ -291,7 +291,7 @@ func (g *googleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	}); err != nil {
 		return nil, err
 	}
-	appLogger.Infof("Invoke scanned, messageId: %v", resp.MessageId)
+	appLogger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
 	return &google.Empty{}, nil
 }
 
@@ -305,10 +305,10 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 	}
 	for _, gcp := range *list {
 		if resp, err := g.projectClient.IsActive(ctx, &project.IsActiveRequest{ProjectId: gcp.ProjectID}); err != nil {
-			appLogger.Errorf("Failed to project.IsActive API, err=%+v", err)
+			appLogger.Errorf(ctx, "Failed to project.IsActive API, err=%+v", err)
 			return nil, err
 		} else if !resp.Active {
-			appLogger.Infof("Skip deactive project, project_id=%d", gcp.ProjectID)
+			appLogger.Infof(ctx, "Skip deactive project, project_id=%d", gcp.ProjectID)
 			continue
 		}
 
@@ -318,7 +318,7 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 			GoogleDataSourceId: gcp.GoogleDataSourceID,
 			ScanOnly:           true,
 		}); err != nil {
-			appLogger.Errorf("InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
+			appLogger.Errorf(ctx, "InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
 			return nil, err
 		}
 		// TODO delete jitter

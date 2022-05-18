@@ -202,11 +202,11 @@ ON DUPLICATE KEY UPDATE
 func (g *googleRepository) UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
 	// Check master table exists
 	if _, err := g.GetGoogleDataSource(ctx, gcpDataSource.GoogleDataSourceId); err != nil {
-		appLogger.Errorf("Not exists google_data_source or DB error: google_data_source_id=%d", gcpDataSource.GoogleDataSourceId)
+		appLogger.Errorf(ctx, "Not exists google_data_source or DB error: google_data_source_id=%d", gcpDataSource.GoogleDataSourceId)
 		return nil, err
 	}
 	if _, err := g.GetGCP(ctx, gcpDataSource.ProjectId, gcpDataSource.GcpId); err != nil {
-		appLogger.Errorf("Not exists gcp or DB error: gcp_id=%d", gcpDataSource.GcpId)
+		appLogger.Errorf(ctx, "Not exists gcp or DB error: gcp_id=%d", gcpDataSource.GcpId)
 		return nil, err
 	}
 
