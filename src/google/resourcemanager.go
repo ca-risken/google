@@ -22,12 +22,12 @@ func newResourceManagerClient(credentialPath string) resourceManagerServiceClien
 	ctx := context.Background()
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf("Failed to create new Cloud Resource Manager service: %+v", err)
+		appLogger.Fatalf(ctx, "Failed to create new Cloud Resource Manager service: %+v", err)
 	}
 
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", credentialPath, err)
+		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &resourceManagerClient{
 		svc: svc,
@@ -48,10 +48,10 @@ func (r *resourceManagerClient) verifyCode(ctx context.Context, gcpProjectID, ve
 	resp, err := r.svc.Projects.Get(gcpProjectID).Context(cctx).Do()
 	cspan.Finish(tracer.WithError(err))
 	if err != nil {
-		appLogger.Warnf("Failed to ResourceManager.Projects.Get API, err=%+v", err)
+		appLogger.Warnf(ctx, "Failed to ResourceManager.Projects.Get API, err=%+v", err)
 		return false, fmt.Errorf("Failed to ResourceManager.Projects.Get API, err=%+v", err)
 	}
-	appLogger.Debugf("Got the project info: %+v", resp)
+	appLogger.Debugf(ctx, "Got the project info: %+v", resp)
 	if v, ok := resp.Labels[verificationLabelKey]; !ok || v != verificationCode {
 		return false, fmt.Errorf(verificationErrMsgTemplate, verificationLabelKey, verificationCode)
 	}
