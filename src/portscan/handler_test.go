@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"reflect"
 	"testing"
 )
@@ -69,7 +70,8 @@ func TestSplitPort(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			fromPort, toPort, err := splitPort(c.input)
+			ctx := context.Background()
+			fromPort, toPort, err := splitPort(ctx, c.input)
 			if !reflect.DeepEqual(c.wantFrom, fromPort) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.wantFrom, fromPort)
 			}
@@ -112,7 +114,8 @@ func TestGtFullResourceName(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := getFullResourceName(c.input)
+			ctx := context.Background()
+			got := getFullResourceName(ctx, c.input)
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
 			}
