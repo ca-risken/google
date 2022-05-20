@@ -72,28 +72,28 @@ func (c *cloudSploitFinding) generateDataSourceID() {
 func (g *cloudSploitClient) run(ctx context.Context, gcpProjectID string) (*[]cloudSploitFinding, error) {
 	unixNano := time.Now().UnixNano()
 	// Generate cloudsploit confing file
-	configJs, err := g.generateConfig(gcpProjectID, unixNano)
+	configJs, err := g.generateConfig(ctx, gcpProjectID, unixNano)
 	if err != nil {
-		appLogger.Errorf("Failed to generate config file, gcpProjectID=%s, err=%+v", gcpProjectID, err)
+		appLogger.Errorf(ctx, "Failed to generate config file, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return nil, err
 	}
 
 	// Exec CloudSploit
-	result, resultJSON, err := g.execCloudSploit(gcpProjectID, unixNano, configJs)
+	result, resultJSON, err := g.execCloudSploit(ctx, gcpProjectID, unixNano, configJs)
 	if err != nil {
-		appLogger.Errorf("Failed to exec cloudsploit, gcpProjectID=%s, err=%+v", gcpProjectID, err)
+		appLogger.Errorf(ctx, "Failed to exec cloudsploit, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return nil, err
 	}
 
 	// Remove temp files
 	if err = g.removeTempFiles(configJs, resultJSON); err != nil {
-		appLogger.Errorf("Failed to remove temp files, gcpProjectID=%s, err=%+v", gcpProjectID, err)
+		appLogger.Errorf(ctx, "Failed to remove temp files, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return nil, err
 	}
 	return result, nil
 }
 
-func (g *cloudSploitClient) generateConfig(gcpProjectID string, unixNano int64) (string, error) {
+func (g *cloudSploitClient) generateConfig(ctx context.Context, gcpProjectID string, unixNano int64) (string, error) {
 	configJs, err := os.Create(fmt.Sprintf("/tmp/%s_%d_config.js", gcpProjectID, unixNano))
 	if err != nil {
 		return "", err
@@ -101,7 +101,7 @@ func (g *cloudSploitClient) generateConfig(gcpProjectID string, unixNano int64) 
 	defer configJs.Close()
 
 	if err = g.cloudSploitConfigTemplate.Execute(configJs, gcpProjectID); err != nil {
-		appLogger.Errorf("Failed to execute confing template, gcpProjectID=%s, err=%+v", gcpProjectID, err)
+		appLogger.Errorf(ctx, "Failed to execute confing template, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return "", err
 	}
 	return configJs.Name(), nil
@@ -112,7 +112,7 @@ const (
 	resourceUnknown       string = "Unknown"
 )
 
-func (g *cloudSploitClient) execCloudSploit(gcpProjectID string, unixNano int64, configJs string) (*[]cloudSploitFinding, string, error) {
+func (g *cloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID string, unixNano int64, configJs string) (*[]cloudSploitFinding, string, error) {
 	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
 	resultJSON, err := os.Create(filepath)
 	if err != nil {
@@ -136,7 +136,7 @@ func (g *cloudSploitClient) execCloudSploit(gcpProjectID string, unixNano int64,
 	if err != nil {
 		return nil, "", err
 	}
-	appLogger.Debugf("Result file Length: %d", len(buf))
+	appLogger.Debugf(ctx, "Result file Length: %d", len(buf))
 
 	var findings []cloudSploitFinding
 	if len(buf) == 0 {

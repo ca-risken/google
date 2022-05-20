@@ -35,8 +35,8 @@ type AppConfig struct {
 
 	CloudSploitQueueName string `split_words:"true" default:"google-cloudsploit"`
 	CloudSploitQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
-	MaxNumberOfMessage   int64  `split_words:"true" default:"10"`
-	WaitTimeSecond       int64  `split_words:"true" default:"20"`
+	MaxNumberOfMessage   int32  `split_words:"true" default:"10"`
+	WaitTimeSecond       int32  `split_words:"true" default:"20"`
 
 	// grpc
 	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
@@ -49,19 +49,20 @@ type AppConfig struct {
 }
 
 func main() {
+	ctx := context.Background()
 	var conf AppConfig
 	err := envconfig.Process("", &conf)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 
 	pTypes, err := profiler.ConvertProfileTypeFrom(conf.ProfileTypes)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	pExporter, err := profiler.ConvertExporterTypeFrom(conf.ProfileExporter)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	pc := profiler.Config{
 		ServiceName:  getFullServiceName(),
@@ -71,7 +72,7 @@ func main() {
 	}
 	err = pc.Start()
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	defer pc.Stop()
 
@@ -98,10 +99,10 @@ func main() {
 		conf.GoogleServiceAccountPrivateKey)
 	f, err := mimosasqs.NewFinalizer(common.CloudSploitDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
-		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
+		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
 	}
 
-	appLogger.Info("Start")
+	appLogger.Info(ctx, "Start")
 	sqsConf := &SQSConfig{
 		Debug:                conf.Debug,
 		AWSRegion:            conf.AWSRegion,
@@ -111,14 +112,13 @@ func main() {
 		MaxNumberOfMessage:   conf.MaxNumberOfMessage,
 		WaitTimeSecond:       conf.WaitTimeSecond,
 	}
-	consumer := newSQSConsumer(sqsConf)
+	consumer := newSQSConsumer(ctx, sqsConf)
 
-	appLogger.Info("Start the SQS consumer server for GCP CloudSploit...")
-	ctx := context.Background()
+	appLogger.Info(ctx, "Start the SQS consumer server for GCP CloudSploit...")
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
-				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosasqs.TracingHandler(getFullServiceName(),
+				mimosasqs.TracingHandler(getFullServiceName(),
+					mimosasqs.StatusLoggingHandler(appLogger,
 						f.FinalizeHandler(handler))))))
 }

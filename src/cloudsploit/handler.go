@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
@@ -25,44 +25,44 @@ type sqsHandler struct {
 	cloudSploit   cloudSploitServiceClient
 }
 
-func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) error {
-	msgBody := aws.StringValue(sqsMsg.Body)
-	appLogger.Infof("got message: %s", msgBody)
+func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
+	msgBody := aws.ToString(sqsMsg.Body)
+	appLogger.Infof(ctx, "got message: %s", msgBody)
 	msg, err := common.ParseMessage(msgBody)
 	if err != nil {
-		appLogger.Errorf("Invalid message: msg=%+v, err=%+v", sqsMsg, err)
+		appLogger.Errorf(ctx, "Invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	requestID, err := appLogger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
-		appLogger.Warnf("Failed to generate requestID: err=%+v", err)
+		appLogger.Warnf(ctx, "Failed to generate requestID: err=%+v", err)
 		requestID = fmt.Sprint(msg.ProjectID)
 	}
 
-	appLogger.Infof("start CloudSploit scan, RequestID=%s", requestID)
-	appLogger.Infof("start getGCPDataSource, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "start CloudSploit scan, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "start getGCPDataSource, RequestID=%s", requestID)
 	gcp, err := s.getGCPDataSource(ctx, msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID)
 	if err != nil {
-		appLogger.Errorf("Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+		appLogger.Errorf(ctx, "Failed to get gcp: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	appLogger.Infof("end getGCPDataSource, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "end getGCPDataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
 
 	// Get cloud sploit
-	appLogger.Infof("start Run cloudsploit, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "start Run cloudsploit, RequestID=%s", requestID)
 	tspan, tctx := tracer.StartSpanFromContext(ctx, "runCloudSploit")
 	result, err := s.cloudSploit.run(tctx, gcp.GcpProjectId)
 	tspan.Finish(tracer.WithError(err))
-	appLogger.Infof("end Run cloudsploit, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		appLogger.Error(errMsg)
+		appLogger.Error(ctx, errMsg)
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, errors.New(errMsg))
 	}
-	appLogger.Infof("start put finding, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "start put finding, RequestID=%s", requestID)
 
 	// Clear finding score
 	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
@@ -70,7 +70,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		ProjectId:  msg.ProjectID,
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
-		appLogger.Errorf("Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		appLogger.Errorf(ctx, "Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
 		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 	}
 
@@ -79,23 +79,23 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {
 			errMsg := fmt.Sprintf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			appLogger.Error(errMsg)
+			appLogger.Error(ctx, errMsg)
 			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
 		}
 	}
-	appLogger.Infof("end put finding, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "end put finding, RequestID=%s", requestID)
 
-	appLogger.Infof("start update scan status, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	appLogger.Infof("end update scan status, RequestID=%s", requestID)
-	appLogger.Infof("end CloudSploit scan, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "end update scan status, RequestID=%s", requestID)
+	appLogger.Infof(ctx, "end CloudSploit scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
 		return nil
 	}
 	if err := s.analyzeAlert(ctx, msg.ProjectID); err != nil {
-		appLogger.Notifyf(logging.ErrorLevel, "Failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
+		appLogger.Notifyf(ctx, logging.ErrorLevel, "Failed to analyzeAlert, project_id=%d, err=%+v", msg.ProjectID, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	return nil
@@ -103,7 +103,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *sqs.Message) err
 
 func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
-		appLogger.Warnf("Failed to update scan status error: err=%+v", updateErr)
+		appLogger.Warnf(ctx, "Failed to update scan status error: err=%+v", updateErr)
 	}
 	return mimosasqs.WrapNonRetryable(err)
 }
@@ -134,7 +134,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			},
 		})
 		if err != nil {
-			appLogger.Errorf("Failed to put reousrce project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+			appLogger.Errorf(ctx, "Failed to put reousrce project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 			return err
 		}
 		if err := s.tagResource(ctx, common.TagGoogle, resp.Resource.ResourceId, projectID); err != nil {
@@ -155,7 +155,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	f.setTags()
 	buf, err := json.Marshal(f)
 	if err != nil {
-		appLogger.Errorf("Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+		appLogger.Errorf(ctx, "Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 		return err
 	}
 	// PutFinding
@@ -172,7 +172,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		},
 	})
 	if err != nil {
-		appLogger.Errorf("Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
+		appLogger.Errorf(ctx, "Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
 		return err
 	}
 	// PutFindingTag
@@ -202,7 +202,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	if err := s.putRecommend(ctx, resp.Finding.ProjectId, resp.Finding.FindingId, f); err != nil {
 		return err
 	}
-	appLogger.Debugf("Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
+	appLogger.Debugf(ctx, "Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
 }
 
@@ -259,7 +259,7 @@ func (s *sqsHandler) updateScanStatus(ctx context.Context, putData *google.Attac
 	if err != nil {
 		return err
 	}
-	appLogger.Infof("Success to update GCPDataSource status, response=%+v", resp)
+	appLogger.Infof(ctx, "Success to update GCPDataSource status, response=%+v", resp)
 	return nil
 }
 
@@ -274,7 +274,7 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 	categoryPlugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
 	r := f.getRecommend()
 	if r.Risk == "" && r.Recommendation == "" {
-		appLogger.Warnf("Failed to get recommendation, Unknown plugin=%s", categoryPlugin)
+		appLogger.Warnf(ctx, "Failed to get recommendation, Unknown plugin=%s", categoryPlugin)
 		return nil
 	}
 	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
@@ -287,6 +287,6 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 	}); err != nil {
 		return fmt.Errorf("Failed to TagFinding, finding_id=%d, plugin=%s, error=%+v", findingID, categoryPlugin, err)
 	}
-	appLogger.Debugf("Success PutRecommend, finding_id=%d, reccomend=%+v", findingID, r)
+	appLogger.Debugf(ctx, "Success PutRecommend, finding_id=%d, reccomend=%+v", findingID, r)
 	return nil
 }
