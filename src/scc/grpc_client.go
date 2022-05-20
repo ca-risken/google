@@ -15,7 +15,7 @@ func newFindingClient(svcAddr string) finding.FindingServiceClient {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
-		appLogger.Fatalf("faild to get GRPC connection: err=%+v", err)
+		appLogger.Fatalf(ctx, "faild to get GRPC connection: err=%+v", err)
 	}
 	return finding.NewFindingServiceClient(conn)
 }
@@ -24,7 +24,7 @@ func newAlertClient(svcAddr string) alert.AlertServiceClient {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
-		appLogger.Fatalf("faild to get GRPC connection: err=%+v", err)
+		appLogger.Fatalf(ctx, "faild to get GRPC connection: err=%+v", err)
 	}
 	return alert.NewAlertServiceClient(conn)
 }
@@ -33,7 +33,7 @@ func newGoogleClient(svcAddr string) google.GoogleServiceClient {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
-		appLogger.Fatalf("faild to get GRPC connection: err=%+v", err)
+		appLogger.Fatalf(ctx, "faild to get GRPC connection: err=%+v", err)
 	}
 	return google.NewGoogleServiceClient(conn)
 }
