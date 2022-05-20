@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/aws/aws-sdk-go v1.42.22
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220113015330-0e8462d52b5b
-	github.com/ca-risken/common/pkg/portscan v0.0.0-20211118071101-9855266b50a1
+	github.com/ca-risken/common/pkg/portscan v0.0.0-20220520051921-497abce3e602
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220426050416-a654045b9fa5
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20220425094653-eace2e0a3d4a

@@ -14,9 +14,9 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/ca-risken/google/proto/google"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type sqsHandler struct {
@@ -142,7 +142,7 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 	if relFirewallResourceMap != nil {
 		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, message)
 		if err != nil {
-			appLogger.Errorf("Failed put Finding err: %v", err)
+			appLogger.Errorf("Failed put firewallResource Finding err: %v", err)
 		}
 	}
 	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, message)
