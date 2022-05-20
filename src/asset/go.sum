@@ -147,6 +147,8 @@ github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dR
 github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
 github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520094937-43925ced3ef1 h1:G0/PY97wBslIiee6eFK+ozq66xi4d8bTv1aUw0OYCcs=
 github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520094937-43925ced3ef1/go.mod h1:AUBAZBZxkiGHYAL/erurz7j+g3y7WLUvsyYbd3RHoWc=
+github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520120454-6d3c6da0f38a h1:XJJxCCRVJI//o2s2EWFHJ5zVPZSej+4sk486P1vzHLY=
+github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520120454-6d3c6da0f38a/go.mod h1:AUBAZBZxkiGHYAL/erurz7j+g3y7WLUvsyYbd3RHoWc=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220426050416-a654045b9fa5/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220518032134-ad443b601efd/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602 h1:cmDdv6i6xd9jbeH2Qf9ydQi0rhS2DDoLnlN4nXp8n6Q=

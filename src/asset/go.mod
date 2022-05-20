@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/aws/aws-sdk-go-v2 v1.16.4
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.18.5
-	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520094937-43925ced3ef1
+	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520120454-6d3c6da0f38a
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220520051921-497abce3e602

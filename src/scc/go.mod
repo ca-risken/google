@@ -4,10 +4,9 @@ go 1.17
 
 require (
 	cloud.google.com/go/securitycenter v0.1.0
-	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go-v2 v1.16.4
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.18.5
-	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520094937-43925ced3ef1
+	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20220520120454-6d3c6da0f38a
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220520051921-497abce3e602
@@ -18,7 +17,6 @@ require (
 	github.com/ca-risken/google/pkg/common v0.0.0-20220106084245-d6fa7174f282
 	github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf
 	github.com/gassara-kys/envconfig v1.4.4
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	google.golang.org/api v0.56.0
 	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
 	google.golang.org/grpc v1.45.0
@@ -33,6 +31,7 @@ require (
 	github.com/DataDog/gostackparse v0.5.0 // indirect
 	github.com/DataDog/sketches-go v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.15.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.4 // indirect
@@ -49,6 +48,7 @@ require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
