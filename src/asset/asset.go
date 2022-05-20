@@ -31,19 +31,19 @@ func newAssetClient(credentialPath string) assetServiceClient {
 	ctx := context.Background()
 	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf("Failed to authenticate for Google Asset API client: %+v", err)
+		appLogger.Fatalf(ctx, "Failed to authenticate for Google Asset API client: %+v", err)
 	}
 	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf("Failed to authenticate for Google IAM Admin API client: %+v", err)
+		appLogger.Fatalf(ctx, "Failed to authenticate for Google IAM Admin API client: %+v", err)
 	}
 	st, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf("Failed to authenticate for Google Cloud Storage client: %+v", err)
+		appLogger.Fatalf(ctx, "Failed to authenticate for Google Cloud Storage client: %+v", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf("Failed to remove file: path=%s, err=%+v", credentialPath, err)
+		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &assetClient{
 		asset: as,
@@ -112,6 +112,6 @@ func (a *assetClient) getStorageBucketPolicy(ctx context.Context, bucketName str
 	if err != nil {
 		return nil, fmt.Errorf("Failed to Bucket IAM Policy API, err=%+v", err)
 	}
-	appLogger.Debugf("BucketPolicy: %+v", policy)
+	appLogger.Debugf(ctx, "BucketPolicy: %+v", policy)
 	return policy, nil
 }
