@@ -22,11 +22,11 @@ func newSCCClient(credentialPath string) sccServiceClient {
 	ctx := context.Background()
 	c, err := scc.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf("failed to authenticate for Google API client: %+v", err)
+		appLogger.Fatalf(ctx, "failed to authenticate for Google API client: %+v", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf("failed to remove file: path=%s, err=%+v", credentialPath, err)
+		appLogger.Fatalf(ctx, "failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &sccClient{client: c}
 }

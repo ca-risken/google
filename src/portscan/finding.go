@@ -109,7 +109,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 			}
 		}
 		if err = s.putRecommend(ctx, res.Finding.ProjectId, res.Finding.FindingId, recommendCategory, res.Finding.ResourceName); err != nil {
-			appLogger.Errorf("Failed to put recommend project_id=%d, finding_id=%d, category=%s, err=%+v",
+			appLogger.Errorf(ctx, "Failed to put recommend project_id=%d, finding_id=%d, category=%s, err=%+v",
 				res.Finding.ProjectId, res.Finding.FindingId, recommendCategory, err)
 			return err
 		}
@@ -120,17 +120,17 @@ func (s *sqsHandler) putFindings(ctx context.Context, findings []*finding.Findin
 func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, recommendCategory, resourceName string) error {
 	resourceType := getResourceType(resourceName)
 	if zero.IsZeroVal(resourceType) {
-		appLogger.Warnf("Failed to get resource type, Unknown category,resource_name=%s", fmt.Sprintf("%v", resourceName))
+		appLogger.Warnf(ctx, "Failed to get resource type, Unknown category,resource_name=%s", fmt.Sprintf("%v", resourceName))
 		return nil
 	}
 	recommendType := getRecommendType(recommendCategory, resourceType)
 	if zero.IsZeroVal(recommendType) {
-		appLogger.Warnf("Failed to get recommendation type, Unknown category,resource_type=%s", fmt.Sprintf("%v:%v", recommendCategory, resourceType))
+		appLogger.Warnf(ctx, "Failed to get recommendation type, Unknown category,resource_type=%s", fmt.Sprintf("%v:%v", recommendCategory, resourceType))
 		return nil
 	}
 	r := getRecommend(recommendType)
 	if r.Risk == "" && r.Recommendation == "" {
-		appLogger.Warnf("Failed to get recommendation, Unknown reccomendType,service=%s", fmt.Sprintf("%v", recommendType))
+		appLogger.Warnf(ctx, "Failed to get recommendation, Unknown reccomendType,service=%s", fmt.Sprintf("%v", recommendType))
 		return nil
 	}
 	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{

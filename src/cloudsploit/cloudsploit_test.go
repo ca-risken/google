@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"os"
@@ -37,7 +38,8 @@ func TestGenerateConfig(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := testClient.generateConfig(c.input, unixNano)
+			ctx := context.Background()
+			got, err := testClient.generateConfig(ctx, c.input, unixNano)
 			if (c.wantErr && err == nil) || (!c.wantErr && err != nil) {
 				t.Fatalf("Unexpected error: wantErr=%t, err=%+v", c.wantErr, err)
 			}
@@ -72,7 +74,8 @@ func TestExecCloudSploit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, got, err := testClient.execCloudSploit(c.input, unixNano, testConfigFile)
+			ctx := context.Background()
+			_, got, err := testClient.execCloudSploit(ctx, c.input, unixNano, testConfigFile)
 			if (c.wantErr && err == nil) || (!c.wantErr && err != nil) {
 				t.Fatalf("Unexpected error: wantErr=%t, err=%+v", c.wantErr, err)
 			}

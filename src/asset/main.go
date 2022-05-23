@@ -42,8 +42,8 @@ type AppConfig struct {
 
 	AssetQueueName     string `split_words:"true" default:"google-asset"`
 	AssetQueueURL      string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
-	MaxNumberOfMessage int64  `split_words:"true" default:"10"`
-	WaitTimeSecond     int64  `split_words:"true" default:"20"`
+	MaxNumberOfMessage int32  `split_words:"true" default:"10"`
+	WaitTimeSecond     int32  `split_words:"true" default:"20"`
 
 	// handler
 	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
@@ -52,19 +52,20 @@ type AppConfig struct {
 }
 
 func main() {
+	ctx := context.Background()
 	var conf AppConfig
 	err := envconfig.Process("", &conf)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 
 	pTypes, err := profiler.ConvertProfileTypeFrom(conf.ProfileTypes)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	pExporter, err := profiler.ConvertExporterTypeFrom(conf.ProfileExporter)
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	pc := profiler.Config{
 		ServiceName:  getFullServiceName(),
@@ -74,7 +75,7 @@ func main() {
 	}
 	err = pc.Start()
 	if err != nil {
-		appLogger.Fatal(err.Error())
+		appLogger.Fatal(ctx, err.Error())
 	}
 	defer pc.Stop()
 
@@ -86,7 +87,7 @@ func main() {
 	tracer.Start(tc)
 	defer tracer.Stop()
 
-	appLogger.Info("Start")
+	appLogger.Info(ctx, "Start")
 	handler := &sqsHandler{
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
 		assetAPIRetryNum:       conf.AssetAPIRetryNum,
@@ -98,7 +99,7 @@ func main() {
 	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
 	f, err := mimosasqs.NewFinalizer(common.AssetDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
-		appLogger.Fatalf("Failed to create Finalizer, err=%+v", err)
+		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
 	}
 
 	sqsConf := &SQSConfig{
@@ -110,13 +111,12 @@ func main() {
 		MaxNumberOfMessage: conf.MaxNumberOfMessage,
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
-	consumer := newSQSConsumer(sqsConf)
-	appLogger.Info("start the SQS consumer server for GCP Cloud Asset Inventory...")
-	ctx := context.Background()
+	consumer := newSQSConsumer(ctx, sqsConf)
+	appLogger.Info(ctx, "start the SQS consumer server for GCP Cloud Asset Inventory...")
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
-				mimosasqs.StatusLoggingHandler(appLogger,
-					mimosasqs.TracingHandler(getFullServiceName(),
+				mimosasqs.TracingHandler(getFullServiceName(),
+					mimosasqs.StatusLoggingHandler(appLogger,
 						f.FinalizeHandler(handler))))))
 }
