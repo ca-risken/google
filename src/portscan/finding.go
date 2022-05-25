@@ -24,7 +24,7 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	tags = append(tags, gcpProjectID)
 	err = s.putFindings(ctx, findings, tags, categoryNmap)
 	if err != nil {
-		return fmt.Errorf("putNmapFinding error. gcpProjectID:%v, tags: %v, err: %v", gcpProjectID, tags, err)
+		return fmt.Errorf("putNmapFinding error. gcpProjectID:%v, tags: %v, err: %w", gcpProjectID, tags, err)
 	}
 	return nil
 }
