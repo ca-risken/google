@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.4
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.18.5
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602
-	github.com/ca-risken/common/pkg/portscan v0.0.0-20211118071101-9855266b50a1
+	github.com/ca-risken/common/pkg/portscan v0.0.0-20220525094706-413e91572a52
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220525094706-413e91572a52
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20220425094653-eace2e0a3d4a
