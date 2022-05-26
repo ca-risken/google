@@ -142,7 +142,7 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 	if relFirewallResourceMap != nil {
 		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, message)
 		if err != nil {
-			appLogger.Errorf(ctx, "Failed put Finding err: %v", err)
+			appLogger.Errorf(ctx, "Failed put firewall resource Finding err: %v", err)
 		}
 	}
 	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, message)
