@@ -321,8 +321,6 @@ func (g *googleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 			appLogger.Errorf(ctx, "InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
 			return nil, err
 		}
-		// TODO delete jitter
-		time.Sleep(time.Millisecond * 100) // jitter
 	}
 	return &google.Empty{}, nil
 }
