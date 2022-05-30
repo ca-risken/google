@@ -21,6 +21,10 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	}
 	findings := nmapResult.GetFindings(projectID, common.PortscanDataSource, string(data))
 	tags := nmapResult.GetTags()
+	if len(tags) == 0 {
+		// nmapResult.GetTags returns the slice that has empty element in some condition.
+		appLogger.Infof(ctx, "nmapResult has empty or unknown service, nmapResult: %v", nmapResult)
+	}
 	tags = append(tags, gcpProjectID)
 	err = s.putFindings(ctx, findings, tags, categoryNmap)
 	if err != nil {

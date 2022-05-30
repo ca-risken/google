@@ -158,10 +158,8 @@ github.com/ca-risken/common/pkg/logging v0.0.0-20220426050416-a654045b9fa5/go.mo
 github.com/ca-risken/common/pkg/logging v0.0.0-20220518032134-ad443b601efd/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602 h1:cmDdv6i6xd9jbeH2Qf9ydQi0rhS2DDoLnlN4nXp8n6Q=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
-github.com/ca-risken/common/pkg/portscan v0.0.0-20211118071101-9855266b50a1 h1:Z7xy+bCkdb4HKXRdtb9YDkkUJ3ZJTNdOAL0E9pKPR3k=
-github.com/ca-risken/common/pkg/portscan v0.0.0-20211118071101-9855266b50a1/go.mod h1:4JgzkE62Dv8uTvhAqTRE8KQWIZ6oQX2CcgfS6nf/I4Q=
-github.com/ca-risken/common/pkg/portscan v0.0.0-20220525094706-413e91572a52 h1:AkQ0/kOqBG7iXm1hW9MJZ3A5eFsAuCxiCGI2LXWfhWI=
-github.com/ca-risken/common/pkg/portscan v0.0.0-20220525094706-413e91572a52/go.mod h1:Fa8YzcvEpZJWQNYLI+toBvuD8o4wwEnvk5oOH6nLCrA=
+github.com/ca-risken/common/pkg/portscan v0.0.0-20220530101213-876a1f5fa110 h1:dC1rlZS3JkxsxNvcdvTuxlWHZMVriTSaI8HPg1plog0=
+github.com/ca-risken/common/pkg/portscan v0.0.0-20220530101213-876a1f5fa110/go.mod h1:Fa8YzcvEpZJWQNYLI+toBvuD8o4wwEnvk5oOH6nLCrA=
 github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27 h1:NV95obXJwovUBvxWPW5boJcMAwkUIrsqhH3uwhTfTNY=
 github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27/go.mod h1:xldq3VZ7qomkI5vfpw8Y9qCVEFl8BrSvDr+sxbz32H4=
 github.com/ca-risken/common/pkg/sqs v0.0.0-20220525094706-413e91572a52 h1:WCi2Ofmr7uFXwn85TDZNd6ydktjtntCiPyMHDjeaE7I=
