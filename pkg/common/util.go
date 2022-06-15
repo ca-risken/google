@@ -3,7 +3,7 @@ package common
 import (
 	"time"
 
-	"github.com/ca-risken/google/proto/google"
+	"github.com/ca-risken/datasource-api/proto/google"
 )
 
 // CutString returns cutting specific `cut` characters with ` ...` suffix from `input` string.
