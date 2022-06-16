@@ -7,7 +7,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/common/pkg/tracer"
-	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -31,8 +31,8 @@ type AppConfig struct {
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 
 	// grpc
-	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
-	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr          string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	DataSourceAPISvcAddr string `required:"true" split_words:"true" default:"datasource-api.core.svc.cluster.local:8081"`
 
 	// sqs
 	Debug string `default:"false"`
@@ -40,10 +40,10 @@ type AppConfig struct {
 	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	AssetQueueName     string `split_words:"true" default:"google-asset"`
-	AssetQueueURL      string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
-	MaxNumberOfMessage int32  `split_words:"true" default:"10"`
-	WaitTimeSecond     int32  `split_words:"true" default:"20"`
+	GoogleAssetQueueName string `split_words:"true" default:"google-asset"`
+	GoogleAssetQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
+	MaxNumberOfMessage   int32  `split_words:"true" default:"10"`
+	WaitTimeSecond       int32  `split_words:"true" default:"20"`
 
 	// handler
 	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
@@ -95,21 +95,21 @@ func main() {
 	}
 	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
 	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
+	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
 	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
-	f, err := mimosasqs.NewFinalizer(common.AssetDataSource, settingURL, conf.CoreSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(message.GoogleAssetDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
 	}
 
 	sqsConf := &SQSConfig{
-		Debug:              conf.Debug,
-		AWSRegion:          conf.AWSRegion,
-		SQSEndpoint:        conf.SQSEndpoint,
-		AssetQueueName:     conf.AssetQueueName,
-		AssetQueueURL:      conf.AssetQueueURL,
-		MaxNumberOfMessage: conf.MaxNumberOfMessage,
-		WaitTimeSecond:     conf.WaitTimeSecond,
+		Debug:                conf.Debug,
+		AWSRegion:            conf.AWSRegion,
+		SQSEndpoint:          conf.SQSEndpoint,
+		GoogleAssetQueueName: conf.GoogleAssetQueueName,
+		GoogleAssetQueueURL:  conf.GoogleAssetQueueURL,
+		MaxNumberOfMessage:   conf.MaxNumberOfMessage,
+		WaitTimeSecond:       conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(ctx, sqsConf)
 	appLogger.Info(ctx, "start the SQS consumer server for GCP Cloud Asset Inventory...")
