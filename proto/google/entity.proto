@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package google.google;
+option go_package = "github.com/ca-risken/google/proto/google";
+
+/**
+ * Entity
+ **/
+
+// Empty
+message Empty {}
+
+// GoogleDataSource
+message GoogleDataSource {
+  uint32 google_data_source_id = 1;
+  string name = 2;
+  string description = 3;
+  float max_score = 4;
+  int64 created_at = 5;
+  int64 updated_at = 6;
+}
+
+// GCP
+message GCP {
+  uint32 gcp_id = 1;
+  string name = 2;
+  uint32 project_id = 3;
+  string gcp_organization_id = 4;
+  string gcp_project_id = 5;
+  string verification_code = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+// GCPDataSource
+message GCPDataSource {
+  uint32 gcp_id = 1;                // gcp_data_source.gcp_id
+  uint32 google_data_source_id = 2; // gcp_data_source.google_data_source_id
+  uint32 project_id = 3;            // gcp_data_source.project_id
+  Status status = 4;                // gcp_data_source.status
+  string status_detail = 5;         // gcp_data_source.status_detail
+  int64 scan_at = 6;                // gcp_data_source.scan_at
+  int64 created_at = 7;             // gcp_data_source.created_at
+  int64 updated_at = 8;             // gcp_data_source.updated_at
+  string gcp_organization_id = 9;   // gcp.gcp_organization_id
+  string gcp_project_id = 10;       // gcp.gcp_project_id
+  string name = 11;                 // google_data_source.name
+  string description = 12;          // google_data_source.description
+  float max_score = 13;             // google_data_source.max_score
+}
+
+// Status
+enum Status {
+  UNKNOWN = 0;
+  OK = 1;
+  CONFIGURED = 2;
+  IN_PROGRESS = 3;
+  ERROR = 4;
+}
+
+// GCPForUpsert
+message GCPForUpsert {
+  uint32 gcp_id = 1; // Unique key for entity.
+  string name = 2;
+  uint32 project_id = 3;
+  string gcp_organization_id = 4;
+  string gcp_project_id = 5;
+  string verification_code = 6;
+}
+
+// GCPDataSourceForUpsert
+message GCPDataSourceForUpsert {
+  uint32 gcp_id = 1;
+  uint32 google_data_source_id = 2;
+  uint32 project_id = 3;
+  Status status = 4;
+  string status_detail = 5;
+  int64 scan_at = 6;
+}

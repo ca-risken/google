@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package google.google;
+option go_package = "github.com/ca-risken/google/proto/google";
+
+import "google/entity.proto";
+
+service GoogleService {
+  // Google DataSource
+  rpc ListGoogleDataSource(ListGoogleDataSourceRequest)
+      returns (ListGoogleDataSourceResponse);
+
+  // GCP
+  rpc ListGCP(ListGCPRequest) returns (ListGCPResponse);
+  rpc GetGCP(GetGCPRequest) returns (GetGCPResponse);
+  rpc PutGCP(PutGCPRequest) returns (PutGCPResponse);
+  rpc DeleteGCP(DeleteGCPRequest) returns (Empty);
+
+  // GCP DataSource
+  rpc ListGCPDataSource(ListGCPDataSourceRequest)
+      returns (ListGCPDataSourceResponse);
+  rpc GetGCPDataSource(GetGCPDataSourceRequest)
+      returns (GetGCPDataSourceResponse);
+  rpc AttachGCPDataSource(AttachGCPDataSourceRequest)
+      returns (AttachGCPDataSourceResponse);
+  rpc DetachGCPDataSource(DetachGCPDataSourceRequest) returns (Empty);
+
+  // Scan
+  rpc InvokeScanGCP(InvokeScanGCPRequest) returns (Empty); // For ondeamnd
+  rpc InvokeScanAll(InvokeScanAllRequest) returns (Empty); // For scheduled
+}
+
+message ListGoogleDataSourceRequest {
+  uint32 google_data_source_id = 1;
+  string name = 2;
+}
+
+message ListGoogleDataSourceResponse {
+  repeated GoogleDataSource google_data_source = 1;
+}
+
+message ListGCPRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  string gcp_project_id = 3;
+}
+
+message ListGCPResponse { repeated GCP gcp = 1; }
+
+message GetGCPRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+}
+
+message GetGCPResponse { GCP gcp = 1; }
+
+message PutGCPRequest {
+  uint32 project_id = 1;
+  GCPForUpsert gcp = 2;
+}
+
+message PutGCPResponse { GCP gcp = 1; }
+
+message DeleteGCPRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+}
+
+message ListGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+}
+
+message ListGCPDataSourceResponse {
+  repeated GCPDataSource gcp_data_source = 1;
+}
+
+message GetGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
+}
+
+message GetGCPDataSourceResponse { GCPDataSource gcp_data_source = 1; }
+
+message AttachGCPDataSourceRequest {
+  uint32 project_id = 1;
+  GCPDataSourceForUpsert gcp_data_source = 2;
+}
+
+message AttachGCPDataSourceResponse { GCPDataSource gcp_data_source = 1; }
+
+message DetachGCPDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
+}
+
+message InvokeScanGCPRequest {
+  uint32 project_id = 1;
+  uint32 gcp_id = 2;
+  uint32 google_data_source_id = 3;
+  bool scan_only = 4;
+}
+
+message InvokeScanAllRequest { uint32 google_data_source_id = 1; }
