@@ -7,7 +7,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/common/pkg/tracer"
-	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -33,14 +33,14 @@ type AppConfig struct {
 	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	PortscanQueueName  string `split_words:"true" default:"google-portscan"`
-	PortscanQueueURL   string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
-	MaxNumberOfMessage int32  `split_words:"true" default:"10"`
-	WaitTimeSecond     int32  `split_words:"true" default:"20"`
+	GooglePortscanQueueName string `split_words:"true" default:"google-portscan"`
+	GooglePortscanQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
+	MaxNumberOfMessage      int32  `split_words:"true" default:"10"`
+	WaitTimeSecond          int32  `split_words:"true" default:"20"`
 
 	// grpc
-	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
-	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr          string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	DataSourceAPISvcAddr string `required:"true" split_words:"true" default:"datasource-api.core.svc.cluster.local:8081"`
 
 	// portscan
 	GoogleCredentialPath  string `required:"true" split_words:"true" default:"/tmp/credential.json"`
@@ -88,22 +88,22 @@ func main() {
 	handler := &sqsHandler{}
 	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
 	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
+	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
 	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
 	handler.scanConcurrency = conf.ScanConcurrency
-	f, err := mimosasqs.NewFinalizer(common.PortscanDataSource, settingURL, conf.CoreSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(message.GooglePortscanDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
 	}
 
 	sqsConf := &SQSConfig{
-		Debug:              conf.Debug,
-		AWSRegion:          conf.AWSRegion,
-		SQSEndpoint:        conf.SQSEndpoint,
-		PortscanQueueName:  conf.PortscanQueueName,
-		PortscanQueueURL:   conf.PortscanQueueURL,
-		MaxNumberOfMessage: conf.MaxNumberOfMessage,
-		WaitTimeSecond:     conf.WaitTimeSecond,
+		Debug:                   conf.Debug,
+		AWSRegion:               conf.AWSRegion,
+		SQSEndpoint:             conf.SQSEndpoint,
+		GooglePortscanQueueName: conf.GooglePortscanQueueName,
+		GooglePortscanQueueURL:  conf.GooglePortscanQueueURL,
+		MaxNumberOfMessage:      conf.MaxNumberOfMessage,
+		WaitTimeSecond:          conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(ctx, sqsConf)
 	appLogger.Info(ctx, "Start the SQS consumer server for GCP Portscan Service")

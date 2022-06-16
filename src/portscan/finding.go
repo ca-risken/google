@@ -9,6 +9,7 @@ import (
 
 	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/google/pkg/common"
 	"github.com/vikyd/zero"
 )
@@ -19,7 +20,7 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	if err != nil {
 		return err
 	}
-	findings := nmapResult.GetFindings(projectID, common.PortscanDataSource, string(data))
+	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data))
 	tags := nmapResult.GetTags()
 	if len(tags) == 0 {
 		// nmapResult.GetTags returns the slice that has empty element in some condition.
@@ -33,7 +34,7 @@ func (s *sqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	return nil
 }
 
-func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string, excludeList []*exclude, message *common.GCPQueueMessage) error {
+func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string, excludeList []*exclude, msg *message.GCPQueueMessage) error {
 	var findings []*finding.FindingForUpsert
 	for _, e := range excludeList {
 		data, err := json.Marshal(map[string]exclude{"data": *e})
@@ -42,10 +43,10 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		}
 		finding := &finding.FindingForUpsert{
 			Description:      e.getDescription(),
-			DataSource:       common.PortscanDataSource,
+			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:%v:%v", e.Target, e.Protocol, e.ResourceName)),
 			ResourceName:     e.ResourceName,
-			ProjectId:        message.ProjectID,
+			ProjectId:        msg.ProjectID,
 			OriginalScore:    6.0,
 			OriginalMaxScore: 10.0,
 			Data:             string(data),
@@ -60,7 +61,7 @@ func (s *sqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 	return nil
 }
 
-func (s *sqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProjectID string, relFirewallResourceMap map[string]*relFirewallResource, message *common.GCPQueueMessage) error {
+func (s *sqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProjectID string, relFirewallResourceMap map[string]*relFirewallResource, msg *message.GCPQueueMessage) error {
 	var findings []*finding.FindingForUpsert
 	for resourceName, r := range relFirewallResourceMap {
 		data, err := json.Marshal(r)
@@ -73,10 +74,10 @@ func (s *sqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 		}
 		findings = append(findings, &finding.FindingForUpsert{
 			Description:      getFirewallRuleDescription(resourceName, r.IsPublic),
-			DataSource:       common.PortscanDataSource,
+			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:portscan_firewall:%v", gcpProjectID, resourceName)),
 			ResourceName:     resourceName,
-			ProjectId:        message.ProjectID,
+			ProjectId:        msg.ProjectID,
 			OriginalScore:    score,
 			OriginalMaxScore: 10.0,
 			Data:             string(data),
@@ -140,7 +141,7 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
 		ProjectId:      projectID,
 		FindingId:      findingID,
-		DataSource:     common.PortscanDataSource,
+		DataSource:     message.GooglePortscanDataSource,
 		Type:           recommendType,
 		Risk:           r.Risk,
 		Recommendation: r.Recommendation,
