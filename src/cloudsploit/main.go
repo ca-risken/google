@@ -7,7 +7,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/common/pkg/tracer"
-	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -33,14 +33,14 @@ type AppConfig struct {
 	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	CloudSploitQueueName string `split_words:"true" default:"google-cloudsploit"`
-	CloudSploitQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
-	MaxNumberOfMessage   int32  `split_words:"true" default:"10"`
-	WaitTimeSecond       int32  `split_words:"true" default:"20"`
+	GoogleCloudSploitQueueName string `split_words:"true" default:"google-cloudsploit"`
+	GoogleCloudSploitQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
+	MaxNumberOfMessage         int32  `split_words:"true" default:"10"`
+	WaitTimeSecond             int32  `split_words:"true" default:"20"`
 
 	// grpc
-	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
-	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr          string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	DataSourceAPISvcAddr string `required:"true" split_words:"true" default:"datasource-api.core.svc.cluster.local:8081"`
 
 	// cloudsploit
 	CloudSploitCommand             string `required:"true" split_words:"true" default:"/opt/cloudsploit/index.js"`
@@ -92,25 +92,25 @@ func main() {
 	}
 	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
 	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
+	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
 	handler.cloudSploit = newCloudSploitClient(
 		conf.CloudSploitCommand,
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey)
-	f, err := mimosasqs.NewFinalizer(common.CloudSploitDataSource, settingURL, conf.CoreSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(message.GoogleCloudSploitDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
 	}
 
 	appLogger.Info(ctx, "Start")
 	sqsConf := &SQSConfig{
-		Debug:                conf.Debug,
-		AWSRegion:            conf.AWSRegion,
-		SQSEndpoint:          conf.SQSEndpoint,
-		CloudSploitQueueName: conf.CloudSploitQueueName,
-		CloudSploitQueueURL:  conf.CloudSploitQueueURL,
-		MaxNumberOfMessage:   conf.MaxNumberOfMessage,
-		WaitTimeSecond:       conf.WaitTimeSecond,
+		Debug:                      conf.Debug,
+		AWSRegion:                  conf.AWSRegion,
+		SQSEndpoint:                conf.SQSEndpoint,
+		GoogleCloudSploitQueueName: conf.GoogleCloudSploitQueueName,
+		GoogleCloudSploitQueueURL:  conf.GoogleCloudSploitQueueURL,
+		MaxNumberOfMessage:         conf.MaxNumberOfMessage,
+		WaitTimeSecond:             conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(ctx, sqsConf)
 

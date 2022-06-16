@@ -5,18 +5,18 @@ go 1.17
 require (
 	github.com/aws/aws-sdk-go-v2 v1.16.4
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.18.5
-	github.com/ca-risken/common/pkg/logging v0.0.0-20220520051921-497abce3e602
-	github.com/ca-risken/common/pkg/profiler v0.0.0-20220304031727-c94e2c463b27
+	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
+	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20220525094706-413e91572a52
-	github.com/ca-risken/common/pkg/tracer v0.0.0-20220425094653-eace2e0a3d4a
+	github.com/ca-risken/common/pkg/tracer v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/core/proto/alert v0.0.0-20211202081113-c4c0e9d1af86
 	github.com/ca-risken/core/proto/finding v0.0.0-20220309052852-c058b4e5cb84
+	github.com/ca-risken/datasource-api v0.0.0-20220615043958-794d01b2e367
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
-	github.com/ca-risken/google/pkg/common v0.0.0-20220106084245-d6fa7174f282
-	github.com/ca-risken/google/proto/google v0.0.0-20210907055015-a746c2b3b5cf
+	github.com/ca-risken/google/pkg/common v0.0.0-20220616040504-bcfb27a00bb3
 	github.com/gassara-kys/envconfig v1.4.4
-	google.golang.org/grpc v1.45.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.38.0
+	google.golang.org/grpc v1.47.0
+	gopkg.in/DataDog/dd-trace-go.v1 v1.38.1
 )
 
 require (
@@ -52,7 +52,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tinylib/msgp v1.1.2 // indirect
-	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect

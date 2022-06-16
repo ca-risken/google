@@ -13,8 +13,9 @@ import (
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/message"
+	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/ca-risken/google/proto/google"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -28,7 +29,7 @@ type sqsHandler struct {
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
 	msgBody := aws.ToString(sqsMsg.Body)
 	appLogger.Infof(ctx, "got message: %s", msgBody)
-	msg, err := common.ParseMessage(msgBody)
+	msg, err := message.ParseMessageGCP(msgBody)
 	if err != nil {
 		appLogger.Errorf(ctx, "Invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
@@ -66,7 +67,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 	// Clear finding score
 	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
-		DataSource: common.CloudSploitDataSource,
+		DataSource: message.GoogleCloudSploitDataSource,
 		ProjectId:  msg.ProjectID,
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
@@ -162,7 +163,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{
 		Finding: &finding.FindingForUpsert{
 			Description:      f.Description,
-			DataSource:       common.CloudSploitDataSource,
+			DataSource:       message.GoogleCloudSploitDataSource,
 			DataSourceId:     f.DataSourceID,
 			ResourceName:     getFormatResourceName(gcpProjectID, f.Category, f.Resource),
 			ProjectId:        projectID,
@@ -280,7 +281,7 @@ func (s *sqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 	if _, err := s.findingClient.PutRecommend(ctx, &finding.PutRecommendRequest{
 		ProjectId:      projectID,
 		FindingId:      findingID,
-		DataSource:     common.CloudSploitDataSource,
+		DataSource:     message.GoogleCloudSploitDataSource,
 		Type:           categoryPlugin,
 		Risk:           r.Risk,
 		Recommendation: r.Recommendation,
