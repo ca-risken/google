@@ -13,8 +13,8 @@ type SQSConfig struct {
 	AWSRegion   string
 	SQSEndpoint string
 
-	SCCQueueName       string
-	SCCQueueURL        string
+	GoogleSCCQueueName string
+	GoogleSCCQueueURL  string
 	MaxNumberOfMessage int32
 	WaitTimeSecond     int32
 }
@@ -31,8 +31,8 @@ func newSQSConsumer(ctx context.Context, conf *SQSConfig) *worker.Worker {
 
 	return &worker.Worker{
 		Config: &worker.Config{
-			QueueName:          conf.SCCQueueName,
-			QueueURL:           conf.SCCQueueURL,
+			QueueName:          conf.GoogleSCCQueueName,
+			QueueURL:           conf.GoogleSCCQueueURL,
 			MaxNumberOfMessage: conf.MaxNumberOfMessage,
 			WaitTimeSecond:     conf.WaitTimeSecond,
 		},

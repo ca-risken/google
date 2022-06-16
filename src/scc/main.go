@@ -7,7 +7,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/common/pkg/tracer"
-	"github.com/ca-risken/google/pkg/common"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -33,14 +33,14 @@ type serviceConfig struct {
 	AWSRegion   string `envconfig:"aws_region"   default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	SCCQueueName       string `split_words:"true" default:"google-scc"`
-	SCCQueueURL        string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
+	GoogleSCCQueueName string `split_words:"true" default:"google-scc"`
+	GoogleSCCQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
 	MaxNumberOfMessage int32  `split_words:"true" default:"10"`
 	WaitTimeSecond     int32  `split_words:"true" default:"20"`
 
 	// grpc
-	CoreSvcAddr   string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
-	GoogleSvcAddr string `required:"true" split_words:"true" default:"google.google.svc.cluster.local:11001"`
+	CoreSvcAddr          string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
+	DataSourceAPISvcAddr string `required:"true" split_words:"true" default:"datasource-api.core.svc.cluster.local:8081"`
 
 	// scc
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
@@ -86,9 +86,9 @@ func main() {
 	handler := &sqsHandler{}
 	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
 	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.GoogleSvcAddr)
+	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
 	handler.sccClient = newSCCClient(conf.GoogleCredentialPath)
-	f, err := mimosasqs.NewFinalizer(common.SCCDataSource, settingURL, conf.CoreSvcAddr, nil)
+	f, err := mimosasqs.NewFinalizer(message.GoogleSCCDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "failed to create Finalizer, err=%+v", err)
 	}
@@ -97,8 +97,8 @@ func main() {
 		Debug:              conf.Debug,
 		AWSRegion:          conf.AWSRegion,
 		SQSEndpoint:        conf.SQSEndpoint,
-		SCCQueueName:       conf.SCCQueueName,
-		SCCQueueURL:        conf.SCCQueueURL,
+		GoogleSCCQueueName: conf.GoogleSCCQueueName,
+		GoogleSCCQueueURL:  conf.GoogleSCCQueueURL,
 		MaxNumberOfMessage: conf.MaxNumberOfMessage,
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
