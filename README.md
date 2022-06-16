@@ -44,7 +44,6 @@ Deploy the pre-built containers to the Kubernetes environment on your local mach
 
 | service     | spec                                | before (public images)                            | after (pre-build images on your machine) |
 | ----------- | ----------------------------------- | ------------------------------------------------- | ---------------------------------------- |
-| google      | spec.template.spec.containers.image | `public.ecr.aws/risken/google/google:latest`      | `google/google:latest`                   |
 | asset       | spec.template.spec.containers.image | `public.ecr.aws/risken/google/asset:latest`       | `google/asset:latest`                    |
 | cloudsploit | spec.template.spec.containers.image | `public.ecr.aws/risken/google/cloudsploit:latest` | `google/cloudsploit:latest`              |
 | scc         | spec.template.spec.containers.image | `public.ecr.aws/risken/google/scc:latest`         | `google/scc:latest`                      |
