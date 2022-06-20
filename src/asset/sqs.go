@@ -13,10 +13,10 @@ type SQSConfig struct {
 	AWSRegion   string
 	SQSEndpoint string
 
-	GoogleAssetQueueName string
-	GoogleAssetQueueURL  string
-	MaxNumberOfMessage   int32
-	WaitTimeSecond       int32
+	QueueName          string
+	QueueURL           string
+	MaxNumberOfMessage int32
+	WaitTimeSecond     int32
 }
 
 func newSQSConsumer(ctx context.Context, conf *SQSConfig) *worker.Worker {
@@ -32,8 +32,8 @@ func newSQSConsumer(ctx context.Context, conf *SQSConfig) *worker.Worker {
 	appLogger.Infof(ctx, "created SQS client, sqsConfig=%+v", conf)
 	return &worker.Worker{
 		Config: &worker.Config{
-			QueueName:          conf.GoogleAssetQueueName,
-			QueueURL:           conf.GoogleAssetQueueURL,
+			QueueName:          conf.QueueName,
+			QueueURL:           conf.QueueURL,
 			MaxNumberOfMessage: conf.MaxNumberOfMessage,
 			WaitTimeSecond:     conf.WaitTimeSecond,
 		},

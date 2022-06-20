@@ -97,8 +97,8 @@ func main() {
 		Debug:              conf.Debug,
 		AWSRegion:          conf.AWSRegion,
 		SQSEndpoint:        conf.SQSEndpoint,
-		GoogleSCCQueueName: conf.GoogleSCCQueueName,
-		GoogleSCCQueueURL:  conf.GoogleSCCQueueURL,
+		QueueName:          conf.GoogleSCCQueueName,
+		QueueURL:           conf.GoogleSCCQueueURL,
 		MaxNumberOfMessage: conf.MaxNumberOfMessage,
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}

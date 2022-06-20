@@ -103,13 +103,13 @@ func main() {
 	}
 
 	sqsConf := &SQSConfig{
-		Debug:                conf.Debug,
-		AWSRegion:            conf.AWSRegion,
-		SQSEndpoint:          conf.SQSEndpoint,
-		GoogleAssetQueueName: conf.GoogleAssetQueueName,
-		GoogleAssetQueueURL:  conf.GoogleAssetQueueURL,
-		MaxNumberOfMessage:   conf.MaxNumberOfMessage,
-		WaitTimeSecond:       conf.WaitTimeSecond,
+		Debug:              conf.Debug,
+		AWSRegion:          conf.AWSRegion,
+		SQSEndpoint:        conf.SQSEndpoint,
+		QueueName:          conf.GoogleAssetQueueName,
+		QueueURL:           conf.GoogleAssetQueueURL,
+		MaxNumberOfMessage: conf.MaxNumberOfMessage,
+		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(ctx, sqsConf)
 	appLogger.Info(ctx, "start the SQS consumer server for GCP Cloud Asset Inventory...")

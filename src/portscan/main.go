@@ -97,13 +97,13 @@ func main() {
 	}
 
 	sqsConf := &SQSConfig{
-		Debug:                   conf.Debug,
-		AWSRegion:               conf.AWSRegion,
-		SQSEndpoint:             conf.SQSEndpoint,
-		GooglePortscanQueueName: conf.GooglePortscanQueueName,
-		GooglePortscanQueueURL:  conf.GooglePortscanQueueURL,
-		MaxNumberOfMessage:      conf.MaxNumberOfMessage,
-		WaitTimeSecond:          conf.WaitTimeSecond,
+		Debug:              conf.Debug,
+		AWSRegion:          conf.AWSRegion,
+		SQSEndpoint:        conf.SQSEndpoint,
+		QueueName:          conf.GooglePortscanQueueName,
+		QueueURL:           conf.GooglePortscanQueueURL,
+		MaxNumberOfMessage: conf.MaxNumberOfMessage,
+		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
 	consumer := newSQSConsumer(ctx, sqsConf)
 	appLogger.Info(ctx, "Start the SQS consumer server for GCP Portscan Service")
