@@ -12,8 +12,9 @@ import (
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/message"
+	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/ca-risken/google/proto/google"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -30,7 +31,7 @@ type sqsHandler struct {
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
 	msgBody := aws.ToString(sqsMsg.Body)
 	appLogger.Infof(ctx, "got message: %s", msgBody)
-	msg, err := common.ParseMessage(msgBody)
+	msg, err := message.ParseMessageGCP(msgBody)
 	if err != nil {
 		appLogger.Errorf(ctx, "Invalid message: msg=%+v, err=%+v", msgBody, err)
 		return mimosasqs.WrapNonRetryable(err)
@@ -85,7 +86,7 @@ func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus
 	return mimosasqs.WrapNonRetryable(err)
 }
 
-func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *common.GCPQueueMessage, scanConcurrency int64) error {
+func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message.GCPQueueMessage, scanConcurrency int64) error {
 	targets, relFirewallResourceMap, err := s.portscanClient.listTarget(ctx, gcpProjectId)
 	if err != nil {
 		return err
@@ -126,26 +127,26 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, message *com
 
 	// Clear finding score
 	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
-		DataSource: common.PortscanDataSource,
-		ProjectId:  message.ProjectID,
+		DataSource: message.GooglePortscanDataSource,
+		ProjectId:  msg.ProjectID,
 		Tag:        []string{gcpProjectId},
 	}); err != nil {
 		appLogger.Errorf(ctx, "Failed to clear finding score. GCPProjectID: %v, error: %v", gcpProjectId, err)
 		return err
 	}
 	for _, result := range nmapResults {
-		err := s.putNmapFindings(ctx, message.ProjectID, gcpProjectId, result)
+		err := s.putNmapFindings(ctx, msg.ProjectID, gcpProjectId, result)
 		if err != nil {
 			appLogger.Errorf(ctx, "Failed put Finding err: %v", err)
 		}
 	}
 	if relFirewallResourceMap != nil {
-		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, message)
+		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, msg)
 		if err != nil {
 			appLogger.Errorf(ctx, "Failed put firewall resource Finding err: %v", err)
 		}
 	}
-	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, message)
+	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, msg)
 	if err != nil {
 		appLogger.Errorf(ctx, "Failed put exclude Finding err: %v", err)
 	}

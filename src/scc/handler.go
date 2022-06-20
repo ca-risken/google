@@ -12,8 +12,9 @@ import (
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/message"
+	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/ca-risken/google/proto/google"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
@@ -28,7 +29,7 @@ type sqsHandler struct {
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
 	msgBody := aws.ToString(sqsMsg.Body)
 	appLogger.Infof(ctx, "got message: %s", msgBody)
-	msg, err := common.ParseMessage(msgBody)
+	msg, err := message.ParseMessageGCP(msgBody)
 	if err != nil {
 		appLogger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", msgBody, err)
 		return mimosasqs.WrapNonRetryable(err)
@@ -138,7 +139,7 @@ func (s *sqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	findingData := &finding.FindingBatchForUpsert{
 		Finding: &finding.FindingForUpsert{
 			Description:      fmt.Sprintf("Security Command Center: %s", f.Category),
-			DataSource:       common.SCCDataSource,
+			DataSource:       message.GoogleSCCDataSource,
 			DataSourceId:     f.Name,
 			ResourceName:     f.ResourceName,
 			ProjectId:        projectID,

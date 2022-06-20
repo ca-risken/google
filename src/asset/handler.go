@@ -16,8 +16,9 @@ import (
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/message"
+	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	"github.com/ca-risken/google/proto/google"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
@@ -42,7 +43,7 @@ type assetFinding struct {
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
 	msgBody := aws.ToString(sqsMsg.Body)
 	appLogger.Infof(ctx, "got message: %s", msgBody)
-	msg, err := common.ParseMessage(msgBody)
+	msg, err := message.ParseMessageGCP(msgBody)
 	if err != nil {
 		appLogger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
@@ -66,7 +67,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 	// Clear finding score
 	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
-		DataSource: common.AssetDataSource,
+		DataSource: message.GoogleAssetDataSource,
 		ProjectId:  msg.ProjectID,
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
@@ -194,7 +195,7 @@ func (s *sqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		f := &finding.FindingBatchForUpsert{
 			Finding: &finding.FindingForUpsert{
 				Description:      fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName),
-				DataSource:       common.AssetDataSource,
+				DataSource:       message.GoogleAssetDataSource,
 				DataSourceId:     a.Asset.Name,
 				ResourceName:     a.Asset.Name,
 				ProjectId:        projectID,

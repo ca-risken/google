@@ -76,19 +76,23 @@ go-mod-update:
 	cd src/asset \
 		&& go get \
 			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/google/proto/...
+			github.com/ca-risken/datasource-api/proto/... \
+			github.com/ca-risken/google/pkg/...
 	cd src/cloudsploit \
 		&& go get \
 			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/google/proto/...
+			github.com/ca-risken/datasource-api/proto/... \
+			github.com/ca-risken/google/pkg/...
 	cd src/scc \
 		&& go get \
 			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/google/proto/...
+			github.com/ca-risken/datasource-api/proto/... \
+			github.com/ca-risken/google/pkg/...
 	cd src/portscan \
 		&& go get \
 			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/google/proto/...
+			github.com/ca-risken/datasource-api/proto/... \
+			github.com/ca-risken/google/pkg/...
 
 .PHONY: lint pkg-lint
 lint: $(LINT_TARGETS) pkg-lint
