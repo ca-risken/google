@@ -19,6 +19,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
+	"google.golang.org/api/cloudresourcemanager/v3"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 )
 
@@ -34,10 +35,10 @@ type sqsHandler struct {
 }
 
 type assetFinding struct {
-	Asset                *assetpb.ResourceSearchResult     `json:"asset"`
-	IAMPolicy            *assetpb.AnalyzeIamPolicyResponse `json:"iam_policy,omitempty"`
-	HasServiceAccountKey bool                              `json:"has_key,omitempty"`
-	BucketPolicy         *iam.Policy                       `json:"bucket_policy,omitempty"`
+	Asset                *assetpb.ResourceSearchResult `json:"asset"`
+	IAMPolicy            *[]string                     `json:"iam_policy,omitempty"`
+	HasServiceAccountKey bool                          `json:"has_key,omitempty"`
+	BucketPolicy         *iam.Policy                   `json:"bucket_policy,omitempty"`
 }
 
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
@@ -80,6 +81,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	assetCounter := 0
 	nextPageToken := ""
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
+	iamPolicies, err := s.assetClient.getProjectIAMPolicy(ctx, gcp.GcpProjectId)
+	if err != nil {
+		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+	}
 	for {
 		resources, token, err := s.listAssetIterationCallWithRetry(ctx, it, nextPageToken)
 		if err != nil {
@@ -90,7 +95,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 		assets := []*assetFinding{}
 		for _, r := range resources {
-			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r)
+			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r, iamPolicies)
 			if err != nil {
 				return s.handleErrorWithUpdateStatus(ctx, scanStatus,
 					fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
@@ -283,7 +288,7 @@ const (
 	roleEditor string = "roles/editor"
 )
 
-func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID string, r *assetpb.ResourceSearchResult) (*assetFinding, error) {
+func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID string, r *assetpb.ResourceSearchResult, policy *cloudresourcemanager.Policy) (*assetFinding, error) {
 	f := assetFinding{Asset: r}
 	var err error
 	// IAM
@@ -293,10 +298,7 @@ func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID stri
 		if err != nil {
 			return nil, err
 		}
-		f.IAMPolicy, err = s.assetClient.analyzeServiceAccountPolicy(ctx, gcpProjectID, email)
-		if err != nil {
-			return nil, err
-		}
+		f.IAMPolicy = getServiceAccountIamPolicies(email, policy)
 	}
 
 	// Storage
@@ -311,6 +313,22 @@ func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID stri
 
 func isUserServiceAccount(assetType, name string) bool {
 	return assetType == assetTypeServiceAccount && strings.HasSuffix(name, userServiceAccountEmailPattern)
+}
+
+func getServiceAccountIamPolicies(email string, policy *cloudresourcemanager.Policy) *[]string {
+	policies := []string{}
+	if policy == nil {
+		return &policies
+	}
+	for _, b := range policy.Bindings {
+		for _, m := range b.Members {
+			if m == fmt.Sprintf("serviceAccount:%s", email) {
+				policies = append(policies, b.Role)
+				break
+			}
+		}
+	}
+	return &policies
 }
 
 func scoreAsset(f *assetFinding) float32 {
@@ -329,17 +347,14 @@ func scoreAsset(f *assetFinding) float32 {
 }
 
 func scoreAssetForIAM(f *assetFinding) float32 {
-	if f.IAMPolicy == nil || f.IAMPolicy.MainAnalysis == nil || f.IAMPolicy.MainAnalysis.AnalysisResults == nil {
+	if f.IAMPolicy == nil || len(*f.IAMPolicy) == 0 {
 		return 0.0
 	}
 	if !f.HasServiceAccountKey {
 		return 0.1
 	}
-	for _, p := range f.IAMPolicy.MainAnalysis.AnalysisResults {
-		if p.IamBinding == nil {
-			continue
-		}
-		if p.IamBinding.Role == roleOwner || p.IamBinding.Role == roleEditor {
+	for _, r := range *f.IAMPolicy {
+		if r == roleOwner || r == roleEditor {
 			return 0.8 // the serviceAccount has Admin role.
 		}
 	}

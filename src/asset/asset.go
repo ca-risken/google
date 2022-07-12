@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
@@ -16,19 +17,24 @@ import (
 
 type assetServiceClient interface {
 	listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator
-	analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error)
+	getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error)
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
 }
 
 type assetClient struct {
-	asset *asset.Client
-	admin *admin.IamClient
-	gcs   *storage.Client
+	project *cloudresourcemanager.Service
+	asset   *asset.Client
+	admin   *admin.IamClient
+	gcs     *storage.Client
 }
 
 func newAssetClient(credentialPath string) assetServiceClient {
 	ctx := context.Background()
+	pj, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to authenticate for CloudResourceManager API client: %+v", err)
+	}
 	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to authenticate for Google Asset API client: %+v", err)
@@ -46,9 +52,10 @@ func newAssetClient(credentialPath string) assetServiceClient {
 		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &assetClient{
-		asset: as,
-		admin: ad,
-		gcs:   st,
+		project: pj,
+		asset:   as,
+		admin:   ad,
+		gcs:     st,
 	}
 }
 
@@ -72,15 +79,11 @@ func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset
 	})
 }
 
-func (a *assetClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjectID, email string) (*assetpb.AnalyzeIamPolicyResponse, error) {
-	resp, err := a.asset.AnalyzeIamPolicy(ctx, &assetpb.AnalyzeIamPolicyRequest{
-		AnalysisQuery: &assetpb.IamPolicyAnalysisQuery{
-			Scope: "projects/" + gcpProjectID,
-			IdentitySelector: &assetpb.IamPolicyAnalysisQuery_IdentitySelector{
-				Identity: "serviceAccount:" + email,
-			},
-		},
-	})
+func (a *assetClient) getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error) {
+	// doc: https://cloud.google.com/resource-manager/reference/rest/v3/projects/getIamPolicy
+	project := fmt.Sprintf("projects/%s", gcpProjectID)
+	options := &cloudresourcemanager.GetIamPolicyRequest{}
+	resp, err := a.project.Projects.GetIamPolicy(project, options).Context(ctx).Do()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +93,6 @@ func (a *assetClient) analyzeServiceAccountPolicy(ctx context.Context, gcpProjec
 func (a *assetClient) hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error) {
 	// doc: https://cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts.keys/list
 	name := fmt.Sprintf("projects/%s/serviceAccounts/%s", gcpProjectID, email)
-	// keys, err := a.admin.Projects.ServiceAccounts.Keys.List(name).Context(ctx).Do(&iampb.)
 	keys, err := a.admin.ListServiceAccountKeys(ctx, &adminpb.ListServiceAccountKeysRequest{
 		Name: name,
 		KeyTypes: []adminpb.ListServiceAccountKeysRequest_KeyType{
