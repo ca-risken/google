@@ -298,7 +298,7 @@ func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID stri
 		if err != nil {
 			return nil, err
 		}
-		f.IAMPolicy = getServiceAccountIamPolicies(email, policy)
+		f.IAMPolicy = getServiceAccountIAMPolicies(email, policy)
 	}
 
 	// Storage
@@ -315,7 +315,7 @@ func isUserServiceAccount(assetType, name string) bool {
 	return assetType == assetTypeServiceAccount && strings.HasSuffix(name, userServiceAccountEmailPattern)
 }
 
-func getServiceAccountIamPolicies(email string, policy *cloudresourcemanager.Policy) *[]string {
+func getServiceAccountIAMPolicies(email string, policy *cloudresourcemanager.Policy) *[]string {
 	policies := []string{}
 	if policy == nil {
 		return &policies
