@@ -69,7 +69,7 @@ func TestScoreAsset(t *testing.T) {
 					AssetType: assetTypeServiceAccount,
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
-				IAMPolicy: &asset.AnalyzeIamPolicyResponse{},
+				IAMPolicy: &[]string{},
 			},
 			want: 0.0,
 		},
@@ -119,13 +119,9 @@ func TestScoreAssetForIAM(t *testing.T) {
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
 				HasServiceAccountKey: true,
-				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
-					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
-						AnalysisResults: []*asset.IamPolicyAnalysisResult{
-							{IamBinding: &iam.Binding{Role: "roles/viewer"}},
-							{IamBinding: &iam.Binding{Role: "roles/some-role"}},
-						},
-					},
+				IAMPolicy: &[]string{
+					"roles/viewer",
+					"roles/some-role",
 				},
 			},
 			want: 0.1,
@@ -138,7 +134,7 @@ func TestScoreAssetForIAM(t *testing.T) {
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
 				HasServiceAccountKey: true,
-				IAMPolicy:            &asset.AnalyzeIamPolicyResponse{},
+				IAMPolicy:            &[]string{},
 			},
 			want: 0.0,
 		},
@@ -150,13 +146,9 @@ func TestScoreAssetForIAM(t *testing.T) {
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
 				HasServiceAccountKey: true,
-				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
-					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
-						AnalysisResults: []*asset.IamPolicyAnalysisResult{
-							{IamBinding: &iam.Binding{Role: "roles/viewer"}},
-							{IamBinding: &iam.Binding{Role: roleOwner}}, // admin role
-						},
-					},
+				IAMPolicy: &[]string{
+					"roles/viewer",
+					roleOwner,
 				},
 			},
 			want: 0.8,
@@ -169,13 +161,9 @@ func TestScoreAssetForIAM(t *testing.T) {
 					Name:      "//iam.googleapis.com/projects/my-project/serviceAccounts/my-account@my-project.iam.gserviceaccount.com",
 				},
 				HasServiceAccountKey: false,
-				IAMPolicy: &asset.AnalyzeIamPolicyResponse{
-					MainAnalysis: &asset.AnalyzeIamPolicyResponse_IamPolicyAnalysis{
-						AnalysisResults: []*asset.IamPolicyAnalysisResult{
-							{IamBinding: &iam.Binding{Role: "roles/viewer"}},
-							{IamBinding: &iam.Binding{Role: roleOwner}}, // admin role
-						},
-					},
+				IAMPolicy: &[]string{
+					"roles/viewer",
+					roleOwner,
 				},
 			},
 			want: 0.1,
