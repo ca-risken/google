@@ -91,6 +91,10 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message
 	if err != nil {
 		return err
 	}
+	if targets == nil && relFirewallResourceMap == nil {
+		appLogger.Infof(ctx, "No scan taget, project=%s", gcpProjectId)
+		return nil // skip scan
+	}
 	targets, excludeList := s.portscanClient.excludeTarget(targets)
 	eg, errGroupCtx := errgroup.WithContext(ctx)
 	mutex := &sync.Mutex{}
