@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,27 +11,22 @@ import (
 	"github.com/ca-risken/common/pkg/portscan"
 	"github.com/vikyd/zero"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
 type portscanServiceClient interface {
-	//	listAppEngine(ctx context.Context, gcpProjectID string) *appengine.InstanceIterator
 	listTarget(ctx context.Context, gcpProjectID string) ([]*target, map[string]*relFirewallResource, error)
 	excludeTarget(targets []*target) ([]*target, []*exclude)
 }
 
 type portscanClient struct {
-	//	appEngine *appengine.Client
 	compute               *compute.Service
 	ScanExcludePortNumber int
 }
 
 func newPortscanClient(credentialPath string, scanExcludePortNumber int) portscanServiceClient {
 	ctx := context.Background()
-	//	ae, err := appengine.NewClient(ctx, option.WithCredentialsFile(conf.GoogleCredentialPath))
-	//	if err != nil {
-	//		appLogger.Fatalf("Failed to authenticate for AppEngine API client: %+v", err)
-	//	}
 	compute, err := compute.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to authenticate for Compute service: %+v", err)
@@ -41,17 +37,10 @@ func newPortscanClient(credentialPath string, scanExcludePortNumber int) portsca
 		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
 	}
 	return &portscanClient{
-		//		appEngine: ae,
 		compute:               compute,
 		ScanExcludePortNumber: scanExcludePortNumber,
 	}
 }
-
-//func (p *portscanClient) listInstances(ctx context.Context, gcpProjectID string) *appengine.InstanceIterator {
-//	return p.appEngine.ListInstances(ctx, &appenginepb.ListInstancesRequest{
-//		Scope: "projects/" + gcpProjectID,
-//	})
-//}
 
 func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([]*target, map[string]*relFirewallResource, error) {
 	var ret []*target
@@ -59,6 +48,9 @@ func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([
 	if err != nil {
 		appLogger.Errorf(ctx, "Failed to describe firewall service: %+v", err)
 		return nil, nil, err
+	}
+	if infFirewalls == nil && relFirewallResource == nil {
+		return nil, nil, nil
 	}
 
 	infComputes, err := listTargetCompute(ctx, p.compute, gcpProjectID)
@@ -120,10 +112,11 @@ func listTargetFirewall(ctx context.Context, com *compute.Service, gcpProjectID 
 	firewalls := compute.NewFirewallsService(com)
 	var ret []*infoFirewall
 	relFirewallResources := map[string]*relFirewallResource{}
+	// https://pkg.go.dev/google.golang.org/api/compute/v1#FirewallsListCall.Do
 	f, err := firewalls.List(gcpProjectID).Do()
 	if err != nil {
 		appLogger.Errorf(ctx, "Failed to list firewall rules: %+v", err)
-		return nil, nil, err
+		return nil, nil, handleGoogleAPIError(ctx, err)
 	}
 	for _, fItem := range f.Items {
 		relFirewallResources[getFullResourceName(ctx, fItem.SelfLink)] = &relFirewallResource{
@@ -164,6 +157,33 @@ func listTargetFirewall(ctx context.Context, com *compute.Service, gcpProjectID 
 		})
 	}
 	return ret, relFirewallResources, nil
+}
+
+func handleGoogleAPIError(ctx context.Context, err error) error {
+	var gerr *googleapi.Error
+	ok := errors.As(err, &gerr)
+	if !ok {
+		return err
+	}
+	for _, detail := range gerr.Details {
+		dmap, ok := detail.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		errType, ok := dmap["@type"].(string)
+		if !ok {
+			continue
+		}
+		errReason, ok := dmap["reason"].(string)
+		if !ok {
+			continue
+		}
+		if errType == "type.googleapis.com/google.rpc.ErrorInfo" && errReason == "SERVICE_DISABLED" {
+			appLogger.Debugf(ctx, "Compute API is not enabled for this project, error_detail=%+v", dmap)
+			return nil // no error
+		}
+	}
+	return err
 }
 
 func listTargetCompute(ctx context.Context, com *compute.Service, gcpProjectID string) ([]*infoCompute, error) {
