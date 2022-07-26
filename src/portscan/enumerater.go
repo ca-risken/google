@@ -25,21 +25,21 @@ type portscanClient struct {
 	ScanExcludePortNumber int
 }
 
-func newPortscanClient(credentialPath string, scanExcludePortNumber int) portscanServiceClient {
+func newPortscanClient(credentialPath string, scanExcludePortNumber int) (portscanServiceClient, error) {
 	ctx := context.Background()
 	compute, err := compute.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to authenticate for Compute service: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for Compute service: %w", err)
 	}
 
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
+		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
 	return &portscanClient{
 		compute:               compute,
 		ScanExcludePortNumber: scanExcludePortNumber,
-	}
+	}, nil
 }
 
 func (p *portscanClient) listTarget(ctx context.Context, gcpProjectID string) ([]*target, map[string]*relFirewallResource, error) {

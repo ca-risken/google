@@ -97,7 +97,10 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
 	}
-	portscanClient := newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	portscanClient, err := newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create portscan client, err=%+v", err)
+	}
 	handler := &sqsHandler{
 		findingClient:   findingClient,
 		alertClient:     alertClient,
