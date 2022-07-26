@@ -83,11 +83,25 @@ func main() {
 	defer tracer.Stop()
 
 	appLogger.Info(ctx, "start")
-	handler := &sqsHandler{}
-	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
-	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
-	handler.sccClient = newSCCClient(conf.GoogleCredentialPath)
+	findingClient, err := newFindingClient(ctx, conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create finding client, err=%+v", err)
+	}
+	alertClient, err := newAlertClient(ctx, conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create alert client, err=%+v", err)
+	}
+	googleClient, err := newGoogleClient(ctx, conf.DataSourceAPISvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
+	}
+	sccClient := newSCCClient(conf.GoogleCredentialPath)
+	handler := &sqsHandler{
+		findingClient: findingClient,
+		alertClient:   alertClient,
+		googleClient:  googleClient,
+		sccClient:     sccClient,
+	}
 	f, err := mimosasqs.NewFinalizer(message.GoogleSCCDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "failed to create Finalizer, err=%+v", err)
