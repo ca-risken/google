@@ -100,7 +100,10 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
 	}
-	assetClient := newAssetClient(conf.GoogleCredentialPath)
+	assetClient, err := newAssetClient(conf.GoogleCredentialPath)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create asset client, err=%+v", err)
+	}
 	handler := &sqsHandler{
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
 		assetAPIRetryNum:       conf.AssetAPIRetryNum,
