@@ -84,19 +84,28 @@ func main() {
 	tracer.Start(tc)
 	defer tracer.Stop()
 
-	handler := &sqsHandler{
-		findingClient: nil,
-		alertClient:   nil,
-		googleClient:  nil,
-		cloudSploit:   nil,
+	findingClient, err := newFindingClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create finding client, err=%+v", err)
 	}
-	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
-	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
-	handler.cloudSploit = newCloudSploitClient(
+	alertClient, err := newAlertClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create alert client, err=%+v", err)
+	}
+	googleClient, err := newGoogleClient(conf.DataSourceAPISvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
+	}
+	cloudSploit := newCloudSploitClient(
 		conf.CloudSploitCommand,
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey)
+	handler := &sqsHandler{
+		findingClient: findingClient,
+		alertClient:   alertClient,
+		googleClient:  googleClient,
+		cloudSploit:   cloudSploit,
+	}
 	f, err := mimosasqs.NewFinalizer(message.GoogleCloudSploitDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
