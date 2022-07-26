@@ -55,7 +55,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 			gcp.GcpOrganizationId, gcp.GcpProjectId)
 		appLogger.Errorf(ctx, "Invalid parameters, project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof(ctx, "start SCC ListFinding API, RequestID=%s", requestID)
 	tspan, tctx := tracer.StartSpanFromContext(ctx, "listFinding")
@@ -71,13 +72,15 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		if err != nil {
 			appLogger.Errorf(ctx, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			s.updateStatusToError(ctx, scanStatus, err)
+			return mimosasqs.WrapNonRetryable(err)
 		}
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
 		for _, f := range findings {
 			data, err := s.generateFindingData(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding)
 			if err != nil {
-				return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+				s.updateStatusToError(ctx, scanStatus, err)
+				return mimosasqs.WrapNonRetryable(err)
 			}
 			findingBatchParam = append(findingBatchParam, data)
 		}
@@ -108,11 +111,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	return nil
 }
 
-func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+func (s *sqsHandler) updateStatusToError(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 		appLogger.Warnf(ctx, "failed to update scan status error: err=%+v", updateErr)
 	}
-	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {
