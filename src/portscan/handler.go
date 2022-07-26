@@ -59,7 +59,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	err = s.scan(tctx, gcp.GcpProjectId, msg, s.scanConcurrency)
 	tspan.Finish(tracer.WithError(err))
 	if err != nil {
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof(ctx, "end exec scan, RequestID=%s", requestID)
 
@@ -79,11 +80,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	return nil
 }
 
-func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+func (s *sqsHandler) updateStatusToError(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 		appLogger.Warnf(ctx, "Failed to update scan status error: err=%+v", updateErr)
 	}
-	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message.GCPQueueMessage, scanConcurrency int64) error {
