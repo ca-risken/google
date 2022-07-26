@@ -88,15 +88,28 @@ func main() {
 	defer tracer.Stop()
 
 	appLogger.Info(ctx, "Start")
+	findingClient, err := newFindingClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create finding client, err=%+v", err)
+	}
+	alertClient, err := newAlertClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create alert client, err=%+v", err)
+	}
+	googleClient, err := newGoogleClient(conf.DataSourceAPISvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
+	}
+	assetClient := newAssetClient(conf.GoogleCredentialPath)
 	handler := &sqsHandler{
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
 		assetAPIRetryNum:       conf.AssetAPIRetryNum,
 		assetAPIRetryWaitSec:   conf.AssetAPIRetryWaitSec,
+		findingClient:          findingClient,
+		alertClient:            alertClient,
+		googleClient:           googleClient,
+		assetClient:            assetClient,
 	}
-	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
-	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
-	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
 	f, err := mimosasqs.NewFinalizer(message.GoogleAssetDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
