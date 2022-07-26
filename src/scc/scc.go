@@ -18,17 +18,16 @@ type sccClient struct {
 	client *scc.Client
 }
 
-func newSCCClient(credentialPath string) sccServiceClient {
-	ctx := context.Background()
+func newSCCClient(ctx context.Context, credentialPath string) (sccServiceClient, error) {
 	c, err := scc.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "failed to authenticate for Google API client: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for Google API client: %w", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf(ctx, "failed to remove file: path=%s, err=%+v", credentialPath, err)
+		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
-	return &sccClient{client: c}
+	return &sccClient{client: c}, nil
 }
 
 func (g *sccClient) listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
