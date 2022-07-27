@@ -141,18 +141,21 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message
 	for _, result := range nmapResults {
 		err := s.putNmapFindings(ctx, msg.ProjectID, gcpProjectId, result)
 		if err != nil {
-			appLogger.Errorf(ctx, "Failed put Finding err: %v", err)
+			appLogger.Errorf(ctx, "Failed to put Finding err: %v", err)
+			return err
 		}
 	}
 	if relFirewallResourceMap != nil {
 		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, msg)
 		if err != nil {
-			appLogger.Errorf(ctx, "Failed put firewall resource Finding err: %v", err)
+			appLogger.Errorf(ctx, "Failed to put firewall resource Finding err: %v", err)
+			return err
 		}
 	}
 	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, msg)
 	if err != nil {
 		appLogger.Errorf(ctx, "Failed put exclude Finding err: %v", err)
+		return err
 	}
 	return nil
 }
