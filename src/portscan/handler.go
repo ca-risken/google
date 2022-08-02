@@ -59,7 +59,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	err = s.scan(tctx, gcp.GcpProjectId, msg, s.scanConcurrency)
 	tspan.Finish(tracer.WithError(err))
 	if err != nil {
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof(ctx, "end exec scan, RequestID=%s", requestID)
 
@@ -79,11 +80,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	return nil
 }
 
-func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+func (s *sqsHandler) updateStatusToError(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 		appLogger.Warnf(ctx, "Failed to update scan status error: err=%+v", updateErr)
 	}
-	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message.GCPQueueMessage, scanConcurrency int64) error {
@@ -141,18 +141,21 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message
 	for _, result := range nmapResults {
 		err := s.putNmapFindings(ctx, msg.ProjectID, gcpProjectId, result)
 		if err != nil {
-			appLogger.Errorf(ctx, "Failed put Finding err: %v", err)
+			appLogger.Errorf(ctx, "Failed to put Finding err: %v", err)
+			return err
 		}
 	}
 	if relFirewallResourceMap != nil {
 		err := s.putRelFirewallResourceFindings(ctx, gcpProjectId, relFirewallResourceMap, msg)
 		if err != nil {
-			appLogger.Errorf(ctx, "Failed put firewall resource Finding err: %v", err)
+			appLogger.Errorf(ctx, "Failed to put firewall resource Finding err: %v", err)
+			return err
 		}
 	}
 	err = s.putExcludeFindings(ctx, gcpProjectId, excludeList, msg)
 	if err != nil {
 		appLogger.Errorf(ctx, "Failed put exclude Finding err: %v", err)
+		return err
 	}
 	return nil
 }

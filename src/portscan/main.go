@@ -85,12 +85,29 @@ func main() {
 	defer tracer.Stop()
 
 	appLogger.Info(ctx, "Start")
-	handler := &sqsHandler{}
-	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
-	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
-	handler.portscanClient = newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
-	handler.scanConcurrency = conf.ScanConcurrency
+	findingClient, err := newFindingClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create finding client, err=%+v", err)
+	}
+	alertClient, err := newAlertClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create alert client, err=%+v", err)
+	}
+	googleClient, err := newGoogleClient(conf.DataSourceAPISvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
+	}
+	portscanClient, err := newPortscanClient(conf.GoogleCredentialPath, conf.ScanExcludePortNumber)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create portscan client, err=%+v", err)
+	}
+	handler := &sqsHandler{
+		findingClient:   findingClient,
+		alertClient:     alertClient,
+		googleClient:    googleClient,
+		portscanClient:  portscanClient,
+		scanConcurrency: conf.ScanConcurrency,
+	}
 	f, err := mimosasqs.NewFinalizer(message.GooglePortscanDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
@@ -105,7 +122,10 @@ func main() {
 		MaxNumberOfMessage: conf.MaxNumberOfMessage,
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
-	consumer := newSQSConsumer(ctx, sqsConf)
+	consumer, err := newSQSConsumer(ctx, sqsConf)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create SQS consumer, err=%+v", err)
+	}
 	appLogger.Info(ctx, "Start the SQS consumer server for GCP Portscan Service")
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(
