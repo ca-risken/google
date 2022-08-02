@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -58,10 +57,11 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	tspan.Finish(tracer.WithError(err))
 	appLogger.Infof(ctx, "end Run cloudsploit, RequestID=%s", requestID)
 	if err != nil {
-		errMsg := fmt.Sprintf("Failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+		err = fmt.Errorf("failed to run CloudSploit scan: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%w",
 			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		appLogger.Error(ctx, errMsg)
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus, errors.New(errMsg))
+		appLogger.Error(ctx, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 	appLogger.Infof(ctx, "start put finding, RequestID=%s", requestID)
 
@@ -72,7 +72,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		Tag:        []string{gcp.GcpProjectId},
 	}); err != nil {
 		appLogger.Errorf(ctx, "Failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
-		return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
 
 	for _, f := range *result {
@@ -81,7 +82,8 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 			errMsg := fmt.Sprintf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			appLogger.Error(ctx, errMsg)
-			return s.handleErrorWithUpdateStatus(ctx, scanStatus, err)
+			s.updateStatusToError(ctx, scanStatus, err)
+			return mimosasqs.WrapNonRetryable(err)
 		}
 	}
 	appLogger.Infof(ctx, "end put finding, RequestID=%s", requestID)
@@ -102,11 +104,10 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	return nil
 }
 
-func (s *sqsHandler) handleErrorWithUpdateStatus(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) error {
+func (s *sqsHandler) updateStatusToError(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) {
 	if updateErr := s.updateScanStatusError(ctx, scanStatus, err.Error()); updateErr != nil {
 		appLogger.Warnf(ctx, "Failed to update scan status error: err=%+v", updateErr)
 	}
-	return mimosasqs.WrapNonRetryable(err)
 }
 
 func (s *sqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*google.GCPDataSource, error) {

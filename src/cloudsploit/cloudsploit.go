@@ -116,7 +116,7 @@ func (g *cloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID st
 	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
 	resultJSON, err := os.Create(filepath)
 	if err != nil {
-		return nil, "", fmt.Errorf("Failed to create result file, path:%s", filepath)
+		return nil, "", fmt.Errorf("failed to create result file, path:%s, err:%w", filepath, err)
 	}
 	defer resultJSON.Close()
 	cmd := exec.Command(
