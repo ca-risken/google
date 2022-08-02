@@ -88,15 +88,31 @@ func main() {
 	defer tracer.Stop()
 
 	appLogger.Info(ctx, "Start")
+	findingClient, err := newFindingClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create finding client, err=%+v", err)
+	}
+	alertClient, err := newAlertClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create alert client, err=%+v", err)
+	}
+	googleClient, err := newGoogleClient(conf.DataSourceAPISvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
+	}
+	assetClient, err := newAssetClient(conf.GoogleCredentialPath)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create asset client, err=%+v", err)
+	}
 	handler := &sqsHandler{
 		waitMilliSecPerRequest: conf.WaitMilliSecPerRequest,
 		assetAPIRetryNum:       conf.AssetAPIRetryNum,
 		assetAPIRetryWaitSec:   conf.AssetAPIRetryWaitSec,
+		findingClient:          findingClient,
+		alertClient:            alertClient,
+		googleClient:           googleClient,
+		assetClient:            assetClient,
 	}
-	handler.findingClient = newFindingClient(conf.CoreSvcAddr)
-	handler.alertClient = newAlertClient(conf.CoreSvcAddr)
-	handler.googleClient = newGoogleClient(conf.DataSourceAPISvcAddr)
-	handler.assetClient = newAssetClient(conf.GoogleCredentialPath)
 	f, err := mimosasqs.NewFinalizer(message.GoogleAssetDataSource, settingURL, conf.CoreSvcAddr, nil)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
@@ -111,7 +127,10 @@ func main() {
 		MaxNumberOfMessage: conf.MaxNumberOfMessage,
 		WaitTimeSecond:     conf.WaitTimeSecond,
 	}
-	consumer := newSQSConsumer(ctx, sqsConf)
+	consumer, err := newSQSConsumer(ctx, sqsConf)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create SQS consumer, err=%+v", err)
+	}
 	appLogger.Info(ctx, "start the SQS consumer server for GCP Cloud Asset Inventory...")
 	consumer.Start(ctx,
 		mimosasqs.InitializeHandler(

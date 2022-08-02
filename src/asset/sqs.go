@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/go-sqs-poller/worker/v5"
@@ -19,14 +20,14 @@ type SQSConfig struct {
 	WaitTimeSecond     int32
 }
 
-func newSQSConsumer(ctx context.Context, conf *SQSConfig) *worker.Worker {
+func newSQSConsumer(ctx context.Context, conf *SQSConfig) (*worker.Worker, error) {
 	if conf.Debug == "true" {
 		appLogger.Level(logging.DebugLevel)
 	}
 
 	client, err := worker.CreateSqsClient(ctx, conf.AWSRegion, conf.SQSEndpoint)
 	if err != nil {
-		appLogger.Fatalf(ctx, "failed to create a new client, %v", err)
+		return nil, fmt.Errorf("failed to create a new SQS client, %w", err)
 	}
 
 	appLogger.Infof(ctx, "created SQS client, sqsConfig=%+v", conf)
@@ -39,5 +40,5 @@ func newSQSConsumer(ctx context.Context, conf *SQSConfig) *worker.Worker {
 		},
 		Log:       appLogger,
 		SqsClient: client,
-	}
+	}, nil
 }

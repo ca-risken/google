@@ -29,34 +29,34 @@ type assetClient struct {
 	gcs     *storage.Client
 }
 
-func newAssetClient(credentialPath string) assetServiceClient {
+func newAssetClient(credentialPath string) (assetServiceClient, error) {
 	ctx := context.Background()
 	pj, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to authenticate for CloudResourceManager API client: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for CloudResourceManager API client: %w", err)
 	}
 	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to authenticate for Google Asset API client: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
 	}
 	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to authenticate for Google IAM Admin API client: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for Google IAM Admin API client: %w", err)
 	}
 	st, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to authenticate for Google Cloud Storage client: %+v", err)
+		return nil, fmt.Errorf("failed to authenticate for Google Cloud Storage client: %w", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		appLogger.Fatalf(ctx, "Failed to remove file: path=%s, err=%+v", credentialPath, err)
+		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
 	return &assetClient{
 		project: pj,
 		asset:   as,
 		admin:   ad,
 		gcs:     st,
-	}
+	}, nil
 }
 
 const (
