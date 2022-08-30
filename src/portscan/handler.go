@@ -115,15 +115,7 @@ func (s *sqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message
 			default:
 				results, err := scan(ctx, t)
 				if err != nil {
-					// TODO 以下を確認したら、エラーの種類によるハンドリングはせずにそのまま呼び出し元に返すように変更する予定
-					// 握りつぶしていたエラーを返すようにしたが、そのエラーがどれくらい発生していたかが不明なためそのままエラーを返すとオペレーションの負荷が高くなる可能性がある。
-					// 発生件数を確認するためにログ出力だけを行いエラーは返さずに終了させる。
-					if _, ok := err.(*portscan.ResultAnalysisError); ok {
-						appLogger.Warnf(ctx, "Failed to analyze portscan results, err=%+v", err)
-						return nil
-					} else {
-						return err
-					}
+					return err
 				}
 				mutex.Lock()
 				nmapResults = append(nmapResults, results...)
