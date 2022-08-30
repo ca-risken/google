@@ -74,7 +74,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryCompute + "/connectSerialPortsDisabled": {
-		Score: 0.3,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Connect Serial Ports Disabled
@@ -355,7 +355,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryKubernetes + "/clusterLeastPrivilege": {
-		Score: 0.3,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Cluster Least Privilege
@@ -615,7 +615,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categorySQL + "/dbAutomatedBackups": {
-		Score: 0.3,
+		Score: 0.6,
 		Tag:   []string{"reliability"},
 		Recommend: recommend{
 			Risk: `DB Automated Backups
