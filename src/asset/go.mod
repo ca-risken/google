@@ -1,6 +1,6 @@
 module github.com/ca-risken/google/src/asset
 
-go 1.17
+go 1.18
 
 require (
 	cloud.google.com/go/asset v0.1.0
