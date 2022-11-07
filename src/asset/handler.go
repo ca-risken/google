@@ -21,6 +21,7 @@ import (
 	"github.com/ca-risken/google/pkg/common"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
+	"google.golang.org/genproto/googleapis/iam/admin/v1"
 )
 
 type sqsHandler struct {
@@ -35,10 +36,11 @@ type sqsHandler struct {
 }
 
 type assetFinding struct {
-	Asset                *assetpb.ResourceSearchResult `json:"asset"`
-	IAMPolicy            *[]string                     `json:"iam_policy,omitempty"`
-	HasServiceAccountKey bool                          `json:"has_key,omitempty"`
-	BucketPolicy         *iam.Policy                   `json:"bucket_policy,omitempty"`
+	Asset                  *assetpb.ResourceSearchResult `json:"asset"`
+	IAMPolicy              *[]string                     `json:"iam_policy,omitempty"`
+	HasServiceAccountKey   bool                          `json:"has_key,omitempty"`
+	DisabledServiceAccount bool                          `json:"disabled_service_account,omitempty"`
+	BucketPolicy           *iam.Policy                   `json:"bucket_policy,omitempty"`
 }
 
 func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
@@ -77,16 +79,22 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		return mimosasqs.WrapNonRetryable(err)
 	}
 
-	// Get cloud asset
-	appLogger.Infof(ctx, "start CloudAsset API, RequestID=%s", requestID)
-	assetCounter := 0
-	nextPageToken := ""
-	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	iamPolicies, err := s.assetClient.getProjectIAMPolicy(ctx, gcp.GcpProjectId)
 	if err != nil {
 		s.updateStatusToError(ctx, scanStatus, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
+	serviceAccountMap, err := s.assetClient.getServiceAccountMap(ctx, gcp.GcpProjectId)
+	if err != nil {
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
+	}
+
+	// Get cloud asset
+	appLogger.Infof(ctx, "start CloudAsset API, RequestID=%s", requestID)
+	assetCounter := 0
+	nextPageToken := ""
+	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
 		resources, token, err := s.listAssetIterationCallWithRetry(ctx, it, nextPageToken)
 		if err != nil {
@@ -98,7 +106,7 @@ func (s *sqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 		assets := []*assetFinding{}
 		for _, r := range resources {
-			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r, iamPolicies)
+			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap)
 			if err != nil {
 				err = fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%w",
 					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
@@ -292,7 +300,14 @@ const (
 	roleEditor string = "roles/editor"
 )
 
-func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID string, r *assetpb.ResourceSearchResult, policy *cloudresourcemanager.Policy) (*assetFinding, error) {
+func (s *sqsHandler) generateAssetFinding(
+	ctx context.Context,
+	gcpProjectID string,
+	r *assetpb.ResourceSearchResult,
+	policy *cloudresourcemanager.Policy,
+	serviceAccountMap map[string]*admin.ServiceAccount,
+) (*assetFinding, error) {
+
 	f := assetFinding{Asset: r}
 	var err error
 	// IAM
@@ -302,6 +317,11 @@ func (s *sqsHandler) generateAssetFinding(ctx context.Context, gcpProjectID stri
 		if err != nil {
 			return nil, err
 		}
+		sa, ok := serviceAccountMap[generateServiceAccountKey(gcpProjectID, email)]
+		if !ok {
+			return nil, fmt.Errorf("not found service account, project=%s, email=%s", gcpProjectID, email)
+		}
+		f.DisabledServiceAccount = sa.Disabled
 		f.IAMPolicy = getServiceAccountIAMPolicies(email, policy)
 	}
 
@@ -355,6 +375,9 @@ func scoreAssetForIAM(f *assetFinding) float32 {
 		return 0.0
 	}
 	if !f.HasServiceAccountKey {
+		return 0.1
+	}
+	if f.DisabledServiceAccount {
 		return 0.1
 	}
 	for _, r := range *f.IAMPolicy {

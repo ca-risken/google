@@ -20,6 +20,7 @@ type assetServiceClient interface {
 	getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error)
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
+	getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error)
 }
 
 type assetClient struct {
@@ -67,9 +68,17 @@ const (
 	assetTypeBucket            string = "storage.googleapis.com/Bucket"        // Storage
 )
 
+func generateProjectKey(gcpProjectID string) string {
+	return fmt.Sprintf("projects/%s", gcpProjectID)
+}
+
+func generateServiceAccountKey(gcpProjectID, email string) string {
+	return fmt.Sprintf("projects/%s/serviceAccounts/%s", gcpProjectID, email)
+}
+
 func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator {
 	return a.asset.SearchAllResources(ctx, &assetpb.SearchAllResourcesRequest{
-		Scope: "projects/" + gcpProjectID,
+		Scope: generateProjectKey(gcpProjectID),
 		AssetTypes: []string{
 			assetTypeServiceAccount,
 			assetTypeServiceAccountKey,
@@ -81,7 +90,7 @@ func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset
 
 func (a *assetClient) getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error) {
 	// doc: https://cloud.google.com/resource-manager/reference/rest/v3/projects/getIamPolicy
-	project := fmt.Sprintf("projects/%s", gcpProjectID)
+	project := generateProjectKey(gcpProjectID)
 	options := &cloudresourcemanager.GetIamPolicyRequest{}
 	resp, err := a.project.Projects.GetIamPolicy(project, options).Context(ctx).Do()
 	if err != nil {
@@ -92,7 +101,7 @@ func (a *assetClient) getProjectIAMPolicy(ctx context.Context, gcpProjectID stri
 
 func (a *assetClient) hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error) {
 	// doc: https://cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts.keys/list
-	name := fmt.Sprintf("projects/%s/serviceAccounts/%s", gcpProjectID, email)
+	name := generateServiceAccountKey(gcpProjectID, email)
 	keys, err := a.admin.ListServiceAccountKeys(ctx, &adminpb.ListServiceAccountKeysRequest{
 		Name: name,
 		KeyTypes: []adminpb.ListServiceAccountKeysRequest_KeyType{
@@ -106,6 +115,29 @@ func (a *assetClient) hasUserManagedKeys(ctx context.Context, gcpProjectID, emai
 		return true, nil
 	}
 	return false, nil
+}
+
+func (a *assetClient) getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error) {
+	results := map[string]*adminpb.ServiceAccount{}
+	// doc: https://cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts/list
+	it := a.admin.ListServiceAccounts(ctx, &adminpb.ListServiceAccountsRequest{
+		Name: generateProjectKey(gcpProjectID),
+	})
+	nextPageToken := ""
+	for {
+		list, token, err := it.InternalFetch(100, nextPageToken)
+		if err != nil {
+			return nil, err
+		}
+		for _, sa := range list {
+			results[generateServiceAccountKey(gcpProjectID, sa.Email)] = sa
+		}
+		if token == "" {
+			break
+		}
+		nextPageToken = token
+	}
+	return results, nil
 }
 
 func (a *assetClient) getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error) {
