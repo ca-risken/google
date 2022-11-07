@@ -1,0 +1,9 @@
+go 1.18
+
+use (
+	./pkg/common
+	./src/asset
+	./src/cloudsploit
+	./src/portscan
+	./src/scc
+)

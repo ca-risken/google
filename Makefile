@@ -101,4 +101,8 @@ lint: $(LINT_TARGETS) pkg-lint
 pkg-lint:
 	sh hack/golinter.sh pkg/common
 
+.PHONY: workspace
+workspace:
+	go work use -r .
+
 FAKE:
