@@ -19,7 +19,7 @@ all: build
 
 .PHONY: build
 build: $(BUILD_TARGETS)
-%.build: %.go-test
+%.build: go-test
 	TARGET=$(*) IMAGE_TAG=$(IMAGE_TAG) IMAGE_PREFIX=$(IMAGE_PREFIX) BUILD_OPT="$(BUILD_OPT)" . hack/docker-build.sh
 
 .PHONY: build-ci
@@ -56,53 +56,12 @@ push-manifest: $(MANIFEST_PUSH_TARGETS)
 	docker manifest push $(IMAGE_REGISTRY)/$(IMAGE_PREFIX)/$(*):$(MANIFEST_TAG)
 	docker manifest inspect $(IMAGE_REGISTRY)/$(IMAGE_PREFIX)/$(*):$(MANIFEST_TAG)
 
-.PHONY: go-test pkg-test
-go-test: $(TEST_TARGETS) pkg-test
-%.go-test: FAKE
-	cd src/$(*) && GO111MODULE=on go test ./...
-pkg-test:
-	cd pkg/common && GO111MODULE=on go test ./...
+.PHONY: go-test
+go-test:
+	GO111MODULE=on go test ./...
 
-.PHONY: go-mod-tidy
-go-mod-tidy:
-	cd pkg/common      && go mod tidy
-	cd src/asset       && go mod tidy
-	cd src/cloudsploit && go mod tidy
-	cd src/scc         && go mod tidy
-	cd src/portscan    && go mod tidy
-
-.PHONY: go-mod-update
-go-mod-update:
-	cd src/asset \
-		&& go get \
-			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/datasource-api/proto/... \
-			github.com/ca-risken/google/pkg/...
-	cd src/cloudsploit \
-		&& go get \
-			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/datasource-api/proto/... \
-			github.com/ca-risken/google/pkg/...
-	cd src/scc \
-		&& go get \
-			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/datasource-api/proto/... \
-			github.com/ca-risken/google/pkg/...
-	cd src/portscan \
-		&& go get \
-			github.com/ca-risken/core/proto/... \
-			github.com/ca-risken/datasource-api/proto/... \
-			github.com/ca-risken/google/pkg/...
-
-.PHONY: lint pkg-lint
-lint: $(LINT_TARGETS) pkg-lint
-%.lint: FAKE
-	sh hack/golinter.sh src/$(*)
-pkg-lint:
-	sh hack/golinter.sh pkg/common
-
-.PHONY: workspace
-workspace:
-	go work use -r .
+.PHONY: lint
+lint:
+	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
 
 FAKE:
