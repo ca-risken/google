@@ -169,24 +169,12 @@ func (c *CloudSploitClient) removeTempFiles(configFilePath, resutlFilePath strin
 }
 
 const (
-	// CloudSploit Category
-	categoryCLB               string = "CLB"
-	categoryCompute           string = "Compute"
-	categoryCryptographicKeys string = "Cryptographic Keys"
-	categoryDNS               string = "DNS"
-	categoryIAM               string = "IAM"
-	categoryKubernetes        string = "Kubernetes"
-	categoryLogging           string = "Logging"
-	categorySQL               string = "SQL"
-	categoryStorage           string = "Storage"
-	categoryVPCNetwork        string = "VPC Network"
-
 	// CloudSploit Result Code: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes
 	// Result Code Label:       https://github.com/aquasecurity/cloudsploit/blob/master/postprocess/output.js
-	resultOK      string = "OK"      // 0: PASS: No risks
-	resultWARN    string = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
-	resultFAIL    string = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
-	resultUNKNOWN string = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
+	resultOK      = "OK"      // 0: PASS: No risks
+	resultWARN    = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
+	resultFAIL    = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
+	resultUNKNOWN = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
 )
 
 func (c *cloudSploitFinding) setTags() {
