@@ -15,9 +15,8 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20221119073224-9db027bda6f8
-	github.com/ca-risken/core/proto/alert v0.0.0-20220428031553-0579e204c316
-	github.com/ca-risken/core/proto/finding v0.0.0-20220428031553-0579e204c316
-	github.com/ca-risken/datasource-api v0.4.1
+	github.com/ca-risken/core v0.4.2-0.20221114035311-c4b88fcc3162
+	github.com/ca-risken/datasource-api v0.4.2-0.20221215091113-c6e727315ba7
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/gassara-kys/envconfig v1.4.4
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
@@ -42,15 +41,15 @@ require (
 	github.com/Ullaakut/nmap/v2 v2.1.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.15.4 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.12.0 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.4 // indirect
-	github.com/aws/smithy-go v1.13.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.5 // indirect
+	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect

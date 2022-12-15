@@ -25,6 +25,7 @@ func InitScanStatus(g *google.GCPDataSource) *google.AttachGCPDataSourceRequest 
 			ScanAt:             time.Now().Unix(),
 			Status:             google.Status_UNKNOWN, // After scan, will be updated
 			StatusDetail:       "",
+			SpecificVersion:    g.SpecificVersion,
 		},
 	}
 }
