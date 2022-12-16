@@ -9,6 +9,9 @@ const (
 	categoryCloudResourceManager = "Resource Manager"
 	categoryCompute              = "Compute"
 	categoryCryptographicKeys    = "Cryptographic Keys"
+	categoryDataflow             = "dataflow"
+	categoryDataproc             = "dataproc"
+	categoryDeploymentmanager    = "deploymentmanager"
 	categoryDNS                  = "DNS"
 	categoryIAM                  = "IAM"
 	categoryKubernetes           = "Kubernetes"
@@ -857,6 +860,80 @@ var pluginMap = map[string]pluginMetaData{
 			- To prevent exposing sensitive data and information leaks, make sure that your cryptokeys do not allow access from anonymous and public users.`,
 			Recommendation: `Ensure that your cryptographic keys are not accessible by allUsers or allAuthenticatedUsers.
 			- https://cloud.google.com/kms/docs/reference/permissions-and-roles`,
+		},
+	},
+
+	categoryDataflow + "/dataflowHangedJobs": {
+		Score: 0.3,
+		Tag:   []string{"cost"},
+		Recommend: recommend{
+			Risk: `Dataflow Hanged Jobs
+			- Ensure that Cloud Dataflow jobs are not in same state for more than defined amount of time.
+			- Cloud Dataflow jobs transit between different states and normally reach terminal state.
+			- If they stay in same state for abnormal amount of time, job administrator should stop such jobs to save unnecessary cost.`,
+			Recommendation: `Cancel/stop Dataflow jobs which are in same state for more than set amount of time
+			- https://cloud.google.com/sdk/gcloud/reference/dataflow/jobs/cancel`,
+		},
+	},
+	categoryDataflow + "/dataflowJobsEncryption": {
+		Score: 0.3,
+		Tag:   []string{},
+		Recommend: recommend{
+			Risk: `Dataflow Jobs Encryption
+			- Ensure that Google Dataflow jobs are encrypted with desired encryption level.
+			- Google encrypts all jobs in Dataflow by default.
+			- Protecting source and sinks data for Dataflow batch pipeline with CMEK gives user more granular access to encryption and decryption process.`,
+			Recommendation: `Use desired encryption level to encrypt Dataflow jobs.
+			- https://cloud.google.com/dataflow/docs/guides/customer-managed-encryption-keys`,
+		},
+	},
+
+	categoryDataproc + "/dataprocClusterEncryption": {
+		Score: 0.3,
+		Tag:   []string{},
+		Recommend: recommend{
+			Risk: `Dataproc Cluster Encryption
+			- Ensure that Dataproc clusters have encryption enabled using desired protection level.
+			- By default, all dataproc clusters are encrypted using Google-managed keys.
+			- To have better control over how your dataproc clusters are encrypted, you can use Customer-Managed Keys (CMKs).`,
+			Recommendation: `Ensure that all Dataproc clusters have desired encryption level.
+			- https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/customer-managed-encryption`,
+		},
+	},
+	categoryDataproc + "/dataprocClusterLabelsAdded": {
+		Score: 0.3,
+		Tag:   []string{},
+		Recommend: recommend{
+			Risk: `Dataproc Cluster Labels Added
+			- Ensure that all Dataproc clusters have labels added.
+			- Labels are a lightweight way to group resources together that are related to or associated with each other.
+			- It is a best practice to label cloud resources to better organize and gain visibility into their usage.`,
+			Recommendation: `Ensure labels are added to all Dataproc clusters.
+			- https://cloud.google.com/dataproc/docs/guides/creating-managing-labels`,
+		},
+	},
+	categoryDataproc + "/hadoopSecureModeEnabled": {
+		Score: 0.3,
+		Tag:   []string{},
+		Recommend: recommend{
+			Risk: `Hadoop Secure Mode Enabled
+			- Ensure that all Dataproc clusters have hadoop secure mode enabled.
+			- Enabling Hadoop secure mode will allow multi-tenancy with security features like isolation, encryption, and user authentication within the cluster.
+			- It also enforces all Hadoop services and users to be authenticated via Kerberos Key distribution.`,
+			Recommendation: `Enable Hadoop secure mode for all Dataproc clusters.
+			- https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/security`,
+		},
+	},
+
+	categoryDeploymentmanager + "/deleteExpiredDeployments": {
+		Score: 0.3,
+		Tag:   []string{},
+		Recommend: recommend{
+			Risk: `Delete Expired Deployments
+			- Ensure that Cloud Deployment Manager deployment are deleted after desired number of days from their creation time.
+			- Cloud Deployment Manager deployments should be deleted after desired time period from their creation time as determined by your governance rules.`,
+			Recommendation: `Delete expired deoplyments from Deployment Manager
+			- https://cloud.google.com/deployment-manager/docs/deployments/deleting-deployments`,
 		},
 	},
 
