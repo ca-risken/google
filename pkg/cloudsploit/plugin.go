@@ -434,7 +434,7 @@ var pluginMap = map[string]pluginMetaData{
 	},
 	categoryCompute + "/automaticRestartEnabled": {
 		Score: 0.3,
-		Tag:   []string{},
+		Tag:   []string{"reliability"},
 		Recommend: recommend{
 			Risk: `Instance Automatic Restart Enabled
 			- Ensure that Virtual Machine instances have automatic restart feature enabled.
@@ -677,7 +677,7 @@ var pluginMap = map[string]pluginMetaData{
 	},
 	categoryCompute + "/instanceMaintenanceBehavior": {
 		Score: 0.3,
-		Tag:   []string{},
+		Tag:   []string{"reliability"},
 		Recommend: recommend{
 			Risk: `Instance Maintenance Behavior
 			- Ensure that "On Host Maintenance" configuration is set to Migrate for VM instances.
