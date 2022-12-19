@@ -496,7 +496,7 @@ var pluginMap = map[string]pluginMetaData{
 	},
 	categoryCompute + "/deprecatedImages": {
 		Score: 0.6,
-		Tag:   []string{},
+		Tag:   []string{"operation"},
 		Recommend: recommend{
 			Risk: `Deprecated Images
 			- Ensure that Compute instances are not created from deprecated images.
@@ -1729,7 +1729,7 @@ var pluginMap = map[string]pluginMetaData{
 	},
 	categorySQL + "/serverCertificateRotation": {
 		Score: 0.6,
-		Tag:   []string{},
+		Tag:   []string{"operation"},
 		Recommend: recommend{
 			Risk: `SSL Certificate Rotation
 			- Ensure that server certificates configured for Cloud SQL are rotated before they expire.
@@ -1991,7 +1991,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openCIFS": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open CIFS
@@ -2068,7 +2068,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openDNS": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open DNS
@@ -2079,7 +2079,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openDocker": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Docker
@@ -2102,7 +2102,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openFTP": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open FTP
@@ -2113,7 +2113,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openHadoopNameNode": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Hadoop HDFS NameNode Metadata Service
@@ -2124,7 +2124,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openHadoopNameNodeWebUI": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Hadoop HDFS NameNode WebUI
@@ -2148,7 +2148,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openKibana": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Kibana
@@ -2219,7 +2219,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openMySQL": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open MySQL
@@ -2230,7 +2230,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openNetBIOS": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open NetBIOS
@@ -2241,7 +2241,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openOracle": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Oracle
@@ -2252,7 +2252,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openOracleAutoDataWarehouse": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Oracle Auto Data Warehouse
@@ -2263,7 +2263,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openPostgreSQL": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open PostgreSQL
@@ -2274,7 +2274,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openRDP": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open RDP
@@ -2285,7 +2285,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openRPC": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open RPC
@@ -2307,7 +2307,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openSalt": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Salt
@@ -2319,7 +2319,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openSMBoTCP": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open SMBoTCP
@@ -2330,7 +2330,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openSMTP": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open SMTP
@@ -2354,7 +2354,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openSQLServer": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open SQLServer
@@ -2376,7 +2376,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openTelnet": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open Telnet
@@ -2387,7 +2387,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openVNCClient": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open VNC Client
@@ -2398,7 +2398,7 @@ var pluginMap = map[string]pluginMetaData{
 		},
 	},
 	categoryVPCNetwork + "/openVNCServer": {
-		Score: 0.8,
+		Score: 0.6,
 		Tag:   []string{},
 		Recommend: recommend{
 			Risk: `Open VNC Server
