@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -136,7 +136,7 @@ func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID st
 		return nil, "", fmt.Errorf("Failed exec cloudsploit. error: %+v, detail: %s", err, stderr.String())
 	}
 
-	buf, err := ioutil.ReadAll(resultJSON)
+	buf, err := io.ReadAll(resultJSON)
 	if err != nil {
 		return nil, "", err
 	}
