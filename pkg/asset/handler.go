@@ -238,7 +238,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		}
 		f := &finding.FindingBatchForUpsert{
 			Finding: &finding.FindingForUpsert{
-				Description:      fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName),
+				Description:      getAssetDescription(a),
 				DataSource:       message.GoogleAssetDataSource,
 				DataSourceId:     a.Asset.Name,
 				ResourceName:     a.Asset.Name,
@@ -280,6 +280,16 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	}
 	s.logger.Infof(ctx, "putFindings(%d) succeeded", len(assets))
 	return nil
+}
+
+func getAssetDescription(a *assetFinding) string {
+	if a.Asset.AssetType == assetTypeServiceAccount {
+		return fmt.Sprintf("The %s has the admin role(owner or editor). Make sure it has the least permissions.", a.Asset.DisplayName)
+	}
+	if a.Asset.AssetType == assetTypeBucket {
+		return fmt.Sprintf("The %s bucket allows public access. Make sure it needs to set publish settings.", a.Asset.DisplayName)
+	}
+	return fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName)
 }
 
 func getAssetTags(assetType, assetName string) []string {
