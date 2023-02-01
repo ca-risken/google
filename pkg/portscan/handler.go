@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -55,6 +56,8 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.logger.Errorf(ctx, "Invalid message: msg=%+v, err=%+v", msgBody, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
+
+	beforeScanAt := time.Now()
 	requestID, err := s.logger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		s.logger.Warnf(ctx, "Failed to generate requestID: err=%+v", err)
@@ -82,6 +85,17 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	s.logger.Infof(ctx, "end exec scan, RequestID=%s", requestID)
+
+	// Clear finding score
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: message.GooglePortscanDataSource,
+		ProjectId:  msg.ProjectID,
+		Tag:        []string{gcp.GcpProjectId},
+		BeforeAt:   beforeScanAt.Unix(),
+	}); err != nil {
+		s.logger.Errorf(ctx, "Failed to clear finding score. GCPProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		return err
+	}
 
 	s.logger.Infof(ctx, "start update scan status, RequestID=%s", requestID)
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
@@ -148,15 +162,6 @@ func (s *SqsHandler) scan(ctx context.Context, gcpProjectId string, msg *message
 		return err
 	}
 
-	// Clear finding score
-	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
-		DataSource: message.GooglePortscanDataSource,
-		ProjectId:  msg.ProjectID,
-		Tag:        []string{gcpProjectId},
-	}); err != nil {
-		s.logger.Errorf(ctx, "Failed to clear finding score. GCPProjectID: %v, error: %v", gcpProjectId, err)
-		return err
-	}
 	for _, result := range nmapResults {
 		err := s.putNmapFindings(ctx, msg.ProjectID, gcpProjectId, result)
 		if err != nil {

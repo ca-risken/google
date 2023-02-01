@@ -74,6 +74,8 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.logger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
+
+	beforeScanAt := time.Now()
 	requestID, err := s.logger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		s.logger.Warnf(ctx, "failed to generate requestID: err=%+v", err)
@@ -90,17 +92,6 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	}
 	s.logger.Infof(ctx, "end get GCP DataSource, RequestID=%s", requestID)
 	scanStatus := common.InitScanStatus(gcp)
-
-	// Clear finding score
-	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
-		DataSource: message.GoogleAssetDataSource,
-		ProjectId:  msg.ProjectID,
-		Tag:        []string{gcp.GcpProjectId},
-	}); err != nil {
-		s.logger.Errorf(ctx, "failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
-		s.updateStatusToError(ctx, scanStatus, err)
-		return mimosasqs.WrapNonRetryable(err)
-	}
 
 	iamPolicies, err := s.assetClient.getProjectIAMPolicy(ctx, gcp.GcpProjectId)
 	if err != nil {
@@ -163,6 +154,19 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
+
+	// Clear score for inactive findings
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: message.GoogleAssetDataSource,
+		ProjectId:  msg.ProjectID,
+		Tag:        []string{gcp.GcpProjectId},
+		BeforeAt:   beforeScanAt.Unix(),
+	}); err != nil {
+		s.logger.Errorf(ctx, "failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
+	}
+
 	s.logger.Infof(ctx, "end google asset scan, RequestID=%s", requestID)
 	if msg.ScanOnly {
 		return nil
