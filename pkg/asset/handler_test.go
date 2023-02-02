@@ -259,45 +259,84 @@ func TestScoreAssetForStorage(t *testing.T) {
 }
 
 func TestGetAssetDescription(t *testing.T) {
+	type args struct {
+		asset *assetFinding
+		score float32
+	}
 	cases := []struct {
 		name  string
-		input *assetFinding
+		input args
 		want  string
 	}{
 		{
-			name: "Type SA",
-			input: &assetFinding{
-				Asset: &asset.ResourceSearchResult{
-					AssetType:   assetTypeServiceAccount,
-					DisplayName: "alice@some-project.iam.gserviceaccount.com",
+			name: "Type SA(high score)",
+			input: args{
+				asset: &assetFinding{
+					Asset: &asset.ResourceSearchResult{
+						AssetType:   assetTypeServiceAccount,
+						DisplayName: "alice@some-project.iam.gserviceaccount.com",
+					},
 				},
+				score: 0.8,
 			},
 			want: "The alice@some-project.iam.gserviceaccount.com has the admin role(owner or editor). Make sure it has the least permissions.",
 		},
 		{
-			name: "Type bucket",
-			input: &assetFinding{
-				Asset: &asset.ResourceSearchResult{
-					AssetType:   assetTypeBucket,
-					DisplayName: "bucket-name",
+			name: "Type SA(low score)",
+			input: args{
+				asset: &assetFinding{
+					Asset: &asset.ResourceSearchResult{
+						AssetType:   assetTypeServiceAccount,
+						DisplayName: "alice@some-project.iam.gserviceaccount.com",
+					},
 				},
+				score: 0.7,
+			},
+			want: "ServiceAccount: alice@some-project.iam.gserviceaccount.com",
+		},
+		{
+			name: "Type bucket(high score)",
+			input: args{
+				asset: &assetFinding{
+					Asset: &asset.ResourceSearchResult{
+						AssetType:   assetTypeBucket,
+						DisplayName: "bucket-name",
+					},
+				},
+				score: 0.7,
 			},
 			want: "The bucket-name bucket allows public access. Make sure it needs to set publish settings.",
 		},
 		{
-			name: "Type unsupported",
-			input: &assetFinding{
-				Asset: &asset.ResourceSearchResult{
-					AssetType:   "some-type",
-					DisplayName: "some-asset",
+			name: "Type bucket(low score)",
+			input: args{
+				asset: &assetFinding{
+					Asset: &asset.ResourceSearchResult{
+						AssetType:   assetTypeBucket,
+						DisplayName: "bucket-name",
+					},
 				},
+				score: 0.6,
+			},
+			want: "Bucket: bucket-name",
+		},
+		{
+			name: "Type unsupported",
+			input: args{
+				asset: &assetFinding{
+					Asset: &asset.ResourceSearchResult{
+						AssetType:   "some-type",
+						DisplayName: "some-asset",
+					},
+				},
+				score: 0.8,
 			},
 			want: "GCP Cloud Asset: some-asset",
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := getAssetDescription(c.input)
+			got := getAssetDescription(c.input.asset, c.input.score)
 			if c.want != got {
 				t.Fatalf("Unexpected data match: want=%s, got=%s", c.want, got)
 			}
