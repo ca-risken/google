@@ -238,7 +238,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		}
 		f := &finding.FindingBatchForUpsert{
 			Finding: &finding.FindingForUpsert{
-				Description:      fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName),
+				Description:      getAssetDescription(a, score),
 				DataSource:       message.GoogleAssetDataSource,
 				DataSourceId:     a.Asset.Name,
 				ResourceName:     a.Asset.Name,
@@ -457,6 +457,28 @@ func writableRole(role string) bool {
 		return false
 	}
 	return true
+}
+
+func getAssetDescription(a *assetFinding, score float32) string {
+	assetType := ""
+	if a.Asset.AssetType == assetTypeServiceAccount {
+		assetType = "ServiceAccount"
+		if score >= 0.8 {
+			return fmt.Sprintf("The %s has the admin role(owner or editor). Make sure it has the least permissions.", a.Asset.DisplayName)
+		}
+	}
+	if a.Asset.AssetType == assetTypeBucket {
+		assetType = "Bucket"
+		if score >= 0.7 {
+			return fmt.Sprintf("The %s bucket allows public access. Make sure it needs to set publish settings.", a.Asset.DisplayName)
+		}
+	}
+
+	description := fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName)
+	if assetType != "" {
+		description = fmt.Sprintf("%s: %s", assetType, a.Asset.DisplayName)
+	}
+	return description
 }
 
 func (s *SqsHandler) listAssetIterationCallWithRetry(ctx context.Context, it *asset.ResourceSearchResultIterator, pageToken string) (resource []*assetpb.ResourceSearchResult, nextPageToken string, err error) {
