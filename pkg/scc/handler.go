@@ -186,7 +186,6 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 
 func (s *SqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
 	putData.GcpDataSource.Status = google.Status_ERROR
-	statusDetail = common.CutString(statusDetail, 200)
 	putData.GcpDataSource.StatusDetail = statusDetail
 	return s.updateScanStatus(ctx, putData)
 }

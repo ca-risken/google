@@ -110,7 +110,7 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	}
 
 	s.logger.Infof(ctx, "start update scan status, RequestID=%s", requestID)
-	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
+	if err := s.updateScanStatusSuccess(ctx, scanStatus, unknownFindings(result)); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	s.logger.Infof(ctx, "end update scan status, RequestID=%s", requestID)
@@ -266,14 +266,13 @@ func (s *SqsHandler) tagResource(ctx context.Context, tag string, resourceID uin
 
 func (s *SqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
 	putData.GcpDataSource.Status = google.Status_ERROR
-	statusDetail = common.CutString(statusDetail, 200)
 	putData.GcpDataSource.StatusDetail = statusDetail
 	return s.updateScanStatus(ctx, putData)
 }
 
-func (s *SqsHandler) updateScanStatusSuccess(ctx context.Context, putData *google.AttachGCPDataSourceRequest) error {
+func (s *SqsHandler) updateScanStatusSuccess(ctx context.Context, putData *google.AttachGCPDataSourceRequest, detail string) error {
 	putData.GcpDataSource.Status = google.Status_OK
-	putData.GcpDataSource.StatusDetail = ""
+	putData.GcpDataSource.StatusDetail = detail
 	return s.updateScanStatus(ctx, putData)
 }
 

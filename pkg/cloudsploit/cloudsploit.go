@@ -175,6 +175,7 @@ const (
 	resultWARN    = "WARN"    // 1: WARN: The result represents a potential misconfiguration or issue but is not an immediate risk
 	resultFAIL    = "FAIL"    // 2: FAIL: The result presents an immediate risk to the security of the account
 	resultUNKNOWN = "UNKNOWN" // 3: UNKNOWN: The results could not be determined (API failure, wrong permissions, etc.)
+	WARN_MESSAGE  = "UNKNOWN status detected. Some scans may have failed. Please take action if you don't have enough permissions."
 )
 
 func (c *cloudSploitFinding) setTags() {
@@ -203,4 +204,21 @@ func (c *cloudSploitFinding) getScore() float32 {
 func (c *cloudSploitFinding) getRecommend() *recommend {
 	p := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]
 	return &p.Recommend
+}
+
+func unknownFindings(findings *[]cloudSploitFinding) string {
+	unknowns := map[string]int{}
+	for _, f := range *findings {
+		if f.Status == resultUNKNOWN {
+			unknowns[fmt.Sprintf("%s: %s", f.Category, f.Message)]++
+		}
+	}
+	statusDetail := ""
+	for k := range unknowns {
+		statusDetail += fmt.Sprintf("- %s\n", k)
+	}
+	if statusDetail != "" {
+		statusDetail = fmt.Sprintf("%s\n\n%s", WARN_MESSAGE, statusDetail)
+	}
+	return statusDetail
 }
