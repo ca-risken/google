@@ -85,15 +85,18 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	nextPageToken := ""
 	counter := 0
 	for {
-		findings, token, err := it.InternalFetch(finding.PutFindingBatchMaxLength, nextPageToken)
+		result, err := s.sccClient.iterationFetchFindingsWithRetry(ctx, it, nextPageToken)
 		if err != nil {
 			s.logger.Errorf(ctx, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			s.updateStatusToError(ctx, scanStatus, err)
 			return mimosasqs.WrapNonRetryable(err)
 		}
+		if result == nil || len(result.findings) == 0 {
+			break
+		}
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
-		for _, f := range findings {
+		for _, f := range result.findings {
 			data, err := s.generateFindingData(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding)
 			if err != nil {
 				s.updateStatusToError(ctx, scanStatus, err)
@@ -107,10 +110,10 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 			}
 		}
 		counter = counter + len(findingBatchParam)
-		if token == "" {
+		if result.token == "" {
 			break
 		}
-		nextPageToken = token
+		nextPageToken = result.token
 	}
 	s.logger.Infof(ctx, "end put findings(%d succeeded), RequestID=%s", counter, requestID)
 

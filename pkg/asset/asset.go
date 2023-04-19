@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	asset "cloud.google.com/go/asset/apiv1"
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"cloud.google.com/go/storage"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
 	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
@@ -18,6 +20,7 @@ import (
 
 type assetServiceClient interface {
 	listAsset(ctx context.Context, gcpProjectID string) *asset.ResourceSearchResultIterator
+	listAssetIterationCallWithRetry(ctx context.Context, it *asset.ResourceSearchResultIterator, pageToken string) (*assetIterationResult, error)
 	getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error)
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
@@ -30,6 +33,7 @@ type assetClient struct {
 	admin   *admin.IamClient
 	gcs     *storage.Client
 	logger  logging.Logger
+	retryer backoff.BackOff
 }
 
 func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient, error) {
@@ -60,6 +64,7 @@ func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient
 		admin:   ad,
 		gcs:     st,
 		logger:  l,
+		retryer: backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
 	}, nil
 }
 
@@ -89,6 +94,29 @@ func (a *assetClient) listAsset(ctx context.Context, gcpProjectID string) *asset
 			assetTypeBucket,
 		},
 	})
+}
+
+type assetIterationResult struct {
+	resources []*assetpb.ResourceSearchResult
+	token     string
+}
+
+func (a *assetClient) listAssetIterationCallWithRetry(ctx context.Context, it *asset.ResourceSearchResultIterator, pageToken string) (*assetIterationResult, error) {
+	operation := func() (*assetIterationResult, error) {
+		return a.listAssetIterationCall(it, pageToken)
+	}
+	return backoff.RetryNotifyWithData(operation, a.retryer, a.newRetryLogger(ctx, "listAssetIterationCall"))
+}
+
+func (a *assetClient) listAssetIterationCall(it *asset.ResourceSearchResultIterator, pageToken string) (*assetIterationResult, error) {
+	resources, token, err := it.InternalFetch(assetPageSize, pageToken)
+	if err != nil {
+		return nil, err
+	}
+	return &assetIterationResult{
+		resources: resources,
+		token:     token,
+	}, nil
 }
 
 func (a *assetClient) getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error) {
@@ -151,4 +179,10 @@ func (a *assetClient) getStorageBucketPolicy(ctx context.Context, bucketName str
 	}
 	a.logger.Debugf(ctx, "BucketPolicy: %+v", policy)
 	return policy, nil
+}
+
+func (a *assetClient) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
+	return func(err error, t time.Duration) {
+		a.logger.Warnf(ctx, "[RetryLogger] %s error: duration=%+v, err=%+v", funcName, t, err)
+	}
 }
