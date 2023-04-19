@@ -8,10 +8,13 @@ import (
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
 	"github.com/ca-risken/common/pkg/logging"
-	"github.com/ca-risken/core/proto/finding"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/option"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
+)
+
+const (
+	maxIterationFetch = 500
 )
 
 type SCCServiceClient interface {
@@ -78,7 +81,7 @@ func (s *SCCClient) iterationFetchFindings(
 ) (
 	*sccIterationResult, error,
 ) {
-	findings, token, err := it.InternalFetch(finding.PutFindingBatchMaxLength, nextPageToken)
+	findings, token, err := it.InternalFetch(maxIterationFetch, nextPageToken)
 	if err != nil {
 		return nil, err
 	}

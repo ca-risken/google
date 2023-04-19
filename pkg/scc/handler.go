@@ -85,7 +85,9 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	nextPageToken := ""
 	counter := 0
 	for {
-		result, err := s.sccClient.iterationFetchFindingsWithRetry(ctx, it, nextPageToken)
+		tspan, tctx1 := tracer.StartSpanFromContext(ctx, "iterationFetchFindings")
+		result, err := s.sccClient.iterationFetchFindingsWithRetry(tctx1, it, nextPageToken)
+		tspan.Finish(tracer.WithError(err))
 		if err != nil {
 			s.logger.Errorf(ctx, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
@@ -95,6 +97,7 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		if result == nil || len(result.findings) == 0 {
 			break
 		}
+
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
 		for _, f := range result.findings {
 			data, err := s.generateFindingData(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding)
@@ -105,7 +108,10 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 			findingBatchParam = append(findingBatchParam, data)
 		}
 		if len(findingBatchParam) > 0 {
-			if err := grpc_client.PutFindingBatch(ctx, s.findingClient, msg.ProjectID, findingBatchParam); err != nil {
+			tspan, tctx2 := tracer.StartSpanFromContext(ctx, "putFindingBatch")
+			err := grpc_client.PutFindingBatch(tctx2, s.findingClient, msg.ProjectID, findingBatchParam)
+			tspan.Finish(tracer.WithError(err))
+			if err != nil {
 				return err
 			}
 		}
