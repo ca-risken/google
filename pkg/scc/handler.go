@@ -75,23 +75,22 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.updateStatusToError(ctx, scanStatus, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
-	s.logger.Infof(ctx, "start SCC ListFinding API, RequestID=%s", requestID)
 	tspan, tctx := tracer.StartSpanFromContext(ctx, "listFinding")
+	s.logger.Infof(tctx, "start SCC ListFinding API, RequestID=%s", requestID)
 	it := s.sccClient.listFinding(tctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	s.logger.Infof(tctx, "end SCC ListFinding API, RequestID=%s", requestID)
 	tspan.Finish()
-	s.logger.Infof(ctx, "end SCC ListFinding API, RequestID=%s", requestID)
 
-	s.logger.Infof(ctx, "start put findings, RequestID=%s", requestID)
+	tspan, tctx2 := tracer.StartSpanFromContext(ctx, "putFindings")
+	s.logger.Infof(tctx2, "start put findings, RequestID=%s", requestID)
 	nextPageToken := ""
 	counter := 0
 	for {
-		tspan, tctx1 := tracer.StartSpanFromContext(ctx, "iterationFetchFindings")
-		result, err := s.sccClient.iterationFetchFindingsWithRetry(tctx1, it, nextPageToken)
-		tspan.Finish(tracer.WithError(err))
+		result, err := s.sccClient.iterationFetchFindingsWithRetry(tctx2, it, nextPageToken)
 		if err != nil {
-			s.logger.Errorf(ctx, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
+			s.logger.Errorf(tctx2, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			s.updateStatusToError(ctx, scanStatus, err)
+			s.updateStatusToError(tctx2, scanStatus, err)
 			return mimosasqs.WrapNonRetryable(err)
 		}
 		if result == nil || len(result.findings) == 0 {
@@ -100,17 +99,15 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
 		for _, f := range result.findings {
-			data, err := s.generateFindingData(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding)
+			data, err := s.generateFindingData(tctx2, msg.ProjectID, gcp.GcpProjectId, f.Finding)
 			if err != nil {
-				s.updateStatusToError(ctx, scanStatus, err)
+				s.updateStatusToError(tctx2, scanStatus, err)
 				return mimosasqs.WrapNonRetryable(err)
 			}
 			findingBatchParam = append(findingBatchParam, data)
 		}
 		if len(findingBatchParam) > 0 {
-			tspan, tctx2 := tracer.StartSpanFromContext(ctx, "putFindingBatch")
 			err := grpc_client.PutFindingBatch(tctx2, s.findingClient, msg.ProjectID, findingBatchParam)
-			tspan.Finish(tracer.WithError(err))
 			if err != nil {
 				return err
 			}
@@ -121,7 +118,8 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		}
 		nextPageToken = result.token
 	}
-	s.logger.Infof(ctx, "end put findings(%d succeeded), RequestID=%s", counter, requestID)
+	s.logger.Infof(tctx2, "end put findings(%d succeeded), RequestID=%s", counter, requestID)
+	tspan.Finish()
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
