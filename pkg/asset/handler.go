@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	asset "cloud.google.com/go/asset/apiv1"
 	"cloud.google.com/go/iam"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -29,11 +28,7 @@ type SqsHandler struct {
 	alertClient   alert.AlertServiceClient
 	googleClient  google.GoogleServiceClient
 	assetClient   assetServiceClient
-
-	waitMilliSecPerRequest int
-	assetAPIRetryNum       int
-	assetAPIRetryWaitSec   int
-	logger                 logging.Logger
+	logger        logging.Logger
 }
 
 func NewSqsHandler(
@@ -41,20 +36,14 @@ func NewSqsHandler(
 	ac alert.AlertServiceClient,
 	gc google.GoogleServiceClient,
 	assetc assetServiceClient,
-	waitMilliSecPerRequest int,
-	assetAPIRetryNum int,
-	assetAPIRetryWaitSec int,
 	l logging.Logger,
 ) *SqsHandler {
 	return &SqsHandler{
-		findingClient:          fc,
-		alertClient:            ac,
-		googleClient:           gc,
-		assetClient:            assetc,
-		waitMilliSecPerRequest: waitMilliSecPerRequest,
-		assetAPIRetryNum:       assetAPIRetryNum,
-		assetAPIRetryWaitSec:   assetAPIRetryWaitSec,
-		logger:                 l,
+		findingClient: fc,
+		alertClient:   ac,
+		googleClient:  gc,
+		assetClient:   assetc,
+		logger:        l,
 	}
 }
 
@@ -110,16 +99,19 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	nextPageToken := ""
 	it := s.assetClient.listAsset(ctx, gcp.GcpProjectId)
 	for {
-		resources, token, err := s.listAssetIterationCallWithRetry(ctx, it, nextPageToken)
+		result, err := s.assetClient.listAssetIterationCallWithRetry(ctx, it, nextPageToken)
 		if err != nil {
 			err = fmt.Errorf("failed to Cloud Asset API: project_id=%d, gcp_id=%d, google_data_source_id=%d, RequestID=%s, err=%w",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, requestID, err)
 			s.updateStatusToError(ctx, scanStatus, err)
 			return mimosasqs.WrapNonRetryable(err)
 		}
+		if result == nil || len(result.resources) == 0 {
+			break
+		}
 
 		assets := []*assetFinding{}
-		for _, r := range resources {
+		for _, r := range result.resources {
 			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap)
 			if err != nil {
 				err = fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%w",
@@ -140,13 +132,10 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 			}
 		}
 		assetCounter = assetCounter + len(assets)
-		nextPageToken = token
-		if token == "" {
+		nextPageToken = result.token
+		if result.token == "" {
 			break
 		}
-
-		// Control the number of API requests so that they are not exceeded.
-		time.Sleep(time.Duration(s.waitMilliSecPerRequest) * time.Millisecond)
 	}
 	s.logger.Infof(ctx, "got %d assets, RequestID=%s", assetCounter, requestID)
 	s.logger.Infof(ctx, "end CloudAsset API, RequestID=%s", requestID)
@@ -478,28 +467,4 @@ func getAssetDescription(a *assetFinding, score float32) string {
 		description = fmt.Sprintf("%s: %s", assetType, a.Asset.DisplayName)
 	}
 	return description
-}
-
-func (s *SqsHandler) listAssetIterationCallWithRetry(ctx context.Context, it *asset.ResourceSearchResultIterator, pageToken string) (resource []*assetpb.ResourceSearchResult, nextPageToken string, err error) {
-	for i := 0; i <= s.assetAPIRetryNum; i++ {
-		if i > 0 {
-			time.Sleep(time.Duration(s.assetAPIRetryWaitSec+i) * time.Second)
-		}
-
-		// API Call
-		resources, token, err := it.InternalFetch(assetPageSize, pageToken)
-		if err != nil {
-			// Retry
-			// https://cloud.google.com/apis/design/errors#retrying_errors
-			// > For 429 RESOURCE_EXHAUSTED errors, the client may retry at the higher level with minimum 30s delay.
-			// > Such retries are only useful for long running background jobs.
-			if i < s.assetAPIRetryNum {
-				s.logger.Warnf(ctx, "failed to Cloud Asset API, But retry call API after %d seconds..., retry=%d/%d, API Result=%+v, err=%+v",
-					s.assetAPIRetryWaitSec+i, i+1, s.assetAPIRetryNum, resource, err)
-			}
-			continue
-		}
-		return resources, token, nil
-	}
-	return nil, "", fmt.Errorf("failed to call Asset API, err=%w", err)
 }

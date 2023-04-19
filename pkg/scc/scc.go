@@ -4,21 +4,32 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
+	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/core/proto/finding"
+	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/option"
 	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
 
 type SCCServiceClient interface {
 	listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator
+	iterationFetchFindingsWithRetry(
+		ctx context.Context,
+		it *scc.ListFindingsResponse_ListFindingsResultIterator,
+		nextPageToken string,
+	) (*sccIterationResult, error)
 }
 
 type SCCClient struct {
-	client *scc.Client
+	client  *scc.Client
+	logger  logging.Logger
+	retryer backoff.BackOff
 }
 
-func NewSCCClient(ctx context.Context, credentialPath string) (SCCServiceClient, error) {
+func NewSCCClient(ctx context.Context, credentialPath string, l logging.Logger) (SCCServiceClient, error) {
 	c, err := scc.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google API client: %w", err)
@@ -27,16 +38,60 @@ func NewSCCClient(ctx context.Context, credentialPath string) (SCCServiceClient,
 	if err := os.Remove(credentialPath); err != nil {
 		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
-	return &SCCClient{client: c}, nil
+	return &SCCClient{
+		client:  c,
+		logger:  l,
+		retryer: backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
+	}, nil
 }
 
-func (g *SCCClient) listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
+func (s *SCCClient) listFinding(ctx context.Context, gcpOrganizationID, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
 	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
-	return g.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
+	return s.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
 		// Parent: fmt.Sprintf("organizations/%s/sources/-", gcpOrganizationID),
 		// Filter: fmt.Sprintf("source_properties.ProjectId = \"%s\"", gcpProjectID),
 		Parent: fmt.Sprintf("projects/%s/sources/-", gcpProjectID),
 	})
+}
+
+type sccIterationResult struct {
+	findings []*sccpb.ListFindingsResponse_ListFindingsResult
+	token    string
+}
+
+func (s *SCCClient) iterationFetchFindingsWithRetry(
+	ctx context.Context,
+	it *scc.ListFindingsResponse_ListFindingsResultIterator,
+	nextPageToken string,
+) (
+	*sccIterationResult, error,
+) {
+	operation := func() (*sccIterationResult, error) {
+		return s.iterationFetchFindings(it, nextPageToken)
+	}
+	return backoff.RetryNotifyWithData(operation, s.retryer, s.newRetryLogger(ctx, "iterationFetchFindings"))
+}
+
+func (s *SCCClient) iterationFetchFindings(
+	it *scc.ListFindingsResponse_ListFindingsResultIterator,
+	nextPageToken string,
+) (
+	*sccIterationResult, error,
+) {
+	findings, token, err := it.InternalFetch(finding.PutFindingBatchMaxLength, nextPageToken)
+	if err != nil {
+		return nil, err
+	}
+	return &sccIterationResult{
+		findings: findings,
+		token:    token,
+	}, nil
+}
+
+func (s *SCCClient) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
+	return func(err error, t time.Duration) {
+		s.logger.Warnf(ctx, "[RetryLogger] %s error: duration=%+v, err=%+v", funcName, t, err)
+	}
 }
 
 func scoreSCC(f *sccpb.Finding) float32 {

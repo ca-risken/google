@@ -50,11 +50,6 @@ type AppConfig struct {
 	GoogleAssetQueueURL  string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
 	MaxNumberOfMessage   int32  `split_words:"true" default:"10"`
 	WaitTimeSecond       int32  `split_words:"true" default:"20"`
-
-	// handler
-	WaitMilliSecPerRequest int `split_words:"true" default:"500"`
-	AssetAPIRetryNum       int `split_words:"true" default:"3"`
-	AssetAPIRetryWaitSec   int `split_words:"true" default:"30"`
 }
 
 func main() {
@@ -115,9 +110,6 @@ func main() {
 		ac,
 		gc,
 		assetc,
-		conf.WaitMilliSecPerRequest,
-		conf.AssetAPIRetryNum,
-		conf.AssetAPIRetryWaitSec,
 		appLogger,
 	)
 	f, err := mimosasqs.NewFinalizer(message.GoogleAssetDataSource, settingURL, conf.CoreSvcAddr, nil)

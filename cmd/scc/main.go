@@ -101,7 +101,7 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
 	}
-	sc, err := scc.NewSCCClient(ctx, conf.GoogleCredentialPath)
+	sc, err := scc.NewSCCClient(ctx, conf.GoogleCredentialPath, appLogger)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create scc client, err=%+v", err)
 	}
