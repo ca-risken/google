@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	securitycenter "cloud.google.com/go/securitycenter/apiv1"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/grpc_client"
@@ -74,46 +75,16 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	s.logger.Infof(ctx, "end SCC ListFinding API, RequestID=%s", requestID)
 
 	s.logger.Infof(ctx, "start put findings, RequestID=%s", requestID)
-	nextPageToken := ""
-	counter := 0
-	for {
-		tspan, tctx1 := tracer.StartSpanFromContext(ctx, "iterationFetchFindings")
-		result, err := s.sccClient.iterationFetchFindingsWithRetry(tctx1, it, nextPageToken)
-		tspan.Finish(tracer.WithError(err))
-		if err != nil {
-			s.logger.Errorf(ctx, "failed to Coud SCC API: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-			s.updateStatusToError(ctx, scanStatus, err)
-			return mimosasqs.WrapNonRetryable(err)
-		}
-		if result == nil || len(result.findings) == 0 {
-			break
-		}
-
-		findingBatchParam := []*finding.FindingBatchForUpsert{}
-		for _, f := range result.findings {
-			data, err := s.generateFindingData(ctx, msg.ProjectID, gcp.GcpProjectId, f.Finding)
-			if err != nil {
-				s.updateStatusToError(ctx, scanStatus, err)
-				return mimosasqs.WrapNonRetryable(err)
-			}
-			findingBatchParam = append(findingBatchParam, data)
-		}
-		if len(findingBatchParam) > 0 {
-			tspan, tctx2 := tracer.StartSpanFromContext(ctx, "putFindingBatch")
-			err := grpc_client.PutFindingBatch(tctx2, s.findingClient, msg.ProjectID, findingBatchParam)
-			tspan.Finish(tracer.WithError(err))
-			if err != nil {
-				return err
-			}
-		}
-		counter = counter + len(findingBatchParam)
-		if result.token == "" {
-			break
-		}
-		nextPageToken = result.token
+	tspan, tctx2 := tracer.StartSpanFromContext(ctx, "putFindings")
+	putCount, err := s.putFindings(tctx2, gcp, it)
+	tspan.Finish(tracer.WithError(err))
+	if err != nil {
+		s.logger.Errorf(ctx, "Failed to put findings: project_id=%d, gcp_project_id=%d, err=%+v",
+			gcp.ProjectId, gcp.GcpProjectId, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
 	}
-	s.logger.Infof(ctx, "end put findings(%d succeeded), RequestID=%s", counter, requestID)
+	s.logger.Infof(ctx, "end put findings(%d succeeded), RequestID=%s", *putCount, requestID)
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
@@ -127,6 +98,45 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	return nil
+}
+
+func (s *SqsHandler) putFindings(
+	ctx context.Context,
+	gcp *google.GCPDataSource,
+	it *securitycenter.ListFindingsResponse_ListFindingsResultIterator,
+) (*int, error) {
+	nextPageToken := ""
+	counter := 0
+	for {
+		result, err := s.sccClient.iterationFetchFindingsWithRetry(ctx, it, nextPageToken)
+		if err != nil {
+			return nil, fmt.Errorf("fetch error: err=%w", err)
+		}
+		if result == nil || len(result.findings) == 0 {
+			break
+		}
+
+		findingBatchParam := []*finding.FindingBatchForUpsert{}
+		for _, f := range result.findings {
+			data, err := s.generateFindingData(ctx, gcp.ProjectId, gcp.GcpProjectId, f.Finding)
+			if err != nil {
+				return nil, fmt.Errorf("generate finding error: err=%w", err)
+			}
+			findingBatchParam = append(findingBatchParam, data)
+		}
+		if len(findingBatchParam) > 0 {
+			err := grpc_client.PutFindingBatch(ctx, s.findingClient, gcp.ProjectId, findingBatchParam)
+			if err != nil {
+				return nil, fmt.Errorf("put finding error: err=%w", err)
+			}
+		}
+		counter = counter + len(findingBatchParam)
+		if result.token == "" {
+			break
+		}
+		nextPageToken = result.token
+	}
+	return &counter, nil
 }
 
 func (s *SqsHandler) updateStatusToError(ctx context.Context, scanStatus *google.AttachGCPDataSourceRequest, err error) {

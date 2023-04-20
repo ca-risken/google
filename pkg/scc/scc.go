@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	maxIterationFetch = 500
+	maxIterationFetch = 1000
 )
 
 type SCCServiceClient interface {
