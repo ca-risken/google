@@ -67,17 +67,9 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	scanStatus := common.InitScanStatus(gcp)
 
 	// Get security command center
-	if gcp.GcpOrganizationId == "" || gcp.GcpProjectId == "" {
-		err := fmt.Errorf("Required GcpOrganizationId and GcpProjectId parameters, GcpOrganizationId=%s, GcpProjectId=%s",
-			gcp.GcpOrganizationId, gcp.GcpProjectId)
-		s.logger.Errorf(ctx, "Invalid parameters, project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
-			msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
-		s.updateStatusToError(ctx, scanStatus, err)
-		return mimosasqs.WrapNonRetryable(err)
-	}
 	s.logger.Infof(ctx, "start SCC ListFinding API, RequestID=%s", requestID)
 	tspan, tctx := tracer.StartSpanFromContext(ctx, "listFinding")
-	it := s.sccClient.listFinding(tctx, gcp.GcpOrganizationId, gcp.GcpProjectId)
+	it := s.sccClient.listFinding(tctx, gcp.GcpProjectId)
 	tspan.Finish()
 	s.logger.Infof(ctx, "end SCC ListFinding API, RequestID=%s", requestID)
 
