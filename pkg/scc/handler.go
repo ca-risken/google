@@ -168,7 +168,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	}
 	findingData := &finding.FindingBatchForUpsert{
 		Finding: &finding.FindingForUpsert{
-			Description:      fmt.Sprintf("Security Command Center: %s", f.Category),
+			Description:      fmt.Sprintf("Detected a %s finding", f.Category), // e.g.) Detected a PUBCLI_DATASET finding
 			DataSource:       message.GoogleSCCDataSource,
 			DataSourceId:     f.Name,
 			ResourceName:     f.ResourceName,
