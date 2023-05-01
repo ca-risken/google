@@ -279,7 +279,7 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.8,
 			},
-			want: "The alice@some-project.iam.gserviceaccount.com has the admin role(owner or editor). Make sure it has the least permissions.",
+			want: "Detected a privileged service-account that has owner(or editor) role. (name=alice@some-project.iam.gserviceaccount.com)",
 		},
 		{
 			name: "Type SA(low score)",
@@ -292,7 +292,7 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.7,
 			},
-			want: "ServiceAccount: alice@some-project.iam.gserviceaccount.com",
+			want: "Detected GCP asset (type=ServiceAccount, name=alice@some-project.iam.gserviceaccount.com)",
 		},
 		{
 			name: "Type bucket(high score)",
@@ -305,7 +305,7 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.7,
 			},
-			want: "The bucket-name bucket allows public access. Make sure it needs to set publish settings.",
+			want: "Detected public bucket. (name=bucket-name)",
 		},
 		{
 			name: "Type bucket(low score)",
@@ -318,20 +318,20 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.6,
 			},
-			want: "Bucket: bucket-name",
+			want: "Detected GCP asset (type=Bucket, name=bucket-name)",
 		},
 		{
 			name: "Type unsupported",
 			input: args{
 				asset: &assetFinding{
 					Asset: &asset.ResourceSearchResult{
-						AssetType:   "some-type",
-						DisplayName: "some-asset",
+						AssetType:   "any-type",
+						DisplayName: "any-name",
 					},
 				},
 				score: 0.8,
 			},
-			want: "GCP Cloud Asset: some-asset",
+			want: "Detected GCP asset (name=any-name)",
 		},
 	}
 	for _, c := range cases {

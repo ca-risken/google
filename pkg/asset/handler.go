@@ -452,19 +452,19 @@ func getAssetDescription(a *assetFinding, score float32) string {
 	if a.Asset.AssetType == assetTypeServiceAccount {
 		assetType = "ServiceAccount"
 		if score >= 0.8 {
-			return fmt.Sprintf("The %s has the admin role(owner or editor). Make sure it has the least permissions.", a.Asset.DisplayName)
+			return fmt.Sprintf("Detected a privileged service-account that has owner(or editor) role. (name=%s)", a.Asset.DisplayName)
 		}
 	}
 	if a.Asset.AssetType == assetTypeBucket {
 		assetType = "Bucket"
 		if score >= 0.7 {
-			return fmt.Sprintf("The %s bucket allows public access. Make sure it needs to set publish settings.", a.Asset.DisplayName)
+			return fmt.Sprintf("Detected public bucket. (name=%s)", a.Asset.DisplayName)
 		}
 	}
 
-	description := fmt.Sprintf("GCP Cloud Asset: %s", a.Asset.DisplayName)
+	description := fmt.Sprintf("Detected GCP asset (name=%s)", a.Asset.DisplayName)
 	if assetType != "" {
-		description = fmt.Sprintf("%s: %s", assetType, a.Asset.DisplayName)
+		description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, a.Asset.DisplayName)
 	}
 	return description
 }

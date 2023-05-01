@@ -11,11 +11,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.19.15
 	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/logging v0.0.0-20221119073224-9db027bda6f8
-	github.com/ca-risken/common/pkg/portscan v0.0.0-20221119073224-9db027bda6f8
+	github.com/ca-risken/common/pkg/portscan v0.0.0-20230501023912-29382763676f
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20221119073224-9db027bda6f8
-	github.com/ca-risken/core v0.5.1-0.20230131022604-6ee078ff449c
+	github.com/ca-risken/core v0.6.0
 	github.com/ca-risken/datasource-api v0.4.2-0.20221215091113-c6e727315ba7
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/cenkalti/backoff/v4 v4.2.0
