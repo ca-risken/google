@@ -423,7 +423,7 @@ func scoreAssetForStorage(f *assetFinding) float32 {
 }
 
 const (
-	assetPageSize = 200
+	assetPageSize = 1000
 	// https://cloud.google.com/storage/docs/access-control/lists#scopes
 	allUsers              string = "allUsers"
 	allAuthenticatedUsers string = "allAuthenticatedUsers"
