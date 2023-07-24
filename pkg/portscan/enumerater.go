@@ -359,7 +359,6 @@ func (p *PortscanClient) getFullResourceName(ctx context.Context, selfLink strin
 	}
 	apiService := fmt.Sprintf("%v.googleapis.com", array[1])
 	resource := strings.Join(array[3:], "/")
-	p.logger.Infof(ctx, "FullResourceName: %v", fmt.Sprintf("//%v/%v", apiService, resource))
 	return fmt.Sprintf("//%v/%v", apiService, resource)
 
 }
