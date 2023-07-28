@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/iam"
+	admin "cloud.google.com/go/iam/admin/apiv1/adminpb"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/grpc_client"
@@ -19,8 +21,6 @@ import (
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
 	"google.golang.org/api/cloudresourcemanager/v3"
-	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
-	"google.golang.org/genproto/googleapis/iam/admin/v1"
 )
 
 type SqsHandler struct {

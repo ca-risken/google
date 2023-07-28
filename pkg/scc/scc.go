@@ -7,10 +7,10 @@ import (
 	"time"
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
+	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/option"
-	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 )
 
 const (
