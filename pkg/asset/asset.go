@@ -7,15 +7,15 @@ import (
 	"time"
 
 	asset "cloud.google.com/go/asset/apiv1"
+	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1"
+	"cloud.google.com/go/iam/admin/apiv1/adminpb"
 	"cloud.google.com/go/storage"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
-	assetpb "google.golang.org/genproto/googleapis/cloud/asset/v1"
-	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 )
 
 type assetServiceClient interface {

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
+	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
 )
 
 func TestScoreSCC(t *testing.T) {

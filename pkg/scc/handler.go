@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	securitycenter "cloud.google.com/go/securitycenter/apiv1"
+	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/grpc_client"
@@ -16,7 +17,6 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	sccpb "google.golang.org/genproto/googleapis/cloud/securitycenter/v1"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 

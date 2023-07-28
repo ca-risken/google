@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	asset "cloud.google.com/go/asset/apiv1/assetpb"
 	bucketIAM "cloud.google.com/go/iam"
-	"google.golang.org/genproto/googleapis/cloud/asset/v1"
-	"google.golang.org/genproto/googleapis/iam/v1"
+	iam "cloud.google.com/go/iam/apiv1/iampb"
 )
 
 func TestIsUserServiceAccount(t *testing.T) {
