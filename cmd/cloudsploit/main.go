@@ -8,7 +8,6 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
 	"github.com/ca-risken/common/pkg/tracer"
-	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/google/pkg/cloudsploit"
 	"github.com/ca-risken/google/pkg/grpc"
 	"github.com/ca-risken/google/pkg/sqs"
@@ -119,10 +118,6 @@ func main() {
 		cloudSploit,
 		appLogger,
 	)
-	f, err := mimosasqs.NewFinalizer(message.GoogleCloudSploitDataSource, settingURL, conf.CoreSvcAddr, nil)
-	if err != nil {
-		appLogger.Fatalf(ctx, "Failed to create Finalizer, err=%+v", err)
-	}
 
 	appLogger.Info(ctx, "Start")
 	sqsConf := &sqs.SQSConfig{
@@ -144,6 +139,5 @@ func main() {
 		mimosasqs.InitializeHandler(
 			mimosasqs.RetryableErrorHandler(
 				mimosasqs.TracingHandler(getFullServiceName(),
-					mimosasqs.StatusLoggingHandler(appLogger,
-						f.FinalizeHandler(handler))))))
+					mimosasqs.StatusLoggingHandler(appLogger, handler)))))
 }
