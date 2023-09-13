@@ -52,6 +52,7 @@ type serviceConfig struct {
 
 	// scc
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
+	IncludeLowSeverity   bool   `split_words:"true" default:"true"`
 }
 
 func main() {
@@ -108,7 +109,7 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create scc client, err=%+v", err)
 	}
-	handler := scc.NewSqsHandler(fc, ac, gc, sc, appLogger)
+	handler := scc.NewSqsHandler(fc, ac, gc, sc, conf.IncludeLowSeverity, appLogger)
 
 	sqsConf := &sqs.SQSConfig{
 		Debug:              conf.Debug,

@@ -18,7 +18,7 @@ const (
 )
 
 type SCCServiceClient interface {
-	listFinding(ctx context.Context, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator
+	listFinding(ctx context.Context, gcpProjectID string, includeAllSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator
 	iterationFetchFindingsWithRetry(
 		ctx context.Context,
 		it *scc.ListFindingsResponse_ListFindingsResultIterator,
@@ -48,10 +48,15 @@ func NewSCCClient(ctx context.Context, credentialPath string, l logging.Logger) 
 	}, nil
 }
 
-func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string) *scc.ListFindingsResponse_ListFindingsResultIterator {
+func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string, includeAllSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator {
+	filter := `severity="CRITICAL" OR severity="HIGH" OR severity="MEDIUM"`
+	if includeAllSeverity {
+		filter += ` OR severity="LOW"`
+	}
 	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
 	return s.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
 		Parent: fmt.Sprintf("projects/%s/sources/-", gcpProjectID),
+		Filter: filter,
 	})
 }
 

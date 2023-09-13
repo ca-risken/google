@@ -21,11 +21,12 @@ import (
 )
 
 type SqsHandler struct {
-	findingClient finding.FindingServiceClient
-	alertClient   alert.AlertServiceClient
-	googleClient  google.GoogleServiceClient
-	sccClient     SCCServiceClient
-	logger        logging.Logger
+	findingClient      finding.FindingServiceClient
+	alertClient        alert.AlertServiceClient
+	googleClient       google.GoogleServiceClient
+	sccClient          SCCServiceClient
+	includeLowSeverity bool
+	logger             logging.Logger
 }
 
 func NewSqsHandler(
@@ -33,14 +34,16 @@ func NewSqsHandler(
 	ac alert.AlertServiceClient,
 	gc google.GoogleServiceClient,
 	sccc SCCServiceClient,
+	includeLowSeverity bool,
 	l logging.Logger,
 ) *SqsHandler {
 	return &SqsHandler{
-		findingClient: fc,
-		alertClient:   ac,
-		googleClient:  gc,
-		sccClient:     sccc,
-		logger:        l,
+		findingClient:      fc,
+		alertClient:        ac,
+		googleClient:       gc,
+		sccClient:          sccc,
+		includeLowSeverity: includeLowSeverity,
+		logger:             l,
 	}
 }
 
@@ -70,7 +73,7 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	// Get security command center
 	s.logger.Infof(ctx, "start SCC ListFinding API, RequestID=%s", requestID)
 	tspan, tctx := tracer.StartSpanFromContext(ctx, "listFinding")
-	it := s.sccClient.listFinding(tctx, gcp.GcpProjectId)
+	it := s.sccClient.listFinding(tctx, gcp.GcpProjectId, s.includeLowSeverity)
 	tspan.Finish()
 	s.logger.Infof(ctx, "end SCC ListFinding API, RequestID=%s", requestID)
 
