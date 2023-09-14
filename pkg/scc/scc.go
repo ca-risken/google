@@ -48,11 +48,13 @@ func NewSCCClient(ctx context.Context, credentialPath string, l logging.Logger) 
 	}, nil
 }
 
-func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string, includeAllSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator {
-	filter := `severity="CRITICAL" OR severity="HIGH" OR severity="MEDIUM"`
-	if includeAllSeverity {
-		filter += ` OR severity="LOW"`
+func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string, includeLowSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator {
+	defaultFilter := `state="ACTIVE" AND NOT mute="MUTED"`
+	severity := `severity="CRITICAL" OR severity="HIGH" OR severity="MEDIUM"`
+	if includeLowSeverity {
+		severity += ` OR severity="LOW"`
 	}
+	filter := fmt.Sprintf("%s AND (%s)", defaultFilter, severity)
 	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
 	return s.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
 		Parent: fmt.Sprintf("projects/%s/sources/-", gcpProjectID),
@@ -101,9 +103,6 @@ func (s *SCCClient) newRetryLogger(ctx context.Context, funcName string) func(er
 }
 
 func scoreSCC(f *sccpb.Finding) float32 {
-	if f.State != sccpb.Finding_ACTIVE {
-		return 0.1
-	}
 	switch f.Severity {
 	case sccpb.Finding_CRITICAL:
 		return 0.9
