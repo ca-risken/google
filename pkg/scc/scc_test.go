@@ -16,7 +16,6 @@ func TestScoreSCC(t *testing.T) {
 		{
 			name: "Critical",
 			input: &sccpb.Finding{
-				State:    sccpb.Finding_ACTIVE,
 				Severity: sccpb.Finding_CRITICAL,
 			},
 			want: 0.9,
@@ -24,7 +23,6 @@ func TestScoreSCC(t *testing.T) {
 		{
 			name: "High",
 			input: &sccpb.Finding{
-				State:    sccpb.Finding_ACTIVE,
 				Severity: sccpb.Finding_HIGH,
 			},
 			want: 0.6,
@@ -32,7 +30,6 @@ func TestScoreSCC(t *testing.T) {
 		{
 			name: "Midium",
 			input: &sccpb.Finding{
-				State:    sccpb.Finding_ACTIVE,
 				Severity: sccpb.Finding_MEDIUM,
 			},
 			want: 0.3,
@@ -40,15 +37,6 @@ func TestScoreSCC(t *testing.T) {
 		{
 			name: "Low",
 			input: &sccpb.Finding{
-				State:    sccpb.Finding_ACTIVE,
-				Severity: sccpb.Finding_LOW,
-			},
-			want: 0.1,
-		},
-		{
-			name: "State inactive",
-			input: &sccpb.Finding{
-				State:    sccpb.Finding_INACTIVE,
 				Severity: sccpb.Finding_LOW,
 			},
 			want: 0.1,
@@ -56,7 +44,6 @@ func TestScoreSCC(t *testing.T) {
 		{
 			name: "Serverity unknown",
 			input: &sccpb.Finding{
-				State:    sccpb.Finding_ACTIVE,
 				Severity: sccpb.Finding_SEVERITY_UNSPECIFIED,
 			},
 			want: 0.0,

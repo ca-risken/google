@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	securitycenter "cloud.google.com/go/securitycenter/apiv1"
 	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
@@ -55,6 +56,8 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.logger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", msgBody, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
+
+	beforeScanAt := time.Now()
 	requestID, err := s.logger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
 	if err != nil {
 		s.logger.Warnf(ctx, "failed to generate requestID: err=%+v", err)
@@ -88,6 +91,18 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		return mimosasqs.WrapNonRetryable(err)
 	}
 	s.logger.Infof(ctx, "end put findings(%d succeeded), RequestID=%s", *putCount, requestID)
+
+	// Clear score for inactive findings
+	if _, err := s.findingClient.ClearScore(ctx, &finding.ClearScoreRequest{
+		DataSource: message.GoogleSCCDataSource,
+		ProjectId:  msg.ProjectID,
+		Tag:        []string{gcp.GcpProjectId},
+		BeforeAt:   beforeScanAt.Unix(),
+	}); err != nil {
+		s.logger.Errorf(ctx, "failed to clear finding score. GcpProjectID: %v, error: %v", gcp.GcpProjectId, err)
+		s.updateStatusToError(ctx, scanStatus, err)
+		return mimosasqs.WrapNonRetryable(err)
+	}
 
 	if err := s.updateScanStatusSuccess(ctx, scanStatus); err != nil {
 		return mimosasqs.WrapNonRetryable(err)
