@@ -27,15 +27,17 @@ type CloudSploitClient struct {
 	googleServiceAccountEmail      string
 	googleServiceAccountPrivateKey string
 	logger                         logging.Logger
+	maxMemSizeMB                   int
 }
 
-func NewCloudSploitClient(command, googleServiceAccountEmail, googleServiceAccountPrivateKey string, l logging.Logger) cloudSploitServiceClient {
+func NewCloudSploitClient(command, googleServiceAccountEmail, googleServiceAccountPrivateKey string, l logging.Logger, maxMemSizeMB int) cloudSploitServiceClient {
 	return &CloudSploitClient{
 		cloudSploitCommand:             command,
 		cloudSploitConfigTemplate:      template.Must(template.New("CloudSploitConfig").Parse(templateConfigJs)),
 		googleServiceAccountEmail:      googleServiceAccountEmail,
 		googleServiceAccountPrivateKey: googleServiceAccountPrivateKey,
 		logger:                         l,
+		maxMemSizeMB:                   maxMemSizeMB,
 	}
 }
 
@@ -118,6 +120,9 @@ const (
 
 func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID string, unixNano int64, configJs string) (*[]cloudSploitFinding, string, error) {
 	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
+	if c.maxMemSizeMB > 0 {
+		os.Setenv("NODE_OPTIONS", fmt.Sprintf("--max-old-space-size=%d", c.maxMemSizeMB))
+	}
 	resultJSON, err := os.Create(filepath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create result file, path:%s, err:%w", filepath, err)
