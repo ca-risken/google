@@ -54,6 +54,7 @@ type AppConfig struct {
 	CloudSploitCommand             string `required:"true" split_words:"true" default:"/opt/cloudsploit/index.js"`
 	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
+	MaxMemSizeMB                   int    `split_words:"true" default:"192"`
 }
 
 func main() {
@@ -110,6 +111,7 @@ func main() {
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey,
 		appLogger,
+		conf.MaxMemSizeMB,
 	)
 	handler := cloudsploit.NewSqsHandler(
 		fc,
