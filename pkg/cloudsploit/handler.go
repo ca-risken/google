@@ -152,7 +152,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
 			Resource: &finding.ResourceForUpsert{
-				ResourceName: getFormatResourceName(gcpProjectID, f.Category, f.Resource),
+				ResourceName: f.Resource,
 				ProjectId:    projectID,
 			},
 		})
@@ -187,7 +187,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			Description:      f.Description,
 			DataSource:       message.GoogleCloudSploitDataSource,
 			DataSourceId:     f.DataSourceID,
-			ResourceName:     getFormatResourceName(gcpProjectID, f.Category, f.Resource),
+			ResourceName:     f.Resource,
 			ProjectId:        projectID,
 			OriginalScore:    score,
 			OriginalMaxScore: 1.0,
@@ -227,15 +227,6 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	}
 	s.logger.Debugf(ctx, "Success to PutFinding, finding_id=%d", resp.Finding.FindingId)
 	return nil
-}
-
-func getFormatResourceName(project, service, resource string) string {
-	return fmt.Sprintf("%s/%s/%s", project, service, getShortName(resource))
-}
-
-func getShortName(name string) string {
-	array := strings.Split(name, "/")
-	return array[len(array)-1]
 }
 
 func (s *SqsHandler) tagFinding(ctx context.Context, tag string, findingID uint64, projectID uint32) error {
