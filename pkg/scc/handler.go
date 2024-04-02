@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	securitycenter "cloud.google.com/go/securitycenter/apiv1"
@@ -178,15 +180,27 @@ func (s *SqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 	return data.GcpDataSource, nil
 }
 
+type SccFinding struct {
+	Finding      *sccpb.Finding `json:"finding"`
+	SccDetailURL string         `json:"scc_detail_url"`
+}
+
 func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, f *sccpb.Finding) (*finding.FindingBatchForUpsert, error) {
-	buf, err := json.Marshal(f)
+	sccURL := generateSccURL(f.Name, gcpProjectID)
+	data := &SccFinding{
+		Finding:      f,
+		SccDetailURL: sccURL,
+	}
+	buf, err := json.Marshal(data)
 	if err != nil {
 		s.logger.Errorf(ctx, "failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
 		return nil, err
 	}
+	cve := extractCVEID(f)
+	resourceShortName := extractShortResourceName(f.ResourceName)
 	findingData := &finding.FindingBatchForUpsert{
 		Finding: &finding.FindingForUpsert{
-			Description:      fmt.Sprintf("Detected a %s finding", f.Category), // e.g.) Detected a PUBCLI_DATASET finding
+			Description:      generateSccDescrition(f.Category, cve, resourceShortName),
 			DataSource:       message.GoogleSCCDataSource,
 			DataSourceId:     f.Name,
 			ResourceName:     f.ResourceName,
@@ -203,14 +217,67 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			{Tag: common.GetServiceName(f.ResourceName)},
 		},
 	}
-	if f.Category != "" && f.SourceProperties["Explanation"] != nil && f.SourceProperties["Explanation"].GetStringValue() != "" {
+	if cve != "" {
+		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: cve})
+	}
+	if resourceShortName != "" {
+		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: resourceShortName})
+	}
+
+	riskDescription := f.Category
+	if f.SourceProperties["Explanation"] != nil {
+		riskDescription += "\n" + f.SourceProperties["Explanation"].GetStringValue()
+	}
+	if f.Category != "" {
 		findingData.Recommend = &finding.RecommendForBatch{
-			Type:           f.Category,
-			Risk:           f.SourceProperties["Explanation"].GetStringValue(),
-			Recommendation: "Please see the finding JSON data in 'data.source_properties.Recommendation'",
+			Type: f.Category,
+			Risk: riskDescription,
+			Recommendation: fmt.Sprintf(`Please see the finding JSON data in 'recommendation' or 'next_steps' field.
+And you can see the more information in the Security Command Center console.
+- %s`, sccURL),
 		}
 	}
 	return findingData, nil
+}
+
+func extractShortResourceName(resourceName string) string {
+	array := strings.Split(resourceName, "/")
+	if len(array) < 1 {
+		return resourceName
+	}
+	return array[len(array)-1]
+}
+
+func extractCVEID(f *sccpb.Finding) string {
+	if f.Vulnerability != nil && f.Vulnerability.Cve != nil {
+		return f.Vulnerability.Cve.Id
+	}
+	return ""
+}
+
+func generateSccDescrition(category, cveID, resourceShortName string) string {
+	desc := fmt.Sprintf("Detected a %s finding.", category)
+	if cveID == "" && resourceShortName == "" {
+		return desc
+	}
+
+	meta := "("
+	if resourceShortName != "" {
+		meta += fmt.Sprintf("Resource: %s", resourceShortName)
+	}
+	if cveID != "" {
+		if meta != "(" {
+			meta += ", "
+		}
+		meta += fmt.Sprintf("CVE: %s", cveID)
+	}
+	meta += ")"
+	return desc + " " + meta
+}
+
+func generateSccURL(name, gcpProjectID string) string {
+	encodedName := url.QueryEscape(name)
+	return fmt.Sprintf("https://console.cloud.google.com/security/command-center/findingsv2;name=%s?project=%s", encodedName, gcpProjectID)
 }
 
 func (s *SqsHandler) updateScanStatusError(ctx context.Context, putData *google.AttachGCPDataSourceRequest, statusDetail string) error {
