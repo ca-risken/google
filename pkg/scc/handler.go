@@ -225,12 +225,14 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	}
 
 	riskDescription := f.Category
-	if f.SourceProperties["Explanation"] != nil {
+	if f.Description != "" {
+		riskDescription += "\n" + f.Description
+	} else if f.SourceProperties["Explanation"] != nil {
 		riskDescription += "\n" + f.SourceProperties["Explanation"].GetStringValue()
 	}
-	if f.Category != "" {
+	if riskDescription != "" {
 		findingData.Recommend = &finding.RecommendForBatch{
-			Type: f.Category,
+			Type: f.Name,
 			Risk: riskDescription,
 			Recommendation: fmt.Sprintf(`Please see the finding JSON data in 'recommendation' or 'next_steps' field.
 And you can see the more information in the Security Command Center console.
