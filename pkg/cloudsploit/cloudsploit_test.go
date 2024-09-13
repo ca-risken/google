@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ca-risken/common/pkg/cloudsploit"
 	"github.com/ca-risken/common/pkg/logging"
 )
 
@@ -16,11 +17,22 @@ var (
 	testConfigFile       = "/tmp/config.js"
 )
 
-func TestGenerateConfig(t *testing.T) {
-	testClient := &CloudSploitClient{
+var testClient *CloudSploitClient
+
+func init() {
+	setting, err := loadCloudsploitSetting("")
+	if err != nil {
+		panic(err)
+	}
+	testClient = &CloudSploitClient{
 		cloudSploitCommand:        "echo",
 		cloudSploitConfigTemplate: template.Must(template.New("TestConfig").Parse(templateConfigJs)),
+		cloudsploitSetting:        setting,
+		logger:                    logging.NewLogger(),
 	}
+}
+
+func TestGenerateConfig(t *testing.T) {
 	cases := []struct {
 		name    string
 		input   string
@@ -53,11 +65,6 @@ func TestGenerateConfig(t *testing.T) {
 }
 
 func TestExecCloudSploit(t *testing.T) {
-	testClient := &CloudSploitClient{
-		cloudSploitCommand:        "echo",
-		cloudSploitConfigTemplate: template.Must(template.New("TestConfig").Parse(templateConfigJs)),
-		logger:                    logging.NewLogger(),
-	}
 	cases := []struct {
 		name    string
 		input   string
@@ -90,10 +97,6 @@ func TestExecCloudSploit(t *testing.T) {
 }
 
 func TestRemoveTempFile(t *testing.T) {
-	testClient := &CloudSploitClient{
-		cloudSploitCommand:        "echo",
-		cloudSploitConfigTemplate: template.Must(template.New("TestConfig").Parse(templateConfigJs)),
-	}
 	cases := []struct {
 		name       string
 		inputFile1 string
@@ -155,7 +158,7 @@ func TestGetScore(t *testing.T) {
 				Plugin:   "Any",
 				Status:   resultUNKNOWN,
 			},
-			want: 0.1,
+			want: 1.0,
 		},
 		{
 			name: "WARN",
@@ -164,61 +167,61 @@ func TestGetScore(t *testing.T) {
 				Plugin:   "Any",
 				Status:   resultWARN,
 			},
-			want: 0.3,
+			want: 3.0,
 		},
 		{
 			name: "FAIL IAM high",
 			input: &cloudSploitFinding{
-				Category: categoryIAM,
+				Category: "IAM",
 				Plugin:   "corporateEmailsOnly",
 				Status:   resultFAIL,
 			},
-			want: 0.8,
+			want: 8.0,
 		},
 		{
 			name: "FAIL IAM middle",
 			input: &cloudSploitFinding{
-				Category: categoryIAM,
+				Category: "IAM",
 				Plugin:   "serviceAccountAdmin",
 				Status:   resultFAIL,
 			},
-			want: 0.6,
+			want: 6.0,
 		},
 		{
 			name: "FAIL SQL htgh",
 			input: &cloudSploitFinding{
-				Category: categorySQL,
+				Category: "SQL",
 				Plugin:   "dbPubliclyAccessible",
 				Status:   resultFAIL,
 			},
-			want: 0.8,
+			want: 8.0,
 		},
 		{
 			name: "FAIL Storage htgh",
 			input: &cloudSploitFinding{
-				Category: categoryStorage,
+				Category: "Storage",
 				Plugin:   "bucketAllUsersPolicy",
 				Status:   resultFAIL,
 			},
-			want: 0.6,
+			want: 6.0,
 		},
 		{
 			name: "FAIL VPC htgh",
 			input: &cloudSploitFinding{
-				Category: categoryVPCNetwork,
+				Category: "VPC Network",
 				Plugin:   "openAllPorts",
 				Status:   resultFAIL,
 			},
-			want: 0.8,
+			want: 8.0,
 		},
 		{
 			name: "FAIL VPC middle",
 			input: &cloudSploitFinding{
-				Category: categoryVPCNetwork,
+				Category: "VPC Network",
 				Plugin:   "openSSH",
 				Status:   resultFAIL,
 			},
-			want: 0.6,
+			want: 6.0,
 		},
 		{
 			name: "FAIL Other",
@@ -227,7 +230,7 @@ func TestGetScore(t *testing.T) {
 				Plugin:   "Any",
 				Status:   resultFAIL,
 			},
-			want: 0.3,
+			want: 3.0,
 		},
 		{
 			name: "Status any",
@@ -236,46 +239,12 @@ func TestGetScore(t *testing.T) {
 				Plugin:   "Any",
 				Status:   "Any",
 			},
-			want: 0.3,
+			want: 3.0,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := c.input.getScore()
-			if !reflect.DeepEqual(c.want, got) {
-				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
-			}
-		})
-	}
-}
-
-func TestSetTags(t *testing.T) {
-	cases := []struct {
-		name  string
-		input *cloudSploitFinding
-		want  []string
-	}{
-		{
-			name: "OK",
-			input: &cloudSploitFinding{
-				Category: categoryCLB,
-				Plugin:   "clbHttpsOnly",
-			},
-			want: []string{"hippa", "pci"},
-		},
-		{
-			name: "Not hit tag",
-			input: &cloudSploitFinding{
-				Category: "Any",
-				Plugin:   "Any",
-			},
-			want: nil,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			c.input.setTags()
-			got := c.input.Tags
+			got := testClient.getScore(c.input)
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data match: want=%+v, got=%+v", c.want, got)
 			}
@@ -287,21 +256,20 @@ func TestGetRecommend(t *testing.T) {
 	cases := []struct {
 		name  string
 		input *cloudSploitFinding
-		want  *recommend
+		want  *cloudsploit.PluginRecommend
 	}{
 		{
 			name: "Exists",
 			input: &cloudSploitFinding{
-				Category: categoryCLB,
+				Category: "CLB",
 				Plugin:   "clbCDNEnabled",
 			},
-			want: &recommend{
-				Risk: `CLB CDN Enabled
-			- Ensures that Cloud CDN is enabled on all load balancers
-			- Cloud CDN increases speed and reliability as well as lowers server costs.
-			- Enabling CDN on load balancers creates a highly available system and is part of GCP best practices.`,
-				Recommendation: `Enable Cloud CDN on all load balancers from the network services console.
-			- https://cloud.google.com/cdn/docs/quickstart`,
+			want: &cloudsploit.PluginRecommend{
+				Risk: cloudsploit.Ptr(`CLB CDN Enabled
+- Ensures that Cloud CDN is enabled on all load balancers
+- Cloud CDN increases speed and reliability as well as lowers server costs. Enabling CDN on load balancers creates a highly available system and is part of GCP best practices.`),
+				Recommendation: cloudsploit.Ptr(`Enable Cloud CDN on all load balancers from the network services console.
+- https://cloud.google.com/cdn/docs/quickstart`),
 			},
 		},
 		{
@@ -310,15 +278,12 @@ func TestGetRecommend(t *testing.T) {
 				Category: "Unknown",
 				Plugin:   "Unknown",
 			},
-			want: &recommend{
-				Risk:           "",
-				Recommendation: "",
-			},
+			want: nil,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := c.input.getRecommend()
+			got := testClient.getRecommend(c.input)
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected data: want=%v, got=%v", c.want, got)
 			}

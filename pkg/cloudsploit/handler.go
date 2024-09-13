@@ -31,7 +31,7 @@ func NewSqsHandler(
 	fc finding.FindingServiceClient,
 	ac alert.AlertServiceClient,
 	gc google.GoogleServiceClient,
-	cloudSploit cloudSploitServiceClient,
+	cloudSploit *CloudSploitClient,
 	l logging.Logger,
 ) *SqsHandler {
 	return &SqsHandler{
@@ -85,9 +85,9 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 	}
 	s.logger.Infof(ctx, "start put finding, RequestID=%s", requestID)
 
-	for _, f := range *result {
+	for _, f := range result {
 		// Put finding
-		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, &f); err != nil {
+		if err := s.putFindings(ctx, msg.ProjectID, gcp.GcpProjectId, f); err != nil {
 			errMsg := fmt.Sprintf("Failed to put findngs: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%+v",
 				msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
 			s.logger.Error(ctx, errMsg)
@@ -147,7 +147,7 @@ func (s *SqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 }
 
 func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProjectID string, f *cloudSploitFinding) error {
-	score := f.getScore()
+	score := s.cloudSploit.getScore(f)
 	if score == 0.0 {
 		// PutResource
 		resp, err := s.findingClient.PutResource(ctx, &finding.PutResourceRequest{
@@ -175,7 +175,6 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		return nil
 	}
 
-	f.setTags()
 	buf, err := json.Marshal(f)
 	if err != nil {
 		s.logger.Errorf(ctx, "Failed to marshal user data, project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)
@@ -190,7 +189,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			ResourceName:     f.Resource,
 			ProjectId:        projectID,
 			OriginalScore:    score,
-			OriginalMaxScore: 1.0,
+			OriginalMaxScore: 10.0,
 			Data:             string(buf),
 		},
 	})
@@ -285,8 +284,8 @@ func (s *SqsHandler) analyzeAlert(ctx context.Context, projectID uint32) error {
 
 func (s *SqsHandler) putRecommend(ctx context.Context, projectID uint32, findingID uint64, f *cloudSploitFinding) error {
 	categoryPlugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
-	r := f.getRecommend()
-	if r.Risk == "" && r.Recommendation == "" {
+	r := s.cloudSploit.getRecommend(f)
+	if r == nil || (r.Risk == nil && r.Recommendation == nil) {
 		s.logger.Warnf(ctx, "Failed to get recommendation, Unknown plugin=%s", categoryPlugin)
 		return nil
 	}
@@ -295,8 +294,8 @@ func (s *SqsHandler) putRecommend(ctx context.Context, projectID uint32, finding
 		FindingId:      findingID,
 		DataSource:     message.GoogleCloudSploitDataSource,
 		Type:           categoryPlugin,
-		Risk:           r.Risk,
-		Recommendation: r.Recommendation,
+		Risk:           *r.Risk,
+		Recommendation: *r.Recommendation,
 	}); err != nil {
 		return fmt.Errorf("Failed to TagFinding, finding_id=%d, plugin=%s, error=%+v", findingID, categoryPlugin, err)
 	}

@@ -14,11 +14,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ca-risken/common/pkg/cloudsploit"
 	"github.com/ca-risken/common/pkg/logging"
 )
 
 type cloudSploitServiceClient interface {
-	run(ctx context.Context, gcpProjectID string) (*[]cloudSploitFinding, error)
+	run(ctx context.Context, gcpProjectID string) ([]*cloudSploitFinding, error)
+	getScore(f *cloudSploitFinding) float32
+	getRecommend(f *cloudSploitFinding) *cloudsploit.PluginRecommend
 }
 
 type CloudSploitClient struct {
@@ -26,19 +29,33 @@ type CloudSploitClient struct {
 	cloudSploitConfigTemplate      *template.Template
 	googleServiceAccountEmail      string
 	googleServiceAccountPrivateKey string
+	cloudsploitSetting             *cloudsploit.CloudsploitSetting
 	logger                         logging.Logger
 	maxMemSizeMB                   int
 }
 
-func NewCloudSploitClient(command, googleServiceAccountEmail, googleServiceAccountPrivateKey string, l logging.Logger, maxMemSizeMB int) cloudSploitServiceClient {
+func NewCloudSploitClient(
+	command,
+	googleServiceAccountEmail,
+	googleServiceAccountPrivateKey,
+	cloudsploitSettingPath string,
+	l logging.Logger,
+	maxMemSizeMB int,
+) (*CloudSploitClient, error) {
+	setting, err := loadCloudsploitSetting(cloudsploitSettingPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cloudsploit setting. error: %v", err)
+	}
+
 	return &CloudSploitClient{
 		cloudSploitCommand:             command,
 		cloudSploitConfigTemplate:      template.Must(template.New("CloudSploitConfig").Parse(templateConfigJs)),
 		googleServiceAccountEmail:      googleServiceAccountEmail,
 		googleServiceAccountPrivateKey: googleServiceAccountPrivateKey,
+		cloudsploitSetting:             setting,
 		logger:                         l,
 		maxMemSizeMB:                   maxMemSizeMB,
-	}
+	}, nil
 }
 
 const templateConfigJs string = `
@@ -75,7 +92,7 @@ func (c *cloudSploitFinding) generateDataSourceID() {
 	c.DataSourceID = hex.EncodeToString(hash[:])
 }
 
-func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) (*[]cloudSploitFinding, error) {
+func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cloudSploitFinding, error) {
 	unixNano := time.Now().UnixNano()
 	// Generate cloudsploit confing file
 	configJs, err := c.generateConfig(ctx, gcpProjectID, unixNano)
@@ -118,7 +135,7 @@ const (
 	resourceUnknown       string = "Unknown"
 )
 
-func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID string, unixNano int64, configJs string) (*[]cloudSploitFinding, string, error) {
+func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID string, unixNano int64, configJs string) ([]*cloudSploitFinding, string, error) {
 	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
 	if c.maxMemSizeMB > 0 {
 		os.Setenv("NODE_OPTIONS", fmt.Sprintf("--max-old-space-size=%d", c.maxMemSizeMB))
@@ -141,26 +158,11 @@ func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID st
 		return nil, "", fmt.Errorf("Failed exec cloudsploit. error: %+v, detail: %s", err, stderr.String())
 	}
 
-	buf, err := io.ReadAll(resultJSON)
+	findings, err := c.generateFindingsFromFile(ctx, resultJSON)
 	if err != nil {
 		return nil, "", err
 	}
-	c.logger.Debugf(ctx, "Result file Length: %d", len(buf))
-
-	var findings []cloudSploitFinding
-	if len(buf) == 0 {
-		return &findings, filepath, nil // empty
-	}
-	if err := json.Unmarshal(buf, &findings); err != nil {
-		return nil, "", fmt.Errorf("Failed parse result JSON. file: %s, error: %+v", filepath, err)
-	}
-	for idx := range findings {
-		if strings.ToUpper(findings[idx].Resource) == resourceNotApplicable {
-			findings[idx].Resource = resourceUnknown
-		}
-		findings[idx].generateDataSourceID()
-	}
-	return &findings, filepath, nil
+	return findings, filepath, nil
 }
 
 func (c *CloudSploitClient) removeTempFiles(configFilePath, resutlFilePath string) error {
@@ -173,6 +175,47 @@ func (c *CloudSploitClient) removeTempFiles(configFilePath, resutlFilePath strin
 	return nil
 }
 
+func (c *CloudSploitClient) generateFindingsFromFile(ctx context.Context, jsonFile *os.File) ([]*cloudSploitFinding, error) {
+	buf, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var findings []*cloudSploitFinding
+	if len(buf) == 0 {
+		c.logger.Warn(ctx, "Result file is empty")
+		return findings, nil // empty
+	}
+	if err := json.Unmarshal(buf, &findings); err != nil {
+		return nil, fmt.Errorf("failed parse result JSON. error: %w", err)
+	}
+
+	results := []*cloudSploitFinding{}
+	for _, f := range findings {
+		plugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
+		if c.cloudsploitSetting.IsIgnorePlugin(plugin) {
+			continue
+		}
+		if c.cloudsploitSetting.IsSkipResourceNamePattern(plugin, f.Resource, "") {
+			c.logger.Infof(ctx, "Ignore resource: plugin=%s, resource=%s", plugin, f.Resource)
+			continue
+		}
+		if c.cloudsploitSetting.IsIgnoreMessagePattern(plugin, []string{f.Message, f.Description}) {
+			c.logger.Infof(ctx, "Ignore message: plugin=%s, resource=%s, msg=%s, desc=%s", plugin, f.Resource, f.Message, f.Description)
+			continue
+		}
+
+		f.generateDataSourceID()
+		if strings.ToUpper(f.Resource) == resourceNotApplicable {
+			f.Resource = resourceUnknown
+		}
+		f.Tags = c.cloudsploitSetting.SpecificPluginSetting[plugin].Tags // set tags
+
+		results = append(results, f)
+	}
+	return results, nil
+}
+
 const (
 	// CloudSploit Result Code: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes
 	// Result Code Label:       https://github.com/aquasecurity/cloudsploit/blob/master/postprocess/output.js
@@ -183,37 +226,33 @@ const (
 	WARN_MESSAGE  = "UNKNOWN status detected. Some scans may have failed. Please take action if you don't have enough permissions."
 )
 
-func (c *cloudSploitFinding) setTags() {
-	if p, ok := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]; ok {
-		c.Tags = p.Tag
-	}
-}
-
-func (c *cloudSploitFinding) getScore() float32 {
-	switch strings.ToUpper(c.Status) {
+func (c *CloudSploitClient) getScore(f *cloudSploitFinding) float32 {
+	switch strings.ToUpper(f.Status) {
 	case resultOK:
 		return 0.0
 	case resultUNKNOWN:
-		return 0.1
+		return 1.0
 	case resultWARN:
-		return 0.3
+		return 3.0
 	default:
 		// FAIL
-		if plugin, ok := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]; ok {
-			return plugin.Score
+		plugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
+		score := c.cloudsploitSetting.DefaultScore
+		if plugin, ok := c.cloudsploitSetting.SpecificPluginSetting[plugin]; ok && plugin.Score != nil {
+			score = *plugin.Score
 		}
-		return 0.3
+		return score
 	}
 }
 
-func (c *cloudSploitFinding) getRecommend() *recommend {
-	p := pluginMap[fmt.Sprintf("%s/%s", c.Category, c.Plugin)]
-	return &p.Recommend
+func (c *CloudSploitClient) getRecommend(f *cloudSploitFinding) *cloudsploit.PluginRecommend {
+	plugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
+	return c.cloudsploitSetting.SpecificPluginSetting[plugin].Recommend
 }
 
-func unknownFindings(findings *[]cloudSploitFinding) string {
+func unknownFindings(findings []*cloudSploitFinding) string {
 	unknowns := map[string]int{}
-	for _, f := range *findings {
+	for _, f := range findings {
 		if f.Status == resultUNKNOWN {
 			unknowns[fmt.Sprintf("%s: %s", f.Category, f.Message)]++
 		}

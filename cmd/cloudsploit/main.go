@@ -55,6 +55,7 @@ type AppConfig struct {
 	GoogleServiceAccountEmail      string `required:"true" split_words:"true"`
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
 	MaxMemSizeMB                   int    `split_words:"true" default:"192"`
+	CloudSploitSettingPath         string `envconfig:"CLOUDSPLOIT_SETTING_PATH" default:""`
 }
 
 func main() {
@@ -106,13 +107,17 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
 	}
-	cloudSploit := cloudsploit.NewCloudSploitClient(
+	cloudSploit, err := cloudsploit.NewCloudSploitClient(
 		conf.CloudSploitCommand,
 		conf.GoogleServiceAccountEmail,
 		conf.GoogleServiceAccountPrivateKey,
+		conf.CloudSploitSettingPath,
 		appLogger,
 		conf.MaxMemSizeMB,
 	)
+	if err != nil {
+		appLogger.Fatalf(ctx, "Failed to create cloudsploit client, err=%+v", err)
+	}
 	handler := cloudsploit.NewSqsHandler(
 		fc,
 		ac,
