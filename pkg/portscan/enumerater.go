@@ -238,7 +238,7 @@ func (p *PortscanClient) listTargetForwardingRule(ctx context.Context, com *comp
 				Name:         fmt.Sprintf("%v/%v/%v", gcpProjectID, "ForwardingRule", fr.Name),
 				ResourceName: p.getFullResourceName(ctx, fr.SelfLink),
 				IpVersion:    fr.IpVersion,
-				IPProtocol:   fr.IPProtocol,
+				IPProtocol:   strings.ToLower(fr.IPProtocol),
 			})
 		}
 	}
