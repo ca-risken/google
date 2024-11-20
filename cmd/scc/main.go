@@ -11,6 +11,7 @@ import (
 	"github.com/ca-risken/google/pkg/grpc"
 	"github.com/ca-risken/google/pkg/scc"
 	"github.com/ca-risken/google/pkg/sqs"
+	vuln "github.com/ca-risken/vulnerability/pkg/sdk"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -53,6 +54,10 @@ type serviceConfig struct {
 	// scc
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 	IncludeLowSeverity   bool   `split_words:"true" default:"true"`
+
+	// vulnerability
+	VulnerabilityApiURL string `envconfig:"VULNERABILITY_API_URL" default:""`
+	VulnerabilityAPIKey string `envconfig:"VULNERABILITY_API_KEY" default:""`
 }
 
 func main() {
@@ -109,7 +114,13 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create scc client, err=%+v", err)
 	}
-	handler := scc.NewSqsHandler(fc, ac, gc, sc, conf.IncludeLowSeverity, appLogger)
+	var vc *vuln.Client
+	if conf.VulnerabilityApiURL != "" {
+		vc = vuln.NewClient(conf.VulnerabilityApiURL, vuln.WithApiKey(conf.VulnerabilityAPIKey))
+	} else {
+		appLogger.Warn(ctx, "Vulnerability API URL is not set")
+	}
+	handler := scc.NewSqsHandler(fc, ac, gc, sc, vc, conf.IncludeLowSeverity, appLogger)
 
 	sqsConf := &sqs.SQSConfig{
 		Debug:              conf.Debug,
