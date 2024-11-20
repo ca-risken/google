@@ -196,7 +196,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	cve := extractCVEID(f)
 	vuln, err := s.GetVulnerability(ctx, cve)
 	if err != nil {
-		s.logger.Errorf(ctx, "failed to get vulnerability, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
+		return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
 	}
 	data := &SccFinding{
 		Finding:       f,
@@ -229,6 +229,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 		},
 	}
 	if cve != "" {
+		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: common.TagCVE})
 		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: cve})
 	}
 	if resourceShortName != "" {

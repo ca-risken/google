@@ -56,8 +56,8 @@ type serviceConfig struct {
 	IncludeLowSeverity   bool   `split_words:"true" default:"true"`
 
 	// vulnerability
-	VulnerabilitySvcAddr string `envconfig:"VULNERABILITY_SVC_ADDR" default:""`
-	VulnerabilityAPIKey  string `envconfig:"VULNERABILITY_API_KEY" default:""`
+	VulnerabilityApiURL string `envconfig:"VULNERABILITY_API_URL" default:""`
+	VulnerabilityAPIKey string `envconfig:"VULNERABILITY_API_KEY" default:""`
 }
 
 func main() {
@@ -115,8 +115,10 @@ func main() {
 		appLogger.Fatalf(ctx, "Failed to create scc client, err=%+v", err)
 	}
 	var vc *vuln.Client
-	if conf.VulnerabilitySvcAddr != "" {
-		vc = vuln.NewClient(conf.VulnerabilitySvcAddr, vuln.WithApiKey(conf.VulnerabilityAPIKey))
+	if conf.VulnerabilityApiURL != "" {
+		vc = vuln.NewClient(conf.VulnerabilityApiURL, vuln.WithApiKey(conf.VulnerabilityAPIKey))
+	} else {
+		appLogger.Warn(ctx, "Vulnerability API URL is not set")
 	}
 	handler := scc.NewSqsHandler(fc, ac, gc, sc, vc, conf.IncludeLowSeverity, appLogger)
 

@@ -1,6 +1,9 @@
 package common
 
 const (
+	// TagCVE
+	TagCVE = "cve"
+
 	// TagGoogle tag
 	TagGoogle = "google"
 	// TagGCP tag
