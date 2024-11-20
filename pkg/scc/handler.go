@@ -20,6 +20,8 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
+	vulnmodel "github.com/ca-risken/vulnerability/pkg/model"
+	vuln "github.com/ca-risken/vulnerability/pkg/sdk"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -29,6 +31,7 @@ type SqsHandler struct {
 	googleClient       google.GoogleServiceClient
 	sccClient          SCCServiceClient
 	includeLowSeverity bool
+	vulnClient         *vuln.Client
 	logger             logging.Logger
 }
 
@@ -37,6 +40,7 @@ func NewSqsHandler(
 	ac alert.AlertServiceClient,
 	gc google.GoogleServiceClient,
 	sccc SCCServiceClient,
+	vc *vuln.Client,
 	includeLowSeverity bool,
 	l logging.Logger,
 ) *SqsHandler {
@@ -45,6 +49,7 @@ func NewSqsHandler(
 		alertClient:        ac,
 		googleClient:       gc,
 		sccClient:          sccc,
+		vulnClient:         vc,
 		includeLowSeverity: includeLowSeverity,
 		logger:             l,
 	}
@@ -181,22 +186,28 @@ func (s *SqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 }
 
 type SccFinding struct {
-	Finding      *sccpb.Finding `json:"finding"`
-	SccDetailURL string         `json:"scc_detail_url"`
+	Finding       *sccpb.Finding           `json:"finding"`
+	SccDetailURL  string                   `json:"scc_detail_url"`
+	Vulnerability *vulnmodel.Vulnerability `json:"vulnerability,omitempty"`
 }
 
 func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, f *sccpb.Finding) (*finding.FindingBatchForUpsert, error) {
 	sccURL := generateSccURL(f.Name, gcpProjectID)
+	cve := extractCVEID(f)
+	vuln, err := s.GetVulnerability(ctx, cve)
+	if err != nil {
+		s.logger.Errorf(ctx, "failed to get vulnerability, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
+	}
 	data := &SccFinding{
-		Finding:      f,
-		SccDetailURL: sccURL,
+		Finding:       f,
+		SccDetailURL:  sccURL,
+		Vulnerability: vuln,
 	}
 	buf, err := json.Marshal(data)
 	if err != nil {
 		s.logger.Errorf(ctx, "failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)
 		return nil, err
 	}
-	cve := extractCVEID(f)
 	resourceShortName := extractShortResourceName(f.ResourceName)
 	findingData := &finding.FindingBatchForUpsert{
 		Finding: &finding.FindingForUpsert{
