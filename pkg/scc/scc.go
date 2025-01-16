@@ -104,8 +104,6 @@ func (s *SCCClient) newRetryLogger(ctx context.Context, funcName string) func(er
 
 func (s *SqsHandler) scoreSCC(f *sccpb.Finding) float32 {
 	findingClass := f.GetFindingClass()
-	// TODO: rm
-	s.logger.Infof(context.TODO(), "findingClass: %v, string: %s", findingClass, findingClass.String())
 	for _, class := range s.reduceScoreFindingClass {
 		if findingClass.String() == class {
 			return 0.1
