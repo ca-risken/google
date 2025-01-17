@@ -26,13 +26,14 @@ import (
 )
 
 type SqsHandler struct {
-	findingClient      finding.FindingServiceClient
-	alertClient        alert.AlertServiceClient
-	googleClient       google.GoogleServiceClient
-	sccClient          SCCServiceClient
-	includeLowSeverity bool
-	vulnClient         *vuln.Client
-	logger             logging.Logger
+	findingClient           finding.FindingServiceClient
+	alertClient             alert.AlertServiceClient
+	googleClient            google.GoogleServiceClient
+	sccClient               SCCServiceClient
+	includeLowSeverity      bool
+	reduceScoreFindingClass []string
+	vulnClient              *vuln.Client
+	logger                  logging.Logger
 }
 
 func NewSqsHandler(
@@ -42,16 +43,18 @@ func NewSqsHandler(
 	sccc SCCServiceClient,
 	vc *vuln.Client,
 	includeLowSeverity bool,
+	reduceScoreFindingClass []string,
 	l logging.Logger,
 ) *SqsHandler {
 	return &SqsHandler{
-		findingClient:      fc,
-		alertClient:        ac,
-		googleClient:       gc,
-		sccClient:          sccc,
-		vulnClient:         vc,
-		includeLowSeverity: includeLowSeverity,
-		logger:             l,
+		findingClient:           fc,
+		alertClient:             ac,
+		googleClient:            gc,
+		sccClient:               sccc,
+		vulnClient:              vc,
+		includeLowSeverity:      includeLowSeverity,
+		reduceScoreFindingClass: reduceScoreFindingClass,
+		logger:                  l,
 	}
 }
 
@@ -216,7 +219,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			DataSourceId:     f.Name,
 			ResourceName:     f.ResourceName,
 			ProjectId:        projectID,
-			OriginalScore:    scoreSCC(f),
+			OriginalScore:    s.scoreSCC(f),
 			OriginalMaxScore: 1.0,
 			Data:             string(buf),
 		},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	scc "cloud.google.com/go/securitycenter/apiv1"
@@ -102,7 +103,11 @@ func (s *SCCClient) newRetryLogger(ctx context.Context, funcName string) func(er
 	}
 }
 
-func scoreSCC(f *sccpb.Finding) float32 {
+func (s *SqsHandler) scoreSCC(f *sccpb.Finding) float32 {
+	findingClass := f.GetFindingClass().String()
+	if slices.Contains(s.reduceScoreFindingClass, findingClass) {
+		return 0.1
+	}
 	switch f.Severity {
 	case sccpb.Finding_CRITICAL:
 		return 0.9

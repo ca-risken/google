@@ -54,6 +54,8 @@ type serviceConfig struct {
 	// scc
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
 	IncludeLowSeverity   bool   `split_words:"true" default:"true"`
+	// https://pkg.go.dev/cloud.google.com/go/securitycenter/apiv1/securitycenterpb#Finding_FindingClass
+	ReduceScoreFindingClass []string `envconfig:"REDUCE_SCORE_FINDING_CLASS" default:""`
 
 	// vulnerability
 	VulnerabilityApiURL string `envconfig:"VULNERABILITY_API_URL" default:""`
@@ -120,7 +122,7 @@ func main() {
 	} else {
 		appLogger.Warn(ctx, "Vulnerability API URL is not set")
 	}
-	handler := scc.NewSqsHandler(fc, ac, gc, sc, vc, conf.IncludeLowSeverity, appLogger)
+	handler := scc.NewSqsHandler(fc, ac, gc, sc, vc, conf.IncludeLowSeverity, conf.ReduceScoreFindingClass, appLogger)
 
 	sqsConf := &sqs.SQSConfig{
 		Debug:              conf.Debug,
