@@ -146,7 +146,6 @@ func (s *SqsHandler) putFindings(
 
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
 		for _, f := range result.findings {
-			// TODO: ここでassetを取得する
 			data, err := s.generateFindingData(ctx, gcp.ProjectId, gcp.GcpProjectId, f)
 			if err != nil {
 				return nil, fmt.Errorf("generate finding error: err=%w", err)
