@@ -146,7 +146,8 @@ func (s *SqsHandler) putFindings(
 
 		findingBatchParam := []*finding.FindingBatchForUpsert{}
 		for _, f := range result.findings {
-			data, err := s.generateFindingData(ctx, gcp.ProjectId, gcp.GcpProjectId, f.Finding)
+			// TODO: ここでassetを取得する
+			data, err := s.generateFindingData(ctx, gcp.ProjectId, gcp.GcpProjectId, f)
 			if err != nil {
 				return nil, fmt.Errorf("generate finding error: err=%w", err)
 			}
@@ -188,13 +189,38 @@ func (s *SqsHandler) getGCPDataSource(ctx context.Context, projectID, gcpID, goo
 	return data.GcpDataSource, nil
 }
 
+type SccAsset struct {
+	Type               string `json:"type,omitempty"`
+	Service            string `json:"service,omitempty"`
+	Location           string `json:"location,omitempty"`
+	FullName           string `json:"full_name,omitempty"`
+	DisplayName        string `json:"display_name,omitempty"`
+	ParentDisplayName  string `json:"parent_display_name,omitempty"`
+	ProjectDisplayName string `json:"project_display_name,omitempty"`
+	Organization       string `json:"organization,omitempty"`
+}
+
 type SccFinding struct {
+	Asset         *SccAsset                `json:"asset"`
 	Finding       *sccpb.Finding           `json:"finding"`
 	SccDetailURL  string                   `json:"scc_detail_url"`
 	Vulnerability *vulnmodel.Vulnerability `json:"vulnerability,omitempty"`
 }
 
-func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, f *sccpb.Finding) (*finding.FindingBatchForUpsert, error) {
+func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, findingResp *sccpb.ListFindingsResponse_ListFindingsResult) (*finding.FindingBatchForUpsert, error) {
+	f := findingResp.GetFinding()
+	resource := findingResp.GetResource()
+	asset := &SccAsset{
+		Type:               resource.GetType(),
+		Service:            resource.GetService(),
+		Location:           resource.GetLocation(),
+		FullName:           resource.GetName(),
+		DisplayName:        resource.GetDisplayName(),
+		ParentDisplayName:  resource.GetParentDisplayName(),
+		ProjectDisplayName: resource.GetProjectDisplayName(),
+		Organization:       resource.GetOrganization(),
+	}
+
 	sccURL := generateSccURL(f.Name, gcpProjectID)
 	cve := extractCVEID(f)
 	vuln, err := s.GetVulnerability(ctx, cve)
@@ -202,6 +228,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 		return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
 	}
 	data := &SccFinding{
+		Asset:         asset,
 		Finding:       f,
 		SccDetailURL:  sccURL,
 		Vulnerability: vuln,
