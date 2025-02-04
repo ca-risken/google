@@ -10,6 +10,7 @@ import (
 	securitycenter "cloud.google.com/go/securitycenter/apiv1"
 	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
 	"github.com/ca-risken/common/pkg/grpc_client"
+	triage "github.com/ca-risken/core/pkg/server/finding"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/proto/google"
@@ -72,6 +73,7 @@ type SccFinding struct {
 	Finding       *sccpb.Finding           `json:"finding"`
 	SccDetailURL  string                   `json:"scc_detail_url"`
 	Vulnerability *vulnmodel.Vulnerability `json:"vulnerability,omitempty"`
+	RiskenTriage  *triage.RiskenTriage     `json:"risken_triage,omitempty"`
 }
 
 func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, findingResp *sccpb.ListFindingsResponse_ListFindingsResult) (*finding.FindingBatchForUpsert, error) {
@@ -89,17 +91,21 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	}
 
 	sccURL := generateSccURL(f.Name, gcpProjectID)
-	cve := extractCVEID(f)
-	vuln, err := s.GetVulnerability(ctx, cve)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
-	}
 	data := &SccFinding{
-		Asset:         asset,
-		Finding:       f,
-		SccDetailURL:  sccURL,
-		Vulnerability: vuln,
+		Asset:        asset,
+		Finding:      f,
+		SccDetailURL: sccURL,
 	}
+	cve := extractCVEID(f)
+	if cve != "" {
+		vuln, err := s.GetVulnerability(ctx, cve)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
+		}
+		data.Vulnerability = vuln
+		data.RiskenTriage = evaluateVulnerability(vuln)
+	}
+
 	buf, err := json.Marshal(data)
 	if err != nil {
 		s.logger.Errorf(ctx, "failed to marshal user data, project_id=%d, findingName=%s, err=%+v", projectID, f.Name, err)

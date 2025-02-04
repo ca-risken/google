@@ -16,12 +16,13 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.6.0
+	github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247
 	github.com/ca-risken/datasource-api v0.4.2-0.20221215091113-c6e727315ba7
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/ca-risken/vulnerability v0.0.0-20241119125125-0693660e1024
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/gassara-kys/envconfig v1.4.4
+	github.com/google/go-cmp v0.6.0
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.214.0
@@ -38,6 +39,7 @@ require (
 	cloud.google.com/go/longrunning v0.6.2 // indirect
 	cloud.google.com/go/orgpolicy v1.14.1 // indirect
 	cloud.google.com/go/osconfig v1.14.2 // indirect
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/DataDog/appsec-internal-go v1.0.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.45.0-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.45.0 // indirect
@@ -61,7 +63,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
+	github.com/ca-risken/common/pkg/database v0.0.0-20230719091915-496f0dc45899 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/coocood/freecache v1.2.3 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -72,18 +76,23 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.22.1 // indirect
+	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20230509042627-b1315fad0c5a // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.1 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/richardartoul/molecule v1.0.1-0.20221107223329-32cfee06a052 // indirect
+	github.com/sashabaranov/go-openai v1.5.8 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
@@ -111,5 +120,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/mysql v1.5.7 // indirect
+	gorm.io/gorm v1.25.12 // indirect
 	inet.af/netaddr v0.0.0-20220811202034-502d2d690317 // indirect
 )
