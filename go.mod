@@ -16,13 +16,12 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247
+	github.com/ca-risken/core v0.14.0
 	github.com/ca-risken/datasource-api v0.4.2-0.20221215091113-c6e727315ba7
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
-	github.com/ca-risken/vulnerability v0.0.0-20241119125125-0693660e1024
+	github.com/ca-risken/vulnerability v0.0.0-20250207144506-e2bcae88c3dc
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/gassara-kys/envconfig v1.4.4
-	github.com/google/go-cmp v0.6.0
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	golang.org/x/sync v0.10.0
 	google.golang.org/api v0.214.0

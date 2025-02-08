@@ -14,7 +14,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
-	vuln "github.com/ca-risken/vulnerability/pkg/sdk"
+	vulnsdk "github.com/ca-risken/vulnerability/pkg/sdk"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -25,7 +25,7 @@ type SqsHandler struct {
 	sccClient               SCCServiceClient
 	includeLowSeverity      bool
 	reduceScoreFindingClass []string
-	vulnClient              *vuln.Client
+	vulnClient              *vulnsdk.Client
 	logger                  logging.Logger
 }
 
@@ -34,7 +34,7 @@ func NewSqsHandler(
 	ac alert.AlertServiceClient,
 	gc google.GoogleServiceClient,
 	sccc SCCServiceClient,
-	vc *vuln.Client,
+	vc *vulnsdk.Client,
 	includeLowSeverity bool,
 	reduceScoreFindingClass []string,
 	l logging.Logger,

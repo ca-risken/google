@@ -11,7 +11,7 @@ import (
 	"github.com/ca-risken/google/pkg/grpc"
 	"github.com/ca-risken/google/pkg/scc"
 	"github.com/ca-risken/google/pkg/sqs"
-	vuln "github.com/ca-risken/vulnerability/pkg/sdk"
+	vulnsdk "github.com/ca-risken/vulnerability/pkg/sdk"
 	"github.com/gassara-kys/envconfig"
 )
 
@@ -116,9 +116,9 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create scc client, err=%+v", err)
 	}
-	var vc *vuln.Client
+	var vc *vulnsdk.Client
 	if conf.VulnerabilityApiURL != "" {
-		vc = vuln.NewClient(conf.VulnerabilityApiURL, vuln.WithApiKey(conf.VulnerabilityAPIKey))
+		vc = vulnsdk.NewClient(conf.VulnerabilityApiURL, vulnsdk.WithApiKey(conf.VulnerabilityAPIKey))
 	} else {
 		appLogger.Warn(ctx, "Vulnerability API URL is not set")
 	}
