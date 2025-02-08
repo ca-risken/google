@@ -16,6 +16,7 @@ import (
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/google/pkg/common"
 	vulnmodel "github.com/ca-risken/vulnerability/pkg/model"
+	vulnsdk "github.com/ca-risken/vulnerability/pkg/sdk"
 )
 
 func (s *SqsHandler) putFindings(
@@ -103,7 +104,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
 		}
 		data.Vulnerability = vuln
-		data.RiskenTriage = evaluateVulnerability(vuln)
+		data.RiskenTriage = vulnsdk.EvaluateVulnerability(vuln)
 	}
 
 	buf, err := json.Marshal(data)
