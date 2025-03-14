@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/iam"
 	admin "cloud.google.com/go/iam/admin/apiv1/adminpb"
+	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/grpc_client"
@@ -48,11 +50,12 @@ func NewSqsHandler(
 }
 
 type assetFinding struct {
-	Asset                  *assetpb.ResourceSearchResult `json:"asset"`
-	IAMPolicy              *[]string                     `json:"iam_policy,omitempty"`
-	HasServiceAccountKey   bool                          `json:"has_key,omitempty"`
-	DisabledServiceAccount bool                          `json:"disabled_service_account,omitempty"`
-	BucketPolicy           *iam.Policy                   `json:"bucket_policy,omitempty"`
+	Asset                        *assetpb.ResourceSearchResult   `json:"asset"`
+	IAMPolicy                    *[]string                       `json:"iam_policy,omitempty"`
+	HasServiceAccountKey         bool                            `json:"has_key,omitempty"`
+	DisabledServiceAccount       bool                            `json:"disabled_service_account,omitempty"`
+	BucketPolicy                 *iam.Policy                     `json:"bucket_policy,omitempty"`
+	BucketPublicAccessPrevention *storage.PublicAccessPrevention `json:"bucket_public_access_prevention,omitempty"`
 }
 
 func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
@@ -346,6 +349,10 @@ func (s *SqsHandler) generateAssetFinding(
 		if err != nil {
 			return nil, err
 		}
+		f.BucketPublicAccessPrevention, err = s.assetClient.getStoragePublicAccessPrevention(ctx, r.DisplayName)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &f, nil
 }
@@ -359,12 +366,10 @@ func getServiceAccountIAMPolicies(email string, policy *cloudresourcemanager.Pol
 	if policy == nil {
 		return &policies
 	}
+	serviceAccountMember := fmt.Sprintf("serviceAccount:%s", email)
 	for _, b := range policy.Bindings {
-		for _, m := range b.Members {
-			if m == fmt.Sprintf("serviceAccount:%s", email) {
-				policies = append(policies, b.Role)
-				break
-			}
+		if slices.Contains(b.Members, serviceAccountMember) {
+			policies = append(policies, b.Role)
 		}
 	}
 	return &policies
@@ -409,7 +414,7 @@ func scoreAssetForStorage(f *assetFinding) float32 {
 	}
 	var score float32 = 0.1
 	for _, b := range f.BucketPolicy.InternalProto.Bindings {
-		public := allowedPubliclyAccess(b.Members)
+		public := allowedPubliclyAccess(b.Members, f.BucketPublicAccessPrevention)
 		writable := writableRole(b.Role)
 		if public && writable {
 			score = 1.0 // `writable` means both READ and WRITE.
@@ -429,7 +434,13 @@ const (
 	allAuthenticatedUsers string = "allAuthenticatedUsers"
 )
 
-func allowedPubliclyAccess(members []string) bool {
+func allowedPubliclyAccess(members []string, publicAccessPrevention *storage.PublicAccessPrevention) bool {
+	if publicAccessPrevention != nil {
+		preventSetting := publicAccessPrevention.String()
+		if preventSetting == "inherited" || preventSetting == "enforced" {
+			return false
+		}
+	}
 	for _, m := range members {
 		if m == allUsers || m == allAuthenticatedUsers {
 			return true

@@ -7,6 +7,7 @@ import (
 	asset "cloud.google.com/go/asset/apiv1/assetpb"
 	bucketIAM "cloud.google.com/go/iam"
 	iam "cloud.google.com/go/iam/apiv1/iampb"
+	"cloud.google.com/go/storage"
 )
 
 func TestIsUserServiceAccount(t *testing.T) {
@@ -83,6 +84,42 @@ func TestScoreAsset(t *testing.T) {
 				BucketPolicy: &bucketIAM.Policy{},
 			},
 			want: 0.0,
+		},
+		{
+			name: "Storage Public",
+			input: &assetFinding{
+				Asset: &asset.ResourceSearchResult{
+					AssetType:   assetTypeBucket,
+					DisplayName: "bucket-name",
+				},
+				BucketPolicy: &bucketIAM.Policy{
+					InternalProto: &iam.Policy{
+						Bindings: []*iam.Binding{
+							{Role: "roles/storage.objectViewer", Members: []string{allUsers}},
+						},
+					},
+				},
+				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionUnknown),
+			},
+			want: 0.7,
+		},
+		{
+			name: "Storage PublicAccessPreventionInherited",
+			input: &assetFinding{
+				Asset: &asset.ResourceSearchResult{
+					AssetType:   assetTypeBucket,
+					DisplayName: "bucket-name",
+				},
+				BucketPolicy: &bucketIAM.Policy{
+					InternalProto: &iam.Policy{
+						Bindings: []*iam.Binding{
+							{Role: "roles/storage.objectViewer", Members: []string{allUsers}},
+						},
+					},
+				},
+				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionInherited),
+			},
+			want: 0.1,
 		},
 	}
 	for _, c := range cases {
@@ -342,4 +379,8 @@ func TestGetAssetDescription(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Ptr[T any](v T) *T {
+	return &v
 }

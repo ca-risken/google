@@ -24,6 +24,7 @@ type assetServiceClient interface {
 	getProjectIAMPolicy(ctx context.Context, gcpProjectID string) (*cloudresourcemanager.Policy, error)
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
+	getStoragePublicAccessPrevention(ctx context.Context, bucketName string) (*storage.PublicAccessPrevention, error)
 	getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error)
 }
 
@@ -177,8 +178,16 @@ func (a *assetClient) getStorageBucketPolicy(ctx context.Context, bucketName str
 	if err != nil {
 		return nil, fmt.Errorf("Failed to Bucket IAM Policy API, err=%+v", err)
 	}
-	a.logger.Debugf(ctx, "BucketPolicy: %+v", policy)
 	return policy, nil
+}
+
+func (a *assetClient) getStoragePublicAccessPrevention(ctx context.Context, bucketName string) (*storage.PublicAccessPrevention, error) {
+	b := a.gcs.Bucket(bucketName)
+	attrs, err := b.Attrs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to Bucket Attributes API, err=%+v", err)
+	}
+	return &attrs.PublicAccessPrevention, nil
 }
 
 func (a *assetClient) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
