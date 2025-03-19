@@ -351,7 +351,8 @@ func (s *SqsHandler) generateAssetFinding(
 		}
 		f.BucketPublicAccessPrevention, err = s.assetClient.getStoragePublicAccessPrevention(ctx, r.DisplayName)
 		if err != nil {
-			return nil, err
+			// TODO: error handling
+			s.logger.Errorf(ctx, "failed to get storage public access prevention, project=%s, bucket=%s, err=%+v", gcpProjectID, r.DisplayName, err)
 		}
 	}
 	return &f, nil
