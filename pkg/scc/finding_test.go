@@ -3,7 +3,7 @@ package scc
 import (
 	"testing"
 
-	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
+	sccpb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
 )
 
 func TestExtractShortResourceName(t *testing.T) {
@@ -153,6 +153,48 @@ func TestGenerateSccURL(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got := generateSccURL(c.input.name, c.input.gcpProjectID)
+			if c.want != got {
+				t.Fatalf("Unexpected: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestFormatSccDataSourceID(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "APIv2 format with locations/global",
+			input: "organizations/111/sources/222/locations/global/findings/333",
+			want:  "organizations/111/sources/222/findings/333",
+		},
+		{
+			name:  "APIv2 format with locations/us-central1",
+			input: "organizations/111/sources/222/locations/us-central1/findings/333",
+			want:  "organizations/111/sources/222/findings/333",
+		},
+		{
+			name:  "APIv1 format (already in correct format)",
+			input: "organizations/111/sources/222/findings/333",
+			want:  "organizations/111/sources/222/findings/333",
+		},
+		{
+			name:  "Invalid format",
+			input: "invalid-format",
+			want:  "invalid-format",
+		},
+		{
+			name:  "Empty string",
+			input: "",
+			want:  "",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := formatSccDataSourceID(c.input)
 			if c.want != got {
 				t.Fatalf("Unexpected: want=%+v, got=%+v", c.want, got)
 			}
