@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
+	sccpb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
 	"github.com/ca-risken/common/pkg/logging"
 )
 

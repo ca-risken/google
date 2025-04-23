@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	securitycenter "cloud.google.com/go/securitycenter/apiv1"
-	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
+	sccv2 "cloud.google.com/go/securitycenter/apiv2"
+	sccv2pb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
 	"github.com/ca-risken/common/pkg/grpc_client"
 	triage "github.com/ca-risken/core/pkg/server/finding"
 	"github.com/ca-risken/core/proto/finding"
@@ -21,7 +21,7 @@ import (
 func (s *SqsHandler) putFindings(
 	ctx context.Context,
 	gcp *google.GCPDataSource,
-	it *securitycenter.ListFindingsResponse_ListFindingsResultIterator,
+	it *sccv2.ListFindingsResponse_ListFindingsResultIterator,
 ) (*int, error) {
 	nextPageToken := ""
 	counter := 0
@@ -70,13 +70,13 @@ type SccAsset struct {
 
 type SccFinding struct {
 	Asset         *SccAsset                `json:"asset"`
-	Finding       *sccpb.Finding           `json:"finding"`
+	Finding       *sccv2pb.Finding         `json:"finding"`
 	SccDetailURL  string                   `json:"scc_detail_url"`
 	Vulnerability *vulnmodel.Vulnerability `json:"vulnerability,omitempty"`
 	RiskenTriage  *triage.RiskenTriage     `json:"risken_triage,omitempty"`
 }
 
-func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, findingResp *sccpb.ListFindingsResponse_ListFindingsResult) (*finding.FindingBatchForUpsert, error) {
+func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, gcpProjectID string, findingResp *sccv2pb.ListFindingsResponse_ListFindingsResult) (*finding.FindingBatchForUpsert, error) {
 	f := findingResp.GetFinding()
 	resource := findingResp.GetResource()
 	asset := &SccAsset{
@@ -85,9 +85,9 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 		Location:           resource.GetLocation(),
 		FullName:           resource.GetName(),
 		DisplayName:        resource.GetDisplayName(),
-		ParentDisplayName:  resource.GetParentDisplayName(),
-		ProjectDisplayName: resource.GetProjectDisplayName(),
-		Organization:       resource.GetOrganization(),
+		ParentDisplayName:  resource.GetGcpMetadata().GetParentDisplayName(),
+		ProjectDisplayName: resource.GetGcpMetadata().GetProjectDisplayName(),
+		Organization:       resource.GetGcpMetadata().GetOrganization(),
 	}
 
 	sccURL := generateSccURL(f.Name, gcpProjectID)
@@ -116,7 +116,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 		Finding: &finding.FindingForUpsert{
 			Description:      generateSccDescrition(f.Category, cve, resourceShortName),
 			DataSource:       message.GoogleSCCDataSource,
-			DataSourceId:     f.Name,
+			DataSourceId:     formatSccDataSourceID(f.Name),
 			ResourceName:     f.ResourceName,
 			ProjectId:        projectID,
 			OriginalScore:    s.scoreSCC(f),
@@ -165,11 +165,28 @@ func extractShortResourceName(resourceName string) string {
 	return array[len(array)-1]
 }
 
-func extractCVEID(f *sccpb.Finding) string {
+func extractCVEID(f *sccv2pb.Finding) string {
 	if f.Vulnerability != nil && f.Vulnerability.Cve != nil {
 		return f.Vulnerability.Cve.Id
 	}
 	return ""
+}
+
+func formatSccDataSourceID(name string) string {
+	parts := strings.Split(name, "/")
+	if len(parts) < 1 {
+		return name
+	}
+
+	// Convert API v2 format to API v1 format to maintain compatibility between DataSourceID
+	// API v2 format: organizations/111/sources/222/locations/xxx/findings/333
+	// API v1 format: organizations/111/sources/222/findings/333
+	// Check if the format includes locations part
+	if len(parts) >= 7 && parts[4] == "locations" {
+		// Remove locations/xxx part
+		return fmt.Sprintf("organizations/%s/sources/%s/findings/%s", parts[1], parts[3], parts[7])
+	}
+	return name
 }
 
 func generateSccDescrition(category, cveID, resourceShortName string) string {

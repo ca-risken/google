@@ -7,8 +7,8 @@ import (
 	"slices"
 	"time"
 
-	scc "cloud.google.com/go/securitycenter/apiv1"
-	sccpb "cloud.google.com/go/securitycenter/apiv1/securitycenterpb"
+	sccv2 "cloud.google.com/go/securitycenter/apiv2"
+	sccv2pb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/option"
@@ -19,22 +19,23 @@ const (
 )
 
 type SCCServiceClient interface {
-	listFinding(ctx context.Context, gcpProjectID string, includeAllSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator
+	listFinding(ctx context.Context, gcpProjectID string, includeAllSeverity bool) *sccv2.ListFindingsResponse_ListFindingsResultIterator
+
 	iterationFetchFindingsWithRetry(
 		ctx context.Context,
-		it *scc.ListFindingsResponse_ListFindingsResultIterator,
+		it *sccv2.ListFindingsResponse_ListFindingsResultIterator,
 		nextPageToken string,
 	) (*sccIterationResult, error)
 }
 
 type SCCClient struct {
-	client  *scc.Client
+	client  *sccv2.Client
 	logger  logging.Logger
 	retryer backoff.BackOff
 }
 
 func NewSCCClient(ctx context.Context, credentialPath string, l logging.Logger) (SCCServiceClient, error) {
-	c, err := scc.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	c, err := sccv2.NewClient(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google API client: %w", err)
 	}
@@ -49,28 +50,28 @@ func NewSCCClient(ctx context.Context, credentialPath string, l logging.Logger) 
 	}, nil
 }
 
-func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string, includeLowSeverity bool) *scc.ListFindingsResponse_ListFindingsResultIterator {
+func (s *SCCClient) listFinding(ctx context.Context, gcpProjectID string, includeLowSeverity bool) *sccv2.ListFindingsResponse_ListFindingsResultIterator {
+	// https://pkg.go.dev/cloud.google.com/go/securitycenter/apiv2/securitycenterpb#ListFindingsRequest
 	defaultFilter := `state="ACTIVE" AND NOT mute="MUTED"`
 	severity := `severity="CRITICAL" OR severity="HIGH" OR severity="MEDIUM"`
 	if includeLowSeverity {
 		severity += ` OR severity="LOW"`
 	}
 	filter := fmt.Sprintf("%s AND (%s)", defaultFilter, severity)
-	// https://pkg.go.dev/google.golang.org/api/securitycenter/v1
-	return s.client.ListFindings(ctx, &sccpb.ListFindingsRequest{
+	return s.client.ListFindings(ctx, &sccv2pb.ListFindingsRequest{
 		Parent: fmt.Sprintf("projects/%s/sources/-", gcpProjectID),
 		Filter: filter,
 	})
 }
 
 type sccIterationResult struct {
-	findings []*sccpb.ListFindingsResponse_ListFindingsResult
+	findings []*sccv2pb.ListFindingsResponse_ListFindingsResult
 	token    string
 }
 
 func (s *SCCClient) iterationFetchFindingsWithRetry(
 	ctx context.Context,
-	it *scc.ListFindingsResponse_ListFindingsResultIterator,
+	it *sccv2.ListFindingsResponse_ListFindingsResultIterator,
 	nextPageToken string,
 ) (
 	*sccIterationResult, error,
@@ -78,11 +79,11 @@ func (s *SCCClient) iterationFetchFindingsWithRetry(
 	operation := func() (*sccIterationResult, error) {
 		return s.iterationFetchFindings(it, nextPageToken)
 	}
-	return backoff.RetryNotifyWithData(operation, s.retryer, s.newRetryLogger(ctx, "iterationFetchFindings"))
+	return backoff.RetryNotifyWithData(operation, s.retryer, s.newRetryLogger(ctx, "iterationFetchFindingsV2"))
 }
 
 func (s *SCCClient) iterationFetchFindings(
-	it *scc.ListFindingsResponse_ListFindingsResultIterator,
+	it *sccv2.ListFindingsResponse_ListFindingsResultIterator,
 	nextPageToken string,
 ) (
 	*sccIterationResult, error,
@@ -103,19 +104,19 @@ func (s *SCCClient) newRetryLogger(ctx context.Context, funcName string) func(er
 	}
 }
 
-func (s *SqsHandler) scoreSCC(f *sccpb.Finding) float32 {
+func (s *SqsHandler) scoreSCC(f *sccv2pb.Finding) float32 {
 	findingClass := f.GetFindingClass().String()
 	if slices.Contains(s.reduceScoreFindingClass, findingClass) {
 		return 0.1
 	}
 	switch f.Severity {
-	case sccpb.Finding_CRITICAL:
+	case sccv2pb.Finding_CRITICAL:
 		return 0.9
-	case sccpb.Finding_HIGH:
+	case sccv2pb.Finding_HIGH:
 		return 0.6
-	case sccpb.Finding_MEDIUM:
+	case sccv2pb.Finding_MEDIUM:
 		return 0.3
-	case sccpb.Finding_LOW:
+	case sccv2pb.Finding_LOW:
 		return 0.1
 	}
 	return 0.0
