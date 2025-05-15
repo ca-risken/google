@@ -103,7 +103,7 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			return nil, fmt.Errorf("failed to get vulnerability, project_id=%d, cve_id=%s, err=%+v", projectID, cve, err)
 		}
 		data.Vulnerability = vuln
-		data.RiskenTriage = evaluateVulnerability(vuln)
+		data.RiskenTriage = Triage(vuln, f.AttackExposure)
 	}
 
 	buf, err := json.Marshal(data)
