@@ -95,6 +95,8 @@ github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8 h1:7
 github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8/go.mod h1:/U/wZ+4lsT9oDDRT2Kp4XDcfVt6qaF9PmzRpbpxERko=
 github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8 h1:qkGWlFgaOYeqPhvfn+5FMGfoj2ut02TDpYblwatvB1I=
 github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8/go.mod h1:OuXf9lf0tOf/9vd2LJ9peTv6YCYTsJTd9/1LAVxUeZY=
+github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb h1:WipOquXFgSk/j2/MKvQv9j+Mvln8yxJK9msMwce4nLQ=
+github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb/go.mod h1:Eo1gQLHEOi9uMEJG2kE/CazdfnsDNVhdizxRpKDeFy0=
 github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d h1:d+QWOmwmL2YjVWmTlbabmhdCSTnDuiJWxSf8siQbSrM=
 github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d/go.mod h1:c6ENRTqNN5hOCB85fZHvEjMhDWt87dpN20Wz6j91InU=
 github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247 h1:OWvGeqmZUkevxg75pFoCfncQGOvulW4pwXYeSNfp3ck=
@@ -196,8 +198,8 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.3/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
-github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
+github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/gofuzz v1.1.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
 github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=

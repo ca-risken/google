@@ -10,6 +10,7 @@ import (
 	sccv2 "cloud.google.com/go/securitycenter/apiv2"
 	sccv2pb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
 	"github.com/ca-risken/common/pkg/grpc_client"
+	riskenstr "github.com/ca-risken/common/pkg/strings"
 	triage "github.com/ca-risken/core/pkg/server/finding"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/message"
@@ -127,8 +128,8 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			{Tag: common.TagGoogle},
 			{Tag: common.TagGCP},
 			{Tag: common.TagSCC},
-			{Tag: gcpProjectID},
-			{Tag: common.GetServiceName(f.ResourceName)},
+			{Tag: riskenstr.TruncateString(gcpProjectID, 64, "")},
+			{Tag: riskenstr.TruncateString(common.GetServiceName(f.ResourceName), 64, "")},
 		},
 	}
 	if cve != "" {
@@ -136,7 +137,9 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: cve})
 	}
 	if resourceShortName != "" {
-		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: resourceShortName})
+		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{
+			Tag: riskenstr.TruncateString(resourceShortName, 64, ""),
+		})
 	}
 
 	riskDescription := f.Category

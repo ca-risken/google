@@ -119,7 +119,7 @@ func TestScoreAsset(t *testing.T) {
 				},
 				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionInherited),
 			},
-			want: 0.1,
+			want: 0.7,
 		},
 	}
 	for _, c := range cases {

@@ -17,6 +17,7 @@ import (
 	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
+	riskenstr "github.com/ca-risken/common/pkg/strings"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/message"
@@ -215,7 +216,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 				{Tag: gcpProjectID},
 			}
 			for _, t := range getAssetTags(a.Asset.AssetType, a.Asset.Name) {
-				tags = append(tags, &finding.ResourceTagForBatch{Tag: t})
+				tags = append(tags, &finding.ResourceTagForBatch{Tag: riskenstr.TruncateString(t, 64, "")})
 			}
 			r.Tag = tags
 			resources = append(resources, r)
@@ -247,7 +248,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 			{Tag: gcpProjectID},
 		}
 		for _, t := range getAssetTags(a.Asset.AssetType, a.Asset.Name) {
-			tags = append(tags, &finding.FindingTagForBatch{Tag: t})
+			tags = append(tags, &finding.FindingTagForBatch{Tag: riskenstr.TruncateString(t, 64, "")})
 		}
 		f.Tag = tags
 
@@ -437,9 +438,9 @@ const (
 
 func allowedPubliclyAccess(members []string, publicAccessPrevention *storage.PublicAccessPrevention) bool {
 	if publicAccessPrevention != nil {
-		preventSetting := publicAccessPrevention.String()
-		if preventSetting == "inherited" || preventSetting == "enforced" {
-			return false
+		switch *publicAccessPrevention {
+		case storage.PublicAccessPreventionEnforced:
+			return false // Bucket level setting
 		}
 	}
 	for _, m := range members {
@@ -467,16 +468,17 @@ func getAssetDescription(a *assetFinding, score float32) string {
 			return fmt.Sprintf("Detected a privileged service-account that has owner(or editor) role. (name=%s)", a.Asset.DisplayName)
 		}
 	}
+	dispName := riskenstr.TruncateString(a.Asset.DisplayName, 200, "...")
 	if a.Asset.AssetType == assetTypeBucket {
 		assetType = "Bucket"
 		if score >= 0.7 {
-			return fmt.Sprintf("Detected public bucket. (name=%s)", a.Asset.DisplayName)
+			return fmt.Sprintf("Detected public bucket. (name=%s)", dispName)
 		}
 	}
 
-	description := fmt.Sprintf("Detected GCP asset (name=%s)", a.Asset.DisplayName)
+	description := fmt.Sprintf("Detected GCP asset (name=%s)", dispName)
 	if assetType != "" {
-		description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, a.Asset.DisplayName)
+		description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, dispName)
 	}
 	return description
 }
