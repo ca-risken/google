@@ -368,7 +368,7 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.8,
 			},
-			want: "Detected GCP asset (name=any-name)",
+			want: "Detected GCP asset (type=any-type, name=any-name)",
 		},
 	}
 	for _, c := range cases {

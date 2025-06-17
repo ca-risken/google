@@ -462,23 +462,29 @@ func writableRole(role string) bool {
 
 func getAssetDescription(a *assetFinding, score float32) string {
 	assetType := ""
+	description := ""
+
+	// AssetType
 	if a.Asset.AssetType == assetTypeServiceAccount {
 		assetType = "ServiceAccount"
 		if score >= 0.8 {
-			return fmt.Sprintf("Detected a privileged service-account that has owner(or editor) role. (name=%s)", a.Asset.DisplayName)
+			description = fmt.Sprintf("Detected a privileged service-account that has owner(or editor) role. (name=%s)", a.Asset.DisplayName)
 		}
-	}
-	dispName := riskenstr.TruncateString(a.Asset.DisplayName, 200, "...")
-	if a.Asset.AssetType == assetTypeBucket {
+	} else if a.Asset.AssetType == assetTypeBucket {
 		assetType = "Bucket"
 		if score >= 0.7 {
-			return fmt.Sprintf("Detected public bucket. (name=%s)", dispName)
+			description = fmt.Sprintf("Detected public bucket. (name=%s)", a.Asset.DisplayName)
 		}
+	} else {
+		assetType = a.Asset.AssetType
 	}
 
-	description := fmt.Sprintf("Detected GCP asset (name=%s)", dispName)
-	if assetType != "" {
-		description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, dispName)
+	// Specific description
+	if description != "" {
+		return riskenstr.TruncateString(description, 200, "...")
 	}
-	return description
+
+	// Default description
+	description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, a.Asset.DisplayName)
+	return riskenstr.TruncateString(description, 200, "...")
 }
