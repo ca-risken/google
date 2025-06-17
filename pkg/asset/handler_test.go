@@ -119,7 +119,7 @@ func TestScoreAsset(t *testing.T) {
 				},
 				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionInherited),
 			},
-			want: 0.1,
+			want: 0.7,
 		},
 	}
 	for _, c := range cases {
@@ -368,7 +368,7 @@ func TestGetAssetDescription(t *testing.T) {
 				},
 				score: 0.8,
 			},
-			want: "Detected GCP asset (name=any-name)",
+			want: "Detected GCP asset (type=any-type, name=any-name)",
 		},
 	}
 	for _, c := range cases {
