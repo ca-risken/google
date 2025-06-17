@@ -481,10 +481,10 @@ func getAssetDescription(a *assetFinding, score float32) string {
 
 	// Specific description
 	if description != "" {
-		return riskenstr.TruncateString(description, 200, "...")
+		return riskenstr.TruncateString(description, 150, "...")
 	}
 
 	// Default description
 	description = fmt.Sprintf("Detected GCP asset (type=%s, name=%s)", assetType, a.Asset.DisplayName)
-	return riskenstr.TruncateString(description, 200, "...")
+	return riskenstr.TruncateString(description, 150, "...")
 }
