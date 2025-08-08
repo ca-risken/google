@@ -14,7 +14,7 @@ require (
 	github.com/ca-risken/common/pkg/logging v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/portscan v0.0.0-20230501023912-29382763676f
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
-	github.com/ca-risken/common/pkg/sqs v0.0.0-20221119073224-9db027bda6f8
+	github.com/ca-risken/common/pkg/sqs v0.0.0-20250723085534-daee3fbf0ba6
 	github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
 	github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247
