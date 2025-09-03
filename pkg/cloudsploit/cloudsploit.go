@@ -8,14 +8,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ca-risken/common/pkg/cloudsploit"
 	"github.com/ca-risken/common/pkg/logging"
+)
+
+const (
+	DEFAULT_SCAN_TIMEOUT_MINUTES             = 20
+	DEFAULT_SCAN_TIMEOUT_ALL_PLUGINS_MINUTES = 90
 )
 
 type cloudSploitServiceClient interface {
@@ -32,6 +37,9 @@ type CloudSploitClient struct {
 	cloudsploitSetting             *cloudsploit.CloudsploitSetting
 	logger                         logging.Logger
 	maxMemSizeMB                   int
+	parallelScanNum                int
+	scanTimeout                    time.Duration
+	scanTimeoutAll                 time.Duration
 }
 
 func NewCloudSploitClient(
@@ -41,11 +49,23 @@ func NewCloudSploitClient(
 	cloudsploitSettingPath string,
 	l logging.Logger,
 	maxMemSizeMB int,
+	parallelScanNum int,
+	scanTimeoutMinutes int,
+	scanTimeoutAllMinutes int,
 ) (*CloudSploitClient, error) {
 	setting, err := loadCloudsploitSetting(cloudsploitSettingPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load cloudsploit setting. error: %v", err)
 	}
+
+	if scanTimeoutMinutes == 0 {
+		scanTimeoutMinutes = DEFAULT_SCAN_TIMEOUT_MINUTES
+	}
+	if scanTimeoutAllMinutes == 0 {
+		scanTimeoutAllMinutes = DEFAULT_SCAN_TIMEOUT_ALL_PLUGINS_MINUTES
+	}
+	scanTimeout := time.Duration(scanTimeoutMinutes) * time.Minute
+	scanTimeoutAll := time.Duration(scanTimeoutAllMinutes) * time.Minute
 
 	return &CloudSploitClient{
 		cloudSploitCommand:             command,
@@ -55,6 +75,9 @@ func NewCloudSploitClient(
 		cloudsploitSetting:             setting,
 		logger:                         l,
 		maxMemSizeMB:                   maxMemSizeMB,
+		parallelScanNum:                parallelScanNum,
+		scanTimeout:                    scanTimeout,
+		scanTimeoutAll:                 scanTimeoutAll,
 	}, nil
 }
 
@@ -93,27 +116,121 @@ func (c *cloudSploitFinding) generateDataSourceID() {
 }
 
 func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cloudSploitFinding, error) {
-	unixNano := time.Now().UnixNano()
-	// Generate cloudsploit confing file
-	configJs, err := c.generateConfig(ctx, gcpProjectID, unixNano)
+	allScanCtx, allCancel := context.WithTimeout(ctx, c.scanTimeoutAll)
+	defer allCancel()
+	now := time.Now().UnixNano()
+	
+	if c.maxMemSizeMB > 0 {
+		os.Setenv("NODE_OPTIONS", fmt.Sprintf("--max-old-space-size=%d", c.maxMemSizeMB))
+	}
+	
+	// Generate cloudsploit config file
+	configJs, err := c.generateConfig(ctx, gcpProjectID, now)
 	if err != nil {
 		c.logger.Errorf(ctx, "Failed to generate config file, gcpProjectID=%s, err=%+v", gcpProjectID, err)
 		return nil, err
 	}
+	defer os.Remove(configJs)
 
-	// Exec CloudSploit
-	result, resultJSON, err := c.execCloudSploit(ctx, gcpProjectID, unixNano, configJs)
-	if err != nil {
-		c.logger.Errorf(ctx, "Failed to exec cloudsploit, gcpProjectID=%s, err=%+v", gcpProjectID, err)
-		return nil, err
+	var results []*cloudSploitFinding
+	var wg sync.WaitGroup
+	resultChan := make(chan []*cloudSploitFinding)
+	errChan := make(chan error, 1)
+	
+	c.logger.Debugf(ctx, "exec parallel scan: gcpProjectID=%s, plugins=%d, parallelScanNum=%d, maxMemSizeMB=%d",
+		gcpProjectID, len(c.cloudsploitSetting.SpecificPluginSetting), c.parallelScanNum, c.maxMemSizeMB)
+	
+	semaphore := make(chan struct{}, c.parallelScanNum) // parallel scan
+	
+	for plugin := range c.cloudsploitSetting.SpecificPluginSetting {
+		if c.cloudsploitSetting.IsIgnorePlugin(plugin) {
+			continue
+		}
+		split := strings.Split(plugin, "/")
+		if len(split) < 2 {
+			return nil, fmt.Errorf("invalid plugin format: plugin=%s", plugin)
+		}
+		category := split[0]
+		pluginName := split[1]
+
+		wg.Add(1)
+		go func(gcpProjectID, category, pluginName string, now int64) {
+			defer wg.Done()
+			scanCtx, scanCancel := context.WithTimeout(allScanCtx, c.scanTimeout)
+			defer scanCancel()
+
+			select {
+			case <-allScanCtx.Done():
+				if allScanCtx.Err() == context.DeadlineExceeded {
+					c.logger.Warnf(ctx, "scan timeout: gcpProjectID=%s, category=%s, plugin=%s, timeout=%d(min)",
+						gcpProjectID, category, pluginName, int(c.scanTimeoutAll.Minutes()))
+					return
+				}
+				errChan <- allScanCtx.Err()
+				return
+			case semaphore <- struct{}{}: // get semaphore
+				defer func() { <-semaphore }()
+			}
+
+			c.logger.Debugf(ctx, "start scan: gcpProjectID=%s, category=%s, plugin=%s", gcpProjectID, category, pluginName)
+			startUnix := time.Now().Unix()
+			pluginResults, err := c.scan(scanCtx, gcpProjectID, category, pluginName, configJs, now)
+			if err != nil {
+				if scanCtx.Err() == context.DeadlineExceeded {
+					c.logger.Warnf(ctx, "scan timeout: gcpProjectID=%s, category=%s, plugin=%s, timeout=%d(min)",
+						gcpProjectID, category, pluginName, int(c.scanTimeout.Minutes()))
+					return
+				} else {
+					errChan <- fmt.Errorf("gcpProjectID=%s, category=%s, plugin=%s, error=%w", gcpProjectID, category, pluginName, err)
+					return
+				}
+			}
+			endUnix := time.Now().Unix()
+			c.logger.Debugf(ctx, "end scan: gcpProjectID=%s, category=%s, plugin=%s, time=%d(sec)", gcpProjectID, category, pluginName, endUnix-startUnix)
+
+			select {
+			case resultChan <- pluginResults:
+			case <-allScanCtx.Done():
+				return
+			}
+		}(gcpProjectID, category, pluginName, now)
 	}
 
-	// Remove temp files
-	if err = c.removeTempFiles(configJs, resultJSON); err != nil {
-		c.logger.Errorf(ctx, "Failed to remove temp files, gcpProjectID=%s, err=%+v", gcpProjectID, err)
-		return nil, err
+	// Watching wait group (non-blocking)
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// Result collection loop (blocking)
+	for {
+		select {
+		case <-done:
+			// Finish all scan
+			close(resultChan)
+			close(errChan)
+			goto COLLECTION_COMPLETE
+		case err := <-errChan:
+			if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+				return nil, fmt.Errorf("scan error: %w", err)
+			}
+		case res, ok := <-resultChan:
+			if !ok {
+				continue
+			}
+			results = append(results, res...)
+		}
 	}
-	return result, nil
+
+COLLECTION_COMPLETE:
+	c.logger.Debugf(ctx, "end parallel scan: gcpProjectID=%s, plugins=%d, parallelScanNum=%d, maxMemSizeMB=%d",
+		gcpProjectID, len(c.cloudsploitSetting.SpecificPluginSetting), c.parallelScanNum, c.maxMemSizeMB)
+	
+	if len(results) > 0 {
+		results = c.removeIgnoreFindings(ctx, results)
+	}
+	return results, nil
 }
 
 func (c *CloudSploitClient) generateConfig(ctx context.Context, gcpProjectID string, unixNano int64) (string, error) {
@@ -130,67 +247,51 @@ func (c *CloudSploitClient) generateConfig(ctx context.Context, gcpProjectID str
 	return configJs.Name(), nil
 }
 
-const (
-	resourceNotApplicable string = "N/A"
-	resourceUnknown       string = "Unknown"
-)
+func (c *CloudSploitClient) scan(ctx context.Context, gcpProjectID, category, pluginName, configJs string, scanUnixNano int64) ([]*cloudSploitFinding, error) {
+	filePath := fmt.Sprintf("/tmp/%s_%s_%s_%d.json", gcpProjectID, category, pluginName, scanUnixNano)
+	if fileExists(filePath) {
+		return nil, fmt.Errorf("result file already exists: file=%s", filePath)
+	}
+	defer os.Remove(filePath)
 
-func (c *CloudSploitClient) execCloudSploit(ctx context.Context, gcpProjectID string, unixNano int64, configJs string) ([]*cloudSploitFinding, string, error) {
-	filepath := fmt.Sprintf("/tmp/%s_%d_result.json", gcpProjectID, unixNano)
-	if c.maxMemSizeMB > 0 {
-		os.Setenv("NODE_OPTIONS", fmt.Sprintf("--max-old-space-size=%d", c.maxMemSizeMB))
-	}
-	resultJSON, err := os.Create(filepath)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create result file, path:%s, err:%w", filepath, err)
-	}
-	defer resultJSON.Close()
-	cmd := exec.Command(
-		c.cloudSploitCommand,
+	cmd := exec.CommandContext(ctx, c.cloudSploitCommand,
 		"--config", configJs,
-		"--json", filepath,
 		"--console", "none",
+		"--plugin", pluginName,
+		"--json", filePath,
 	)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		return nil, "", fmt.Errorf("Failed exec cloudsploit. error: %+v, detail: %s", err, stderr.String())
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed exec cloudsploit. error: %w, detail: %s", err, stderr.String())
 	}
 
-	findings, err := c.generateFindingsFromFile(ctx, resultJSON)
-	if err != nil {
-		return nil, "", err
-	}
-	return findings, filepath, nil
-}
-
-func (c *CloudSploitClient) removeTempFiles(configFilePath, resutlFilePath string) error {
-	if err := os.Remove(configFilePath); err != nil {
-		return err
-	}
-	if err := os.Remove(resutlFilePath); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *CloudSploitClient) generateFindingsFromFile(ctx context.Context, jsonFile *os.File) ([]*cloudSploitFinding, error) {
-	buf, err := io.ReadAll(jsonFile)
+	buf, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-
-	var findings []*cloudSploitFinding
 	if len(buf) == 0 {
-		c.logger.Warn(ctx, "Result file is empty")
-		return findings, nil // empty
-	}
-	if err := json.Unmarshal(buf, &findings); err != nil {
-		return nil, fmt.Errorf("failed parse result JSON. error: %w", err)
+		c.logger.Warn(ctx, "scan output file is empty")
+		return []*cloudSploitFinding{}, nil
 	}
 
-	results := []*cloudSploitFinding{}
+	var results []*cloudSploitFinding
+	if err := json.Unmarshal(buf, &results); err != nil {
+		return nil, fmt.Errorf("json parse error(scan output file): output_length=%d, err=%v", len(string(buf)), err)
+	}
+	return results, nil
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func (c *CloudSploitClient) removeIgnoreFindings(ctx context.Context, findings []*cloudSploitFinding) []*cloudSploitFinding {
+	removedResult := []*cloudSploitFinding{}
 	for _, f := range findings {
 		plugin := fmt.Sprintf("%s/%s", f.Category, f.Plugin)
 		if c.cloudsploitSetting.IsIgnorePlugin(plugin) {
@@ -211,10 +312,15 @@ func (c *CloudSploitClient) generateFindingsFromFile(ctx context.Context, jsonFi
 		}
 		f.Tags = c.cloudsploitSetting.SpecificPluginSetting[plugin].Tags // set tags
 
-		results = append(results, f)
+		removedResult = append(removedResult, f)
 	}
-	return results, nil
+	return removedResult
 }
+
+const (
+	resourceNotApplicable string = "N/A"
+	resourceUnknown       string = "Unknown"
+)
 
 const (
 	// CloudSploit Result Code: https://github.com/aquasecurity/cloudsploit/blob/2ab02ba4ffcac7ca8122f37d6b453a9679447a32/docs/writing-plugins.md#result-codes

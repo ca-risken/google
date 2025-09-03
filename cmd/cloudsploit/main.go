@@ -56,6 +56,9 @@ type AppConfig struct {
 	GoogleServiceAccountPrivateKey string `required:"true" split_words:"true"`
 	MaxMemSizeMB                   int    `split_words:"true" default:"192"`
 	CloudSploitSettingPath         string `envconfig:"CLOUDSPLOIT_SETTING_PATH" default:""`
+	ParallelScanNum                int    `split_words:"true" default:"5"`
+	ScanTimeoutMinutes             int    `split_words:"true" default:"20"`
+	ScanTimeoutAllMinutes          int    `split_words:"true" default:"90"`
 }
 
 func main() {
@@ -114,6 +117,9 @@ func main() {
 		conf.CloudSploitSettingPath,
 		appLogger,
 		conf.MaxMemSizeMB,
+		conf.ParallelScanNum,
+		conf.ScanTimeoutMinutes,
+		conf.ScanTimeoutAllMinutes,
 	)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create cloudsploit client, err=%+v", err)
