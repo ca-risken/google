@@ -139,7 +139,6 @@ func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cl
 
 	c.logger.Debugf(ctx, "exec parallel scan: gcpProjectID=%s, plugins=%d, parallelScanNum=%d, maxMemSizeMB=%d",
 		gcpProjectID, len(c.cloudsploitSetting.SpecificPluginSetting), c.parallelScanNum, c.maxMemSizeMB)
-
 	semaphore := make(chan struct{}, c.parallelScanNum) // parallel scan
 
 	for plugin := range c.cloudsploitSetting.SpecificPluginSetting {
