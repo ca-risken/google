@@ -119,11 +119,11 @@ func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cl
 	allScanCtx, allCancel := context.WithTimeout(ctx, c.scanTimeoutAll)
 	defer allCancel()
 	now := time.Now().UnixNano()
-	
+
 	if c.maxMemSizeMB > 0 {
 		os.Setenv("NODE_OPTIONS", fmt.Sprintf("--max-old-space-size=%d", c.maxMemSizeMB))
 	}
-	
+
 	// Generate cloudsploit config file
 	configJs, err := c.generateConfig(ctx, gcpProjectID, now)
 	if err != nil {
@@ -136,12 +136,12 @@ func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cl
 	var wg sync.WaitGroup
 	resultChan := make(chan []*cloudSploitFinding)
 	errChan := make(chan error, 1)
-	
+
 	c.logger.Debugf(ctx, "exec parallel scan: gcpProjectID=%s, plugins=%d, parallelScanNum=%d, maxMemSizeMB=%d",
 		gcpProjectID, len(c.cloudsploitSetting.SpecificPluginSetting), c.parallelScanNum, c.maxMemSizeMB)
-	
+
 	semaphore := make(chan struct{}, c.parallelScanNum) // parallel scan
-	
+
 	for plugin := range c.cloudsploitSetting.SpecificPluginSetting {
 		if c.cloudsploitSetting.IsIgnorePlugin(plugin) {
 			continue
@@ -181,6 +181,8 @@ func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cl
 						gcpProjectID, category, pluginName, int(c.scanTimeout.Minutes()))
 					return
 				} else {
+					c.logger.Errorf(ctx, "scan failed: gcpProjectID=%s, category=%s, plugin=%s, err=%+v",
+						gcpProjectID, category, pluginName, err)
 					errChan <- fmt.Errorf("gcpProjectID=%s, category=%s, plugin=%s, error=%w", gcpProjectID, category, pluginName, err)
 					return
 				}
@@ -226,7 +228,7 @@ func (c *CloudSploitClient) run(ctx context.Context, gcpProjectID string) ([]*cl
 COLLECTION_COMPLETE:
 	c.logger.Debugf(ctx, "end parallel scan: gcpProjectID=%s, plugins=%d, parallelScanNum=%d, maxMemSizeMB=%d",
 		gcpProjectID, len(c.cloudsploitSetting.SpecificPluginSetting), c.parallelScanNum, c.maxMemSizeMB)
-	
+
 	if len(results) > 0 {
 		results = c.removeIgnoreFindings(ctx, results)
 	}
