@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.20.8
 	github.com/ca-risken/common/pkg/cloudsploit v0.0.0-20240913022110-d46627f38918
+	github.com/ca-risken/common/pkg/dlp v0.0.0-20251009082317-0c402b55a771
 	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/logging v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/portscan v0.0.0-20230501023912-29382763676f

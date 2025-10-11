@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
@@ -57,6 +59,31 @@ type assetFinding struct {
 	DisabledServiceAccount       bool                            `json:"disabled_service_account,omitempty"`
 	BucketPolicy                 *iam.Policy                     `json:"bucket_policy,omitempty"`
 	BucketPublicAccessPrevention *storage.PublicAccessPrevention `json:"bucket_public_access_prevention,omitempty"`
+	DlpScan                      *dlp.ScanResult                 `json:"dlp_scan,omitempty"`
+}
+
+// TODO: remove
+func parseFullScanFlag(msgBody string) bool {
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(msgBody), &raw); err != nil {
+		return false
+	}
+	value, ok := raw["full_scan"]
+	if !ok {
+		return false
+	}
+	switch v := value.(type) {
+	case bool:
+		return v
+	case string:
+		parsed, err := strconv.ParseBool(v)
+		if err == nil {
+			return parsed
+		}
+	case float64:
+		return v != 0
+	}
+	return false
 }
 
 func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
@@ -67,6 +94,9 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.logger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
+
+	// TODO: remove
+	fullScan := parseFullScanFlag(msgBody)
 
 	beforeScanAt := time.Now()
 	requestID, err := s.logger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
@@ -116,7 +146,7 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 		assets := []*assetFinding{}
 		for _, r := range result.resources {
-			a, err := s.generateAssetFinding(ctx, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap)
+			a, err := s.generateAssetFinding(ctx, msg.ProjectID, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap, fullScan)
 			if err != nil {
 				err = fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%w",
 					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
@@ -321,10 +351,12 @@ const (
 
 func (s *SqsHandler) generateAssetFinding(
 	ctx context.Context,
+	projectID uint32,
 	gcpProjectID string,
 	r *assetpb.ResourceSearchResult,
 	policy *cloudresourcemanager.Policy,
 	serviceAccountMap map[string]*admin.ServiceAccount,
+	fullScan bool,
 ) (*assetFinding, error) {
 
 	f := assetFinding{Asset: r}
@@ -346,14 +378,8 @@ func (s *SqsHandler) generateAssetFinding(
 
 	// Storage
 	if r.AssetType == assetTypeBucket {
-		f.BucketPolicy, err = s.assetClient.getStorageBucketPolicy(ctx, r.DisplayName)
-		if err != nil {
+		if err := s.enrichBucketFinding(ctx, projectID, gcpProjectID, r, fullScan, &f); err != nil {
 			return nil, err
-		}
-		f.BucketPublicAccessPrevention, err = s.assetClient.getStoragePublicAccessPrevention(ctx, r.DisplayName)
-		if err != nil {
-			// TODO: error handling
-			s.logger.Errorf(ctx, "failed to get storage public access prevention, project=%s, bucket=%s, err=%+v", gcpProjectID, r.DisplayName, err)
 		}
 	}
 	return &f, nil
@@ -410,55 +436,7 @@ func scoreAssetForIAM(f *assetFinding) float32 {
 	return 0.1
 }
 
-func scoreAssetForStorage(f *assetFinding) float32 {
-	if f.BucketPolicy == nil || f.BucketPolicy.InternalProto == nil {
-		return 0.0
-	}
-	var score float32 = 0.1
-	for _, b := range f.BucketPolicy.InternalProto.Bindings {
-		public := allowedPubliclyAccess(b.Members, f.BucketPublicAccessPrevention)
-		writable := writableRole(b.Role)
-		if public && writable {
-			score = 1.0 // `writable` means both READ and WRITE.
-			break
-		}
-		if public {
-			score = 0.7 // read only access
-		}
-	}
-	return score
-}
-
-const (
-	assetPageSize = 1000
-	// https://cloud.google.com/storage/docs/access-control/lists#scopes
-	allUsers              string = "allUsers"
-	allAuthenticatedUsers string = "allAuthenticatedUsers"
-)
-
-func allowedPubliclyAccess(members []string, publicAccessPrevention *storage.PublicAccessPrevention) bool {
-	if publicAccessPrevention != nil {
-		switch *publicAccessPrevention {
-		case storage.PublicAccessPreventionEnforced:
-			return false // Bucket level setting
-		}
-	}
-	for _, m := range members {
-		if m == allUsers || m == allAuthenticatedUsers {
-			return true
-		}
-	}
-	return false
-}
-
-func writableRole(role string) bool {
-	// https://cloud.google.com/storage/docs/access-control/iam-roles
-	// Not supported custom roles.
-	if strings.HasSuffix(strings.ToLower(role), "reader") || strings.HasSuffix(strings.ToLower(role), "viewer") {
-		return false
-	}
-	return true
-}
+const assetPageSize = 1000
 
 func getAssetDescription(a *assetFinding, score float32) string {
 	assetType := ""

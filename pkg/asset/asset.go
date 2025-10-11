@@ -12,6 +12,7 @@ import (
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"cloud.google.com/go/iam/admin/apiv1/adminpb"
 	"cloud.google.com/go/storage"
+	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/cloudresourcemanager/v3"
@@ -26,15 +27,17 @@ type assetServiceClient interface {
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
 	getStoragePublicAccessPrevention(ctx context.Context, bucketName string) (*storage.PublicAccessPrevention, error)
 	getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error)
+	dlpScanBucket(ctx context.Context, bucketName string, prevResult *dlp.ScanResult, fullScan bool) (*dlp.ScanResult, error)
 }
 
 type assetClient struct {
-	project *cloudresourcemanager.Service
-	asset   *asset.Client
-	admin   *admin.IamClient
-	gcs     *storage.Client
-	logger  logging.Logger
-	retryer backoff.BackOff
+	project   *cloudresourcemanager.Service
+	asset     *asset.Client
+	admin     *admin.IamClient
+	gcs       *storage.Client
+	dlpConfig *dlp.Config
+	logger    logging.Logger
+	retryer   backoff.BackOff
 }
 
 func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient, error) {
@@ -59,13 +62,18 @@ func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient
 	if err := os.Remove(credentialPath); err != nil {
 		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
+	dlpConfig, err := dlp.LoadConfig("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load DLP config: %w", err)
+	}
 	return &assetClient{
-		project: pj,
-		asset:   as,
-		admin:   ad,
-		gcs:     st,
-		logger:  l,
-		retryer: backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
+		project:   pj,
+		asset:     as,
+		admin:     ad,
+		gcs:       st,
+		dlpConfig: dlpConfig,
+		logger:    l,
+		retryer:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
 	}, nil
 }
 
