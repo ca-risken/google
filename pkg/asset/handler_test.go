@@ -383,27 +383,6 @@ func TestGetAssetDescription(t *testing.T) {
 	}
 }
 
-func TestParseFullScanFlag(t *testing.T) {
-	cases := []struct {
-		name     string
-		body     string
-		expected bool
-	}{
-		{name: "true string", body: `{"full_scan":"true"}`, expected: true},
-		{name: "false missing", body: `{"project_id":1}`, expected: false},
-		{name: "boolean true", body: `{"full_scan":true}`, expected: true},
-		{name: "numeric false", body: `{"full_scan":0}`, expected: false},
-	}
-	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseFullScanFlag(tt.body)
-			if diff := cmp.Diff(tt.expected, got); diff != "" {
-				t.Fatalf("parseFullScanFlag() mismatch (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
 func TestIsBucketPublic(t *testing.T) {
 	publicPolicy := &bucketIAM.Policy{
 		InternalProto: &iam.Policy{

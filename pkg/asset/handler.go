@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -62,30 +61,6 @@ type assetFinding struct {
 	DlpScan                      *dlp.ScanResult                 `json:"dlp_scan,omitempty"`
 }
 
-// TODO: remove
-func parseFullScanFlag(msgBody string) bool {
-	var raw map[string]any
-	if err := json.Unmarshal([]byte(msgBody), &raw); err != nil {
-		return false
-	}
-	value, ok := raw["full_scan"]
-	if !ok {
-		return false
-	}
-	switch v := value.(type) {
-	case bool:
-		return v
-	case string:
-		parsed, err := strconv.ParseBool(v)
-		if err == nil {
-			return parsed
-		}
-	case float64:
-		return v != 0
-	}
-	return false
-}
-
 func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
 	msgBody := aws.ToString(sqsMsg.Body)
 	s.logger.Infof(ctx, "got message: %s", msgBody)
@@ -94,9 +69,6 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 		s.logger.Errorf(ctx, "invalid message: msg=%+v, err=%+v", sqsMsg, err)
 		return mimosasqs.WrapNonRetryable(err)
 	}
-
-	// TODO: remove
-	fullScan := parseFullScanFlag(msgBody)
 
 	beforeScanAt := time.Now()
 	requestID, err := s.logger.GenerateRequestID(fmt.Sprint(msg.ProjectID))
@@ -146,7 +118,7 @@ func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) e
 
 		assets := []*assetFinding{}
 		for _, r := range result.resources {
-			a, err := s.generateAssetFinding(ctx, msg.ProjectID, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap, fullScan)
+			a, err := s.generateAssetFinding(ctx, msg.ProjectID, gcp.GcpProjectId, r, iamPolicies, serviceAccountMap, msg.FullScan)
 			if err != nil {
 				err = fmt.Errorf("failed to generate asset findng: project_id=%d, gcp_id=%d, google_data_source_id=%d, err=%w",
 					msg.ProjectID, msg.GCPID, msg.GoogleDataSourceID, err)
