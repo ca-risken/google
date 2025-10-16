@@ -8,6 +8,8 @@ import (
 	bucketIAM "cloud.google.com/go/iam"
 	iam "cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/storage"
+	"github.com/ca-risken/common/pkg/dlp"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestIsUserServiceAccount(t *testing.T) {
@@ -376,6 +378,120 @@ func TestGetAssetDescription(t *testing.T) {
 			got := getAssetDescription(c.input.asset, c.input.score)
 			if c.want != got {
 				t.Fatalf("Unexpected data match: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
+func TestIsBucketPublic(t *testing.T) {
+	publicPolicy := &bucketIAM.Policy{
+		InternalProto: &iam.Policy{
+			Bindings: []*iam.Binding{
+				{Role: "roles/storage.objectViewer", Members: []string{allUsers}},
+			},
+		},
+	}
+	privatePolicy := &bucketIAM.Policy{
+		InternalProto: &iam.Policy{
+			Bindings: []*iam.Binding{
+				{Role: "roles/storage.objectViewer", Members: []string{"user:test@example.com"}},
+			},
+		},
+	}
+	cases := []struct {
+		name string
+		in   *assetFinding
+		want bool
+	}{
+		{name: "nil finding", in: nil, want: false},
+		{name: "no policy", in: &assetFinding{}, want: false},
+		{
+			name: "public bucket",
+			in: &assetFinding{
+				BucketPolicy:                 publicPolicy,
+				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionUnknown),
+			},
+			want: true,
+		},
+		{
+			name: "private bucket",
+			in: &assetFinding{
+				BucketPolicy:                 privatePolicy,
+				BucketPublicAccessPrevention: Ptr(storage.PublicAccessPreventionUnknown),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isBucketPublic(tt.in); got != tt.want {
+				t.Fatalf("isBucketPublic() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHasDLPScanData(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{name: "has dlp scan data", input: `{"dlp_scan":{"resource_name":"bucket"}}`, expected: true},
+		{name: "no dlp scan data", input: `{"other":"value"}`, expected: false},
+		{name: "invalid json", input: `invalid-json`, expected: false},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := hasDLPScanData(tt.input)
+			if diff := cmp.Diff(tt.expected, got); diff != "" {
+				t.Fatalf("hasDLPScanData() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseDLPScanData(t *testing.T) {
+	cases := []struct {
+		name        string
+		input       string
+		want        *dlp.ScanResult
+		expectError bool
+	}{
+		{
+			name:  "OK",
+			input: `{"dlp_scan":{"resource_name":"bucket","scan_time":100}}`,
+			want: &dlp.ScanResult{
+				ResourceName: "bucket",
+				ScanTime:     100,
+			},
+		},
+		{
+			name:        "no dlp scan data",
+			input:       `{"other":"value"}`,
+			expectError: true,
+		},
+		{
+			name:        "invalid json",
+			input:       `invalid`,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseDLPScanData(tt.input)
+			if tt.expectError {
+				if err == nil {
+					t.Fatalf("parseDLPScanData() error = nil, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseDLPScanData() unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Fatalf("parseDLPScanData() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

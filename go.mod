@@ -7,9 +7,10 @@ require (
 	cloud.google.com/go/iam v1.2.2
 	cloud.google.com/go/securitycenter v1.35.3
 	cloud.google.com/go/storage v1.43.0
-	github.com/aws/aws-sdk-go-v2 v1.18.0
+	github.com/aws/aws-sdk-go-v2 v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.20.8
 	github.com/ca-risken/common/pkg/cloudsploit v0.0.0-20240913022110-d46627f38918
+	github.com/ca-risken/common/pkg/dlp v0.0.0-20251009082317-0c402b55a771
 	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/logging v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/portscan v0.0.0-20230501023912-29382763676f
@@ -18,7 +19,7 @@ require (
 	github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
 	github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247
-	github.com/ca-risken/datasource-api v0.4.2-0.20221215091113-c6e727315ba7
+	github.com/ca-risken/datasource-api v0.16.1-0.20251015071141-d64d07f09118
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/ca-risken/vulnerability v0.0.0-20241119125125-0693660e1024
 	github.com/cenkalti/backoff/v4 v4.2.0
@@ -56,10 +57,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.21 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.20 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.32 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.26 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.34 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.28 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.26 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.12.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9 // indirect
@@ -88,11 +89,13 @@ require (
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.1 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/richardartoul/molecule v1.0.1-0.20221107223329-32cfee06a052 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/sashabaranov/go-openai v1.5.8 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
