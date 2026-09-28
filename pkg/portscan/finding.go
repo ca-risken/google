@@ -21,13 +21,17 @@ func (s *SqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 		return err
 	}
 	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data))
+	for _, f := range findings {
+		f.Provider = "google"
+		f.ProviderTarget = gcpProjectID
+	}
 	tags := nmapResult.GetTags()
 	if len(tags) == 0 {
 		// nmapResult.GetTags returns the slice that has empty element in some condition.
 		s.logger.Infof(ctx, "nmapResult has empty or unknown service, nmapResult: %v", nmapResult)
 	}
 	tags = append(tags, gcpProjectID)
-	err = s.putFindings(ctx, gcpProjectID, findings, tags, categoryNmap)
+	err = s.putFindings(ctx, findings, tags, categoryNmap)
 	if err != nil {
 		return fmt.Errorf("putNmapFinding error. gcpProjectID:%v, tags: %v, err: %w", gcpProjectID, tags, err)
 	}
@@ -42,6 +46,8 @@ func (s *SqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 			return err
 		}
 		finding := &finding.FindingForUpsert{
+			Provider:         "google",
+			ProviderTarget:   gcpProjectID,
 			Description:      e.getDescription(),
 			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:%v:%v", e.Target, e.Protocol, e.ResourceName)),
@@ -53,7 +59,7 @@ func (s *SqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		}
 		findings = append(findings, finding)
 	}
-	err := s.putFindings(ctx, gcpProjectID, findings, []string{gcpProjectID}, categoryManyOpen)
+	err := s.putFindings(ctx, findings, []string{gcpProjectID}, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -73,6 +79,8 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 			score = 3.0
 		}
 		findings = append(findings, &finding.FindingForUpsert{
+			Provider:         "google",
+			ProviderTarget:   gcpProjectID,
 			Description:      getFirewallRuleDescription(resourceName, r.IsPublic),
 			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:portscan_firewall:%v", gcpProjectID, resourceName)),
@@ -85,7 +93,7 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 	}
 	tags := []string{gcpProjectID, "compute", "firewall"}
 
-	err := s.putFindings(ctx, gcpProjectID, findings, tags, categoryManyOpen)
+	err := s.putFindings(ctx, findings, tags, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -93,10 +101,8 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 	return nil
 }
 
-func (s *SqsHandler) putFindings(ctx context.Context, gcpProjectID string, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
+func (s *SqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
 	for _, f := range findings {
-		f.Provider = "google"
-		f.ProviderTarget = gcpProjectID
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
 		if err != nil {
 			return err
