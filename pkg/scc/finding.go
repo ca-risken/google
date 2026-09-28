@@ -115,6 +115,8 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	resourceShortName := extractShortResourceName(f.ResourceName)
 	findingData := &finding.FindingBatchForUpsert{
 		Finding: &finding.FindingForUpsert{
+			Provider:         "google",
+			ProviderTarget:   gcpProjectID,
 			Description:      generateSccDescrition(f.Category, cve, resourceShortName),
 			DataSource:       message.GoogleSCCDataSource,
 			DataSourceId:     formatSccDataSourceID(f.Name),
@@ -132,7 +134,6 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 			{Tag: riskenstr.TruncateString(common.GetServiceName(f.ResourceName), 64, "")},
 		},
 	}
-	common.SetGoogleProvider(findingData.Finding, gcpProjectID)
 	if cve != "" {
 		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: common.TagCVE})
 		findingData.Tag = append(findingData.Tag, &finding.FindingTagForBatch{Tag: cve})

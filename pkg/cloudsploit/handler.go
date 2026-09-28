@@ -182,6 +182,8 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 	}
 	// PutFinding
 	findingForUpsert := &finding.FindingForUpsert{
+		Provider:         "google",
+		ProviderTarget:   gcpProjectID,
 		Description:      f.Description,
 		DataSource:       message.GoogleCloudSploitDataSource,
 		DataSourceId:     f.DataSourceID,
@@ -191,7 +193,6 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		OriginalMaxScore: 10.0,
 		Data:             string(buf),
 	}
-	common.SetGoogleProvider(findingForUpsert, gcpProjectID)
 	resp, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: findingForUpsert})
 	if err != nil {
 		s.logger.Errorf(ctx, "Failed to put finding project_id=%d, resource=%s, err=%+v", projectID, f.Resource, err)

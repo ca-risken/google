@@ -95,7 +95,8 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 
 func (s *SqsHandler) putFindings(ctx context.Context, gcpProjectID string, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
 	for _, f := range findings {
-		common.SetGoogleProvider(f, gcpProjectID)
+		f.Provider = "google"
+		f.ProviderTarget = gcpProjectID
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
 		if err != nil {
 			return err

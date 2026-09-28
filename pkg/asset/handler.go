@@ -233,6 +233,8 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		}
 		f := &finding.FindingBatchForUpsert{
 			Finding: &finding.FindingForUpsert{
+				Provider:         "google",
+				ProviderTarget:   gcpProjectID,
 				Description:      getAssetDescription(a, score),
 				DataSource:       message.GoogleAssetDataSource,
 				DataSourceId:     a.Asset.Name,
@@ -243,7 +245,6 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 				Data:             string(buf),
 			},
 		}
-		common.SetGoogleProvider(f.Finding, gcpProjectID)
 		tags := []*finding.FindingTagForBatch{
 			{Tag: common.TagGoogle},
 			{Tag: common.TagGCP},
