@@ -243,6 +243,7 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 				Data:             string(buf),
 			},
 		}
+		common.SetGoogleProvider(f.Finding, gcpProjectID)
 		tags := []*finding.FindingTagForBatch{
 			{Tag: common.TagGoogle},
 			{Tag: common.TagGCP},

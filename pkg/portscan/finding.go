@@ -27,7 +27,7 @@ func (s *SqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 		s.logger.Infof(ctx, "nmapResult has empty or unknown service, nmapResult: %v", nmapResult)
 	}
 	tags = append(tags, gcpProjectID)
-	err = s.putFindings(ctx, findings, tags, categoryNmap)
+	err = s.putFindings(ctx, gcpProjectID, findings, tags, categoryNmap)
 	if err != nil {
 		return fmt.Errorf("putNmapFinding error. gcpProjectID:%v, tags: %v, err: %w", gcpProjectID, tags, err)
 	}
@@ -53,7 +53,7 @@ func (s *SqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 		}
 		findings = append(findings, finding)
 	}
-	err := s.putFindings(ctx, findings, []string{gcpProjectID}, categoryManyOpen)
+	err := s.putFindings(ctx, gcpProjectID, findings, []string{gcpProjectID}, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 	}
 	tags := []string{gcpProjectID, "compute", "firewall"}
 
-	err := s.putFindings(ctx, findings, tags, categoryManyOpen)
+	err := s.putFindings(ctx, gcpProjectID, findings, tags, categoryManyOpen)
 	if err != nil {
 		return err
 	}
@@ -93,8 +93,9 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 	return nil
 }
 
-func (s *SqsHandler) putFindings(ctx context.Context, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
+func (s *SqsHandler) putFindings(ctx context.Context, gcpProjectID string, findings []*finding.FindingForUpsert, additionalTags []string, recommendCategory string) error {
 	for _, f := range findings {
+		common.SetGoogleProvider(f, gcpProjectID)
 		res, err := s.findingClient.PutFinding(ctx, &finding.PutFindingRequest{Finding: f})
 		if err != nil {
 			return err
