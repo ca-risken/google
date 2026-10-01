@@ -1,6 +1,6 @@
 module github.com/ca-risken/google
 
-go 1.21.3
+go 1.23.3
 
 require (
 	cloud.google.com/go/asset v1.20.3
@@ -13,12 +13,12 @@ require (
 	github.com/ca-risken/common/pkg/dlp v0.0.0-20251009082317-0c402b55a771
 	github.com/ca-risken/common/pkg/grpc_client v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/logging v0.0.0-20221119073224-9db027bda6f8
-	github.com/ca-risken/common/pkg/portscan v0.0.0-20230501023912-29382763676f
+	github.com/ca-risken/common/pkg/portscan v0.0.0-20260928074348-cc7bf4fe1b49
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20221119073224-9db027bda6f8
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20250723085534-daee3fbf0ba6
 	github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.11.1-0.20250204074349-42f821288247
+	github.com/ca-risken/core v0.16.1-0.20261001061147-c22c653884d2
 	github.com/ca-risken/datasource-api v0.16.1-0.20251015071141-d64d07f09118
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/ca-risken/vulnerability v0.0.0-20241119125125-0693660e1024
@@ -69,6 +69,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coocood/freecache v1.2.3 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.1.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
@@ -91,15 +92,19 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/openai/openai-go v1.8.3 // indirect
 	github.com/outcaste-io/ristretto v0.2.1 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/richardartoul/molecule v1.0.1-0.20221107223329-32cfee06a052 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/sashabaranov/go-openai v1.5.8 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.54.0 // indirect
@@ -110,11 +115,11 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect

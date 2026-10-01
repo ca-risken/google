@@ -20,11 +20,7 @@ func (s *SqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	if err != nil {
 		return err
 	}
-	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data))
-	for _, f := range findings {
-		f.Provider = "google"
-		f.ProviderTarget = gcpProjectID
-	}
+	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data), "google", gcpProjectID)
 	tags := nmapResult.GetTags()
 	if len(tags) == 0 {
 		// nmapResult.GetTags returns the slice that has empty element in some condition.
