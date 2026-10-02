@@ -18,7 +18,7 @@ require (
 	github.com/ca-risken/common/pkg/sqs v0.0.0-20250723085534-daee3fbf0ba6
 	github.com/ca-risken/common/pkg/strings v0.0.0-20250616082029-e3cd176cfcdb
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.16.1-0.20261001061147-c22c653884d2
+	github.com/ca-risken/core v0.16.1-0.20261002050808-7575b0301069
 	github.com/ca-risken/datasource-api v0.16.1-0.20251015071141-d64d07f09118
 	github.com/ca-risken/go-sqs-poller/worker/v5 v5.0.0-20220525093235-9148d33b6aee
 	github.com/ca-risken/vulnerability v0.0.0-20241119125125-0693660e1024
