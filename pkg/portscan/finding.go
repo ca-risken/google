@@ -20,7 +20,7 @@ func (s *SqsHandler) putNmapFindings(ctx context.Context, projectID uint32, gcpP
 	if err != nil {
 		return err
 	}
-	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data))
+	findings := nmapResult.GetFindings(projectID, message.GooglePortscanDataSource, string(data), "google", gcpProjectID)
 	tags := nmapResult.GetTags()
 	if len(tags) == 0 {
 		// nmapResult.GetTags returns the slice that has empty element in some condition.
@@ -42,6 +42,8 @@ func (s *SqsHandler) putExcludeFindings(ctx context.Context, gcpProjectID string
 			return err
 		}
 		finding := &finding.FindingForUpsert{
+			Provider:         "google",
+			ProviderTarget:   gcpProjectID,
 			Description:      e.getDescription(),
 			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:%v:%v", e.Target, e.Protocol, e.ResourceName)),
@@ -73,6 +75,8 @@ func (s *SqsHandler) putRelFirewallResourceFindings(ctx context.Context, gcpProj
 			score = 3.0
 		}
 		findings = append(findings, &finding.FindingForUpsert{
+			Provider:         "google",
+			ProviderTarget:   gcpProjectID,
 			Description:      getFirewallRuleDescription(resourceName, r.IsPublic),
 			DataSource:       message.GooglePortscanDataSource,
 			DataSourceId:     generateDataSourceID(fmt.Sprintf("%v:portscan_firewall:%v", gcpProjectID, resourceName)),

@@ -233,6 +233,8 @@ func (s *SqsHandler) putFindings(ctx context.Context, projectID uint32, gcpProje
 		}
 		f := &finding.FindingBatchForUpsert{
 			Finding: &finding.FindingForUpsert{
+				Provider:         "google",
+				ProviderTarget:   gcpProjectID,
 				Description:      getAssetDescription(a, score),
 				DataSource:       message.GoogleAssetDataSource,
 				DataSourceId:     a.Asset.Name,
