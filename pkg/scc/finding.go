@@ -213,8 +213,7 @@ func generateSccDescrition(category, cveID, resourceShortName string) string {
 	meta += ")"
 	fullDesc := desc + " " + meta
 
-	// Truncate to 200 characters to avoid RPC error
-	return riskenstr.TruncateString(fullDesc, 200, "...")
+	return riskenstr.TruncateString(fullDesc, 197, "...")
 }
 
 func generateSccURL(name, gcpProjectID string) string {

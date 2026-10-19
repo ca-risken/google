@@ -1,6 +1,7 @@
 package scc
 
 import (
+	"strings"
 	"testing"
 
 	sccpb "cloud.google.com/go/securitycenter/apiv2/securitycenterpb"
@@ -119,6 +120,15 @@ func TestGenerateSccDescrition(t *testing.T) {
 				resourceShortName: "my-cluster",
 			},
 			want: "Detected a SOME_CATEGORY finding. (Resource: my-cluster)",
+		},
+		{
+			name: "Truncated to 200 characters including suffix",
+			input: args{
+				category:          strings.Repeat("a", 200),
+				cveID:             strings.Repeat("b", 200),
+				resourceShortName: strings.Repeat("c", 200),
+			},
+			want: "Detected a " + strings.Repeat("a", 186) + "...",
 		},
 	}
 	for _, c := range cases {
