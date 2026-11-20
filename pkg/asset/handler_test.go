@@ -8,7 +8,6 @@ import (
 	bucketIAM "cloud.google.com/go/iam"
 	iam "cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/storage"
-	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -455,13 +454,13 @@ func TestParseDLPScanData(t *testing.T) {
 	cases := []struct {
 		name        string
 		input       string
-		want        *dlp.ScanResult
+		want        *bucketDLPScan
 		expectError bool
 	}{
 		{
 			name:  "OK",
 			input: `{"dlp_scan":{"resource_name":"bucket","scan_time":100}}`,
-			want: &dlp.ScanResult{
+			want: &bucketDLPScan{
 				ResourceName: "bucket",
 				ScanTime:     100,
 			},
@@ -490,7 +489,7 @@ func TestParseDLPScanData(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parseDLPScanData() unexpected error: %v", err)
 			}
-			if diff := cmp.Diff(tt.want, got); diff != "" {
+			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(bucketDLPScan{})); diff != "" {
 				t.Fatalf("parseDLPScanData() mismatch (-want +got):\n%s", diff)
 			}
 		})

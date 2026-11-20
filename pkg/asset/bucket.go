@@ -8,7 +8,6 @@ import (
 
 	"cloud.google.com/go/asset/apiv1/assetpb"
 	"cloud.google.com/go/storage"
-	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/message"
 )
@@ -52,12 +51,12 @@ func (s *SqsHandler) enrichBucketFinding(
 		s.logger.Warnf(ctx, "failed to run DLP scan, project=%s, bucket=%s, err=%+v", gcpProjectID, resource.DisplayName, dlpErr)
 	}
 	if dlpResult != nil {
-		f.DlpScan = dlpResult
+		f.DlpScan = dlpResult.withSummary("storage.googleapis.com")
 	}
 	return nil
 }
 
-func (s *SqsHandler) runBucketDLPScan(ctx context.Context, projectID uint32, resource *assetpb.ResourceSearchResult, fullScan bool) (*dlp.ScanResult, error) {
+func (s *SqsHandler) runBucketDLPScan(ctx context.Context, projectID uint32, resource *assetpb.ResourceSearchResult, fullScan bool) (*bucketDLPScan, error) {
 	if resource == nil {
 		return nil, fmt.Errorf("resource is nil")
 	}
@@ -68,16 +67,13 @@ func (s *SqsHandler) runBucketDLPScan(ctx context.Context, projectID uint32, res
 	}
 
 	result, scanErr := s.assetClient.dlpScanBucket(ctx, resource.DisplayName, prevResult, fullScan)
-	if scanErr != nil {
+	if result == nil {
 		return prevResult, scanErr
 	}
-	if result == nil {
-		return prevResult, nil
-	}
-	return result, nil
+	return result, scanErr
 }
 
-func (s *SqsHandler) getPreviousBucketDLPFinding(ctx context.Context, projectID uint32, resourceName string) (*dlp.ScanResult, error) {
+func (s *SqsHandler) getPreviousBucketDLPFinding(ctx context.Context, projectID uint32, resourceName string) (*bucketDLPScan, error) {
 	listReq := &finding.ListFindingRequest{
 		ProjectId:    projectID,
 		DataSource:   []string{message.GoogleAssetDataSource},
@@ -118,7 +114,7 @@ func hasDLPScanData(data string) bool {
 	return ok
 }
 
-func parseDLPScanData(data string) (*dlp.ScanResult, error) {
+func parseDLPScanData(data string) (*bucketDLPScan, error) {
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(data), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal finding data: %w", err)
@@ -134,7 +130,7 @@ func parseDLPScanData(data string) (*dlp.ScanResult, error) {
 		return nil, fmt.Errorf("failed to marshal dlp_scan data: %w", err)
 	}
 
-	var result dlp.ScanResult
+	var result bucketDLPScan
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse dlp_scan data: %w", err)
 	}

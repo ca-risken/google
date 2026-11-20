@@ -27,53 +27,56 @@ type assetServiceClient interface {
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
 	getStoragePublicAccessPrevention(ctx context.Context, bucketName string) (*storage.PublicAccessPrevention, error)
 	getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error)
-	dlpScanBucket(ctx context.Context, bucketName string, prevResult *dlp.ScanResult, fullScan bool) (*dlp.ScanResult, error)
+	dlpScanBucket(ctx context.Context, bucketName string, prevResult *bucketDLPScan, fullScan bool) (*bucketDLPScan, error)
 }
 
 type assetClient struct {
-	project   *cloudresourcemanager.Service
-	asset     *asset.Client
-	admin     *admin.IamClient
-	gcs       *storage.Client
-	dlpConfig *dlp.Config
-	logger    logging.Logger
-	retryer   backoff.BackOff
+	project    *cloudresourcemanager.Service
+	asset      *asset.Client
+	admin      *admin.IamClient
+	gcs        *storage.Client
+	publicGCS  *storage.Client
+	dlpScanner *dlp.Scanner
+	logger     logging.Logger
+	retryer    backoff.BackOff
 }
 
-func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient, error) {
+func NewAssetClient(credentialPath string, dlpScanner *dlp.Scanner, l logging.Logger) (assetServiceClient, error) {
 	ctx := context.Background()
-	pj, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
+	credentials := option.WithCredentialsFile(credentialPath)
+	pj, err := cloudresourcemanager.NewService(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for CloudResourceManager API client: %w", err)
 	}
-	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	as, err := asset.NewClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
 	}
-	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(credentialPath))
+	ad, err := admin.NewIamClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google IAM Admin API client: %w", err)
 	}
-	st, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	st, err := storage.NewClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google Cloud Storage client: %w", err)
+	}
+	publicGCS, err := storage.NewClient(ctx, option.WithoutAuthentication())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create anonymous Google Cloud Storage client: %w", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
 		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
-	dlpConfig, err := dlp.LoadConfig("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load DLP config: %w", err)
-	}
 	return &assetClient{
-		project:   pj,
-		asset:     as,
-		admin:     ad,
-		gcs:       st,
-		dlpConfig: dlpConfig,
-		logger:    l,
-		retryer:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
+		project:    pj,
+		asset:      as,
+		admin:      ad,
+		gcs:        st,
+		publicGCS:  publicGCS,
+		dlpScanner: dlpScanner,
+		logger:     l,
+		retryer:    backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
 	}, nil
 }
 

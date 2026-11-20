@@ -1,0 +1,14 @@
+version: "2"
+
+linters:
+  exclusions:
+    presets:
+      - std-error-handling # Preserve the v1 default exclusions.
+    rules:
+      # The v1 defaults did not enable stylecheck.
+      - linters: [staticcheck]
+        text: "^ST1005:"
+      # Preserve the credential file formats supported by the existing scanners.
+      - linters: [staticcheck]
+        path: 'pkg/(asset/asset|portscan/enumerater|scc/scc)\.go$'
+        text: '^SA1019: google\.golang\.org/api/option\.WithCredentialsFile is deprecated'
