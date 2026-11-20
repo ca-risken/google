@@ -10,20 +10,23 @@ import (
 )
 
 type bucketFileScan struct {
-	Object  string    `json:"object"`
-	URL     string    `json:"url"`
-	Updated time.Time `json:"updated,omitzero"`
+	Object     string    `json:"object"`
+	URL        string    `json:"url"`
+	AccessType string    `json:"access_type,omitempty"`
+	Updated    time.Time `json:"updated,omitzero"`
 	dlp.FindingFile
 }
 
 type bucketDLPScan struct {
-	ResourceName     string           `json:"resource_name"`
-	TotalFiles       int              `json:"total_files"`
-	ScanDuration     string           `json:"scan_duration"`
-	ScanTime         int64            `json:"scan_time"`
-	Sensitive        *bool            `json:"sensitive"`
-	ContentType      []string         `json:"content_type"`
-	SensitiveObjects []bucketFileScan `json:"sensitive_objects"`
+	ResourceName      string           `json:"resource_name"`
+	TotalFiles        int              `json:"total_files"`
+	ScanDuration      string           `json:"scan_duration"`
+	ScanTime          int64            `json:"scan_time"`
+	ScanCursor        *dlpScanCursor   `json:"scan_cursor,omitzero"`
+	Sensitive         *bool            `json:"sensitive"`
+	ContentType       []string         `json:"content_type"`
+	SensitiveObjects  []bucketFileScan `json:"sensitive_objects"`
+	AuthenticatedRead bool             `json:"authenticated_read,omitempty"`
 
 	previousFindings []dlp.Finding
 	unreportedFiles  []bucketFileScan
@@ -84,7 +87,7 @@ func (r *bucketDLPScan) addFile(file bucketFileScan) {
 	r.unreportedFiles = append(r.unreportedFiles, file)
 }
 
-func (r *bucketDLPScan) withSummary(objectHost string) *bucketDLPScan {
+func (r *bucketDLPScan) withSummary() *bucketDLPScan {
 	if len(r.previousFindings) > 0 {
 		// A cached result can be returned when the object listing fails.
 		r.ContentType = nil
@@ -97,11 +100,15 @@ func (r *bucketDLPScan) withSummary(objectHost string) *bucketDLPScan {
 		r.SensitiveObjects = []bucketFileScan{}
 	}
 	r.TotalFiles = len(r.SensitiveObjects)
-	bucketURL := "https://" + objectHost + "/" + url.PathEscape(r.ResourceName) + "/"
+	bucketPath := "/" + url.PathEscape(r.ResourceName) + "/"
 	for i := range r.SensitiveObjects {
 		file := &r.SensitiveObjects[i]
 		objectKey := strings.ReplaceAll(url.PathEscape(file.Object), "+", "%2B")
-		file.URL = bucketURL + objectKey
+		objectHost := "storage.googleapis.com"
+		if file.AccessType == allAuthenticatedUsers {
+			objectHost = "storage.cloud.google.com"
+		}
+		file.URL = "https://" + objectHost + bucketPath + objectKey
 	}
 	if r.ContentType != nil && len(r.unreportedFiles) == 0 {
 		return r

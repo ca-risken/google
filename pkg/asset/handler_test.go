@@ -430,6 +430,30 @@ func TestIsBucketPublic(t *testing.T) {
 	}
 }
 
+func TestHasAuthenticatedDLPGrant(t *testing.T) {
+	t.Parallel()
+
+	const objectViewer = "roles/storage.objectViewer"
+	tests := []struct {
+		name     string
+		bindings []*iam.Binding
+		want     bool
+	}{
+		{name: "authenticated read", bindings: []*iam.Binding{{Role: objectViewer, Members: []string{allAuthenticatedUsers}}}, want: true},
+		{name: "anonymous read preferred", bindings: []*iam.Binding{{Role: objectViewer, Members: []string{allAuthenticatedUsers, allUsers}}}},
+		{name: "object creator only", bindings: []*iam.Binding{{Role: "roles/storage.objectCreator", Members: []string{allAuthenticatedUsers}}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			finding := &assetFinding{BucketPolicy: &bucketIAM.Policy{InternalProto: &iam.Policy{Bindings: test.bindings}}}
+			if got := hasAuthenticatedDLPGrant(finding); got != test.want {
+				t.Errorf("authenticated DLP eligible = %t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
 func TestHasDLPScanData(t *testing.T) {
 	cases := []struct {
 		name     string
