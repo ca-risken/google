@@ -3,12 +3,21 @@ package grpc
 import (
 	"fmt"
 
+	"github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+func NewSensitiveContentClient(svcAddr string) (ai.SensitiveContentServiceClient, error) {
+	conn, err := getGRPCConn(svcAddr)
+	if err != nil {
+		return nil, err
+	}
+	return ai.NewSensitiveContentServiceClient(conn), nil
+}
 
 func NewFindingClient(svcAddr string) (finding.FindingServiceClient, error) {
 	conn, err := getGRPCConn(svcAddr)

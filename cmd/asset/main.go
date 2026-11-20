@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/common/pkg/profiler"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
@@ -104,7 +105,15 @@ func main() {
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create google client, err=%+v", err)
 	}
-	assetc, err := asset.NewAssetClient(conf.GoogleCredentialPath, appLogger)
+	classifier, err := grpc.NewSensitiveContentClient(conf.CoreSvcAddr)
+	if err != nil {
+		appLogger.Fatalf(ctx, "failed to create sensitive content client: %v", err)
+	}
+	dlpConfig, err := dlp.LoadConfig("")
+	if err != nil {
+		appLogger.Fatalf(ctx, "failed to load DLP config: %v", err)
+	}
+	assetc, err := asset.NewAssetClient(conf.GoogleCredentialPath, dlp.NewScanner(classifier, dlpConfig), appLogger)
 	if err != nil {
 		appLogger.Fatalf(ctx, "Failed to create asset client, err=%+v", err)
 	}

@@ -38,10 +38,7 @@ func evaluateVulnerability(vuln *model.Vulnerability) (*triage.Exploitation, *tr
 	} else {
 		return nil, nil
 	}
-	hasKEV := false
-	if vuln.KEV != nil {
-		hasKEV = true
-	}
+	hasKEV := vuln.KEV != nil
 	publicPOC := false
 	automatable := triage.AUTOMATABLE_NO
 	if vuln.PoC != nil {

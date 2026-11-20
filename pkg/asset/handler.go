@@ -14,7 +14,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
-	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/common/pkg/grpc_client"
 	"github.com/ca-risken/common/pkg/logging"
 	mimosasqs "github.com/ca-risken/common/pkg/sqs"
@@ -58,7 +57,7 @@ type assetFinding struct {
 	DisabledServiceAccount       bool                            `json:"disabled_service_account,omitempty"`
 	BucketPolicy                 *iam.Policy                     `json:"bucket_policy,omitempty"`
 	BucketPublicAccessPrevention *storage.PublicAccessPrevention `json:"bucket_public_access_prevention,omitempty"`
-	DlpScan                      *dlp.ScanResult                 `json:"dlp_scan,omitempty"`
+	DlpScan                      *bucketDLPScan                  `json:"dlp_scan,omitempty"`
 }
 
 func (s *SqsHandler) HandleMessage(ctx context.Context, sqsMsg *types.Message) error {
@@ -417,17 +416,18 @@ func getAssetDescription(a *assetFinding, score float32) string {
 	description := ""
 
 	// AssetType
-	if a.Asset.AssetType == assetTypeServiceAccount {
+	switch a.Asset.AssetType {
+	case assetTypeServiceAccount:
 		assetType = "ServiceAccount"
 		if score >= 0.8 {
 			description = fmt.Sprintf("Detected a privileged service-account that has owner(or editor) role. (name=%s)", a.Asset.DisplayName)
 		}
-	} else if a.Asset.AssetType == assetTypeBucket {
+	case assetTypeBucket:
 		assetType = "Bucket"
 		if score >= 0.7 {
 			description = fmt.Sprintf("Detected public bucket. (name=%s)", a.Asset.DisplayName)
 		}
-	} else {
+	default:
 		assetType = a.Asset.AssetType
 	}
 

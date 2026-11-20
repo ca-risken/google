@@ -15,6 +15,7 @@ import (
 	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/cenkalti/backoff/v4"
+	cloudresourcemanagerv1 "google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/cloudresourcemanager/v3"
 	"google.golang.org/api/option"
 )
@@ -26,54 +27,64 @@ type assetServiceClient interface {
 	hasUserManagedKeys(ctx context.Context, gcpProjectID, email string) (bool, error)
 	getStorageBucketPolicy(ctx context.Context, bucketName string) (*iam.Policy, error)
 	getStoragePublicAccessPrevention(ctx context.Context, bucketName string) (*storage.PublicAccessPrevention, error)
+	allowsAuthenticatedDLPRead(ctx context.Context, gcpProjectID string) (bool, error)
 	getServiceAccountMap(ctx context.Context, gcpProjectID string) (map[string]*adminpb.ServiceAccount, error)
-	dlpScanBucket(ctx context.Context, bucketName string, prevResult *dlp.ScanResult, fullScan bool) (*dlp.ScanResult, error)
+	dlpScanBucket(ctx context.Context, bucketName string, prevResult *bucketDLPScan, fullScan bool, accessType string) (*bucketDLPScan, error)
 }
 
 type assetClient struct {
-	project   *cloudresourcemanager.Service
-	asset     *asset.Client
-	admin     *admin.IamClient
-	gcs       *storage.Client
-	dlpConfig *dlp.Config
-	logger    logging.Logger
-	retryer   backoff.BackOff
+	project    *cloudresourcemanager.Service
+	orgPolicy  *cloudresourcemanagerv1.Service
+	asset      *asset.Client
+	admin      *admin.IamClient
+	gcs        *storage.Client
+	publicGCS  *storage.Client
+	dlpScanner *dlp.Scanner
+	logger     logging.Logger
+	retryer    backoff.BackOff
 }
 
-func NewAssetClient(credentialPath string, l logging.Logger) (assetServiceClient, error) {
+func NewAssetClient(credentialPath string, dlpScanner *dlp.Scanner, l logging.Logger) (assetServiceClient, error) {
 	ctx := context.Background()
-	pj, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
+	credentials := option.WithCredentialsFile(credentialPath)
+	pj, err := cloudresourcemanager.NewService(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for CloudResourceManager API client: %w", err)
 	}
-	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	orgPolicy, err := cloudresourcemanagerv1.NewService(ctx, credentials)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create organization policy client: %w", err)
+	}
+	as, err := asset.NewClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
 	}
-	ad, err := admin.NewIamClient(ctx, option.WithCredentialsFile(credentialPath))
+	ad, err := admin.NewIamClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google IAM Admin API client: %w", err)
 	}
-	st, err := storage.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	st, err := storage.NewClient(ctx, credentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google Cloud Storage client: %w", err)
+	}
+	publicGCS, err := storage.NewClient(ctx, option.WithoutAuthentication())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create anonymous Google Cloud Storage client: %w", err)
 	}
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
 		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
-	dlpConfig, err := dlp.LoadConfig("")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load DLP config: %w", err)
-	}
 	return &assetClient{
-		project:   pj,
-		asset:     as,
-		admin:     ad,
-		gcs:       st,
-		dlpConfig: dlpConfig,
-		logger:    l,
-		retryer:   backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
+		project:    pj,
+		orgPolicy:  orgPolicy,
+		asset:      as,
+		admin:      ad,
+		gcs:        st,
+		publicGCS:  publicGCS,
+		dlpScanner: dlpScanner,
+		logger:     l,
+		retryer:    backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
 	}, nil
 }
 
@@ -196,6 +207,23 @@ func (a *assetClient) getStoragePublicAccessPrevention(ctx context.Context, buck
 		return nil, fmt.Errorf("Failed to Bucket Attributes API, err=%+v", err)
 	}
 	return &attrs.PublicAccessPrevention, nil
+}
+
+func (a *assetClient) allowsAuthenticatedDLPRead(ctx context.Context, gcpProjectID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	policy, err := a.orgPolicy.Projects.GetEffectiveOrgPolicy(
+		"projects/"+gcpProjectID,
+		&cloudresourcemanagerv1.GetEffectiveOrgPolicyRequest{Constraint: "constraints/storage.publicAccessPrevention"},
+	).Context(ctx).Do()
+	if err != nil {
+		return false, fmt.Errorf("get effective Cloud Storage public access prevention: %w", err)
+	}
+	if policy.BooleanPolicy != nil {
+		return !policy.BooleanPolicy.Enforced, nil
+	}
+	// The default for storage.publicAccessPrevention is to allow public access.
+	return policy.RestoreDefault != nil, nil
 }
 
 func (a *assetClient) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
