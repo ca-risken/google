@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/ca-risken/common/pkg/dlp"
 	"github.com/google/go-cmp/cmp"
 	cloudresourcemanagerv1 "google.golang.org/api/cloudresourcemanager/v1"
@@ -26,6 +27,7 @@ func TestBucketDLPScanRetainsPreviousFileResponses(t *testing.T) {
 		"total_severity":"HIGH",
 		"severity_reason":"previous severity",
 		"test_data":null,
+		"sensitive_objects":[{"object":"old.wav","complete":false,"content_kind":"UNSPECIFIED","content_type":["PII"]}],
 		"findings":[{"file_path":"example.test/retained/契約 #+%.txt","type":"PII","matches":["legacy@example.test"]},{"file_path":"example.test/retained/契約 #+%.txt","type":"Credential"}],
 		"object_scans":[{"object":"old.csv","input":"text","complete":true,"sensitivity":2}],
 		"pdf_scans":[{"object":"old.pdf","complete":true,"total_pages":1,"pages":[
@@ -40,6 +42,7 @@ func TestBucketDLPScanRetainsPreviousFileResponses(t *testing.T) {
 	cutoff := time.Unix(previous.ScanTime, 0)
 	opens := 0
 	objects := []dlpObject{
+		{Name: "old.wav", Updated: cutoff},
 		{Name: "retained/契約 #+%.txt", Updated: cutoff},
 		{Name: "old.csv", Updated: cutoff},
 		{Name: "old.pdf", Updated: cutoff},
@@ -59,6 +62,13 @@ func TestBucketDLPScanRetainsPreviousFileResponses(t *testing.T) {
 		t.Fatalf("scan time = %d, opened files = %d", got.ScanTime, opens)
 	}
 	wantFiles := []bucketFileScan{
+		{
+			Object: "old.wav",
+			URL:    "https://storage.googleapis.com/example.test/old.wav",
+			FindingFile: dlp.FindingFile{
+				Sensitivity: new(true), ContentType: []string{"PII"}, ContentKind: "UNSPECIFIED",
+			},
+		},
 		{
 			Object: "old.pdf",
 			URL:    "https://storage.googleapis.com/example.test/old.pdf",
@@ -234,6 +244,62 @@ type dlpPolicyTestTransport func(*http.Request) (*http.Response, error)
 
 func (f dlpPolicyTestTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func TestFullDLPScanReplacesPreviousResultsOnlyAfterListing(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		wantOld    bool
+	}{
+		{
+			name:       "successful list removes the previous detection for an excluded object",
+			statusCode: http.StatusOK,
+			body:       `{"items":[{"name":"old.wav","size":"16","updated":"2023-11-14T22:13:20Z"}]}`,
+		},
+		{
+			name:       "failed list keeps the saved result",
+			statusCode: http.StatusForbidden,
+			body:       `{"error":{"code":403,"message":"permission denied"}}`,
+			wantOld:    true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			httpClient := &http.Client{Transport: dlpPolicyTestTransport(func(req *http.Request) (*http.Response, error) {
+				if req.URL.Path != "/storage/v1/b/example-bucket/o" {
+					t.Fatalf("unexpected GCS call %s", req.URL)
+				}
+				return &http.Response{
+					StatusCode: test.statusCode,
+					Header:     http.Header{"Content-Type": {"application/json"}},
+					Body:       io.NopCloser(strings.NewReader(test.body)),
+				}, nil
+			})}
+			gcs, err := storage.NewClient(t.Context(), option.WithHTTPClient(httpClient))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = gcs.Close() })
+			client := assetClient{
+				gcs:        gcs,
+				publicGCS:  gcs,
+				dlpScanner: dlp.NewScanner(nil, &dlp.Config{ExcludeFilePatterns: []string{".wav"}}),
+			}
+			previous := &bucketDLPScan{ResourceName: "example-bucket", ScanTime: 1700000000, SensitiveObjects: []bucketFileScan{{Object: "old.wav"}}}
+			got, err := client.dlpScanBucket(t.Context(), "example-bucket", previous, true, allUsers)
+			if (err != nil) != test.wantOld || got == nil {
+				t.Fatalf("unexpected result: scan=%v err=%v", got, err)
+			}
+			if (got == previous) != test.wantOld || (!test.wantOld && len(got.SensitiveObjects) != 0) {
+				t.Errorf("full scan has %d sensitive objects, want previous=%t", len(got.SensitiveObjects), test.wantOld)
+			}
+		})
+	}
 }
 
 func scanDLPTestFiles(t *testing.T, scanner *dlp.Scanner, bucket string, objects []dlpObject, previous *bucketDLPScan, started time.Time) *bucketDLPScan {
