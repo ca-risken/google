@@ -152,11 +152,9 @@ func (s *SqsHandler) generateFindingData(ctx context.Context, projectID uint32, 
 	}
 	if riskDescription != "" {
 		findingData.Recommend = &finding.RecommendForBatch{
-			Type: f.Name,
-			Risk: riskDescription,
-			Recommendation: fmt.Sprintf(`Please see the finding JSON data in 'recommendation' or 'next_steps' field.
-And you can see the more information in the Security Command Center console.
-- %s`, sccURL),
+			Type:           f.Name,
+			Risk:           riskDescription,
+			Recommendation: sccRecommendation(f.NextSteps, sccURL),
 		}
 	}
 	return findingData, nil
@@ -219,4 +217,13 @@ func generateSccDescrition(category, cveID, resourceShortName string) string {
 func generateSccURL(name, gcpProjectID string) string {
 	encodedName := url.QueryEscape(name)
 	return fmt.Sprintf("https://console.cloud.google.com/security/command-center/findingsv2;name=%s?project=%s", encodedName, gcpProjectID)
+}
+
+// Keep provider instructions and the original per-finding console link.
+func sccRecommendation(nextSteps, consoleURL string) string {
+	result := fmt.Sprintf("Please review the finding in the Security Command Center console.\n- %s", consoleURL)
+	if steps := strings.TrimSpace(nextSteps); steps != "" {
+		return steps + "\n\n" + result
+	}
+	return result
 }

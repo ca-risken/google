@@ -211,3 +211,18 @@ func TestFormatSccDataSourceID(t *testing.T) {
 		})
 	}
 }
+
+func TestSccRecommendation(t *testing.T) {
+	cases := []struct{ name, steps string }{{"provided steps", "  Revoke public access.  "}, {"missing steps", ""}, {"blank steps", " \n "}}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := sccRecommendation(c.steps, "https://console.example/finding/one")
+			if !strings.Contains(got, "https://console.example/finding/one") {
+				t.Fatal("missing source link")
+			}
+			if steps := strings.TrimSpace(c.steps); steps != "" && !strings.HasPrefix(got, steps+"\n\n") {
+				t.Fatal("provider instructions lost")
+			}
+		})
+	}
+}
